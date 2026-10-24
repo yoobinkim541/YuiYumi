@@ -8,10 +8,24 @@
 <meta name="app-url" content="">
 <meta property="og:title" content="YUIYUMI · 언제나, 너의 곁에">
 <meta property="og:description" content="화면 옆에 사는 Live2D 캐릭터 비서 유이와 유미. 눈치껏 한마디 하고, 메일·일정·Slack·Discord·Drive 일은 초안까지 해 둬요.">
-<meta property="og:image" content="/assets/hero-duo-room.webp">
-<link rel="icon" href="/assets/sd/yumi-sd-3-16.webp" type="image/webp">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="YUIYUMI">
+<meta property="og:url" content="https://yuiyumi.vercel.app/">
+<meta property="og:image" content="https://yuiyumi.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="유이와 유미가 나란히 웃고 있는 YUIYUMI 랜딩 화면">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://yuiyumi.vercel.app/assets/og.jpg">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#f58ba5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&amp;family=Nanum+Brush+Script&amp;family=Nanum+Pen+Script&amp;family=Gowun+Dodum&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&amp;family=Nanum+Brush+Script&amp;family=Nanum+Pen+Script&amp;family=Gowun+Dodum&amp;family=Jua&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
 <style>
 body{margin:0;background:#FBEFF2}
 a{color:#4A3A44;text-decoration:none}a:hover{color:#D94672}
@@ -55,6 +69,15 @@ a{color:#4A3A44;text-decoration:none}a:hover{color:#D94672}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <style>
+#leave{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#FDF0F4;opacity:0;pointer-events:none;transition:opacity .9s ease,backdrop-filter .9s ease;font-family:'Gowun Dodum',sans-serif;font-size:18px;color:#C2416A}
+#leave img{width:96px;height:auto;transform:translateY(10px);opacity:0;transition:opacity .5s .4s ease,transform .5s .4s ease}
+#leave span{opacity:0;transition:opacity .5s .5s ease}
+body.leaving #leave{opacity:1;pointer-events:auto;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+body.leaving #leave img{opacity:1;transform:none}
+body.leaving #leave span{opacity:1}
+body > :not(#leave):not(script){transition:filter .9s ease}
+body.leaving > :not(#leave):not(script){filter:blur(6px)}
+
 .menu-btn,.mobile-bar{display:none!important}
 header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:absolute;top:100%;left:16px;right:16px;flex-direction:column;gap:14px!important;padding:20px;border-radius:22px;background:rgba(255,255,255,0.96);box-shadow:0 18px 40px rgba(200,90,130,0.2)}
 #appNote{margin:0;font-size:14px;color:#5A4652}
@@ -144,8 +167,8 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
       <span class="w1" style="font-family: 'Dancing Script', cursive; font-weight: 600; font-size: clamp(38px, 5.5vh, 52px); color: #FFFFFF; -webkit-text-stroke: 5px #E0567E; paint-order: stroke fill; text-shadow: 0 4px 12px rgba(224,86,126,0.3); line-height: 1">Yumi</span>
       <span class="paw" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#E0567E" stroke-width="1.6"><ellipse cx="12" cy="15.5" rx="5" ry="4.2"></ellipse><circle cx="5.5" cy="10" r="2.2"></circle><circle cx="9.5" cy="6" r="2.3"></circle><circle cx="14.5" cy="6" r="2.3"></circle><circle cx="18.5" cy="10" r="2.2"></circle></svg></span>
     </div>
-    <h1 style="margin: 0; font-family: 'Nanum Brush Script', cursive; font-weight: 400; color: #FFFFFF; -webkit-text-stroke: 7px #E0567E; paint-order: stroke fill; text-shadow: 0 6px 18px rgba(224,86,126,0.35); line-height: 0.95; position: relative">
-      <span class="w2" style="display: block; font-size: clamp(64px, 10.5vh, 104px); transform: rotate(-4deg); transform-origin: left center">언제나,</span>
+    <h1 style="margin: 0; font-family: 'Jua', sans-serif; font-weight: 400; color: #FFFFFF; -webkit-text-stroke: 4px #E0567E; paint-order: stroke fill; text-shadow: 0 6px 18px rgba(224,86,126,0.35); line-height: 1.05; position: relative">
+      <span class="w2" style="display: block; font-size: clamp(54px, 8.5vh, 88px); transform: rotate(-4deg); transform-origin: left center">언제나,</span>
       <span style="display: flex; align-items: center; gap: 14px; margin-top: 8px">
         <span class="flower" aria-hidden="true" style="position: relative"><span class="bloom" style="display: inline-block"><svg width="62" height="62" viewBox="0 0 24 24" fill="none" stroke="#E0567E" stroke-width="1.4"><circle cx="12" cy="7" r="4"></circle><circle cx="7" cy="11" r="4"></circle><circle cx="17" cy="11" r="4"></circle><circle cx="9" cy="17" r="4"></circle><circle cx="15" cy="17" r="4"></circle><circle cx="12" cy="12.5" r="1.6" fill="#E0567E"></circle></svg></span>
           <span class="burst" style="left: 24px; top: 20px; --dx: -40px; --dy: -70px; animation-delay: 3.2s"><svg width="14" height="11" viewBox="0 0 18 14"><path d="M9 1C4 1 1 5 1 8c3 0 5 2 8 5 3-3 5-5 8-5 0-3-3-7-8-7z" fill="#F4A3BC"></path></svg></span>
@@ -153,13 +176,13 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
           <span class="burst" style="left: 24px; top: 20px; --dx: -70px; --dy: 30px; animation-delay: 5s"><svg width="16" height="12" viewBox="0 0 18 14"><path d="M9 1C4 1 1 5 1 8c3 0 5 2 8 5 3-3 5-5 8-5 0-3-3-7-8-7z" fill="#E0567E"></path></svg></span>
           <span class="burst" style="left: 24px; top: 20px; --dx: 40px; --dy: 60px; animation-delay: 5.8s"><svg width="12" height="9" viewBox="0 0 18 14"><path d="M9 1C4 1 1 5 1 8c3 0 5 2 8 5 3-3 5-5 8-5 0-3-3-7-8-7z" fill="#FAC8D7"></path></svg></span>
         </span>
-        <span class="w3" style="display: block; font-size: clamp(68px, 11vh, 110px); transform: rotate(-5deg); transform-origin: left center">너의 곁에</span>
+        <span class="w3" style="display: block; font-size: clamp(58px, 9vh, 92px); transform: rotate(-5deg); transform-origin: left center">너의 곁에</span>
       </span>
       <svg class="heart-line" width="330" height="70" viewBox="0 0 330 70" fill="none" aria-hidden="true" style="display: block; height: clamp(40px, 6vh, 70px); width: auto; margin: -10px 0 0 200px">
         <path class="draw" d="M4 60 C 90 52, 190 44, 268 26 C 286 22, 300 10, 292 4 C 284 -1, 276 10, 284 18 C 290 10, 304 6, 306 16 C 308 26, 292 32, 284 18" stroke="#E0567E" stroke-width="3" stroke-linecap="round"></path>
       </svg>
     </h1>
-    <p class="r1" style="align-self: flex-start; margin: 0 0 0 6px; padding: clamp(10px, 1.6vh, 16px) 22px clamp(10px, 1.6vh, 16px) 18px; border-radius: 22px; background: rgba(255,247,250,0.62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 8px 28px rgba(200,90,130,0.12); font-family: 'Gowun Dodum', sans-serif; font-size: clamp(16px, 2.2vh, 22px); line-height: 1.6; color: #2E2129; text-shadow: 0 0 10px rgba(255,255,255,0.85)">일상도, 고민도, 좋은 순간도<br>언제든 이야기해줘.<br>유이가, 그리고 유미가<br>언제나 네 옆에 있을게요.</p>
+    <p class="r1" style="align-self: flex-start; margin: 0 0 0 6px; padding: clamp(10px, 1.6vh, 16px) 22px clamp(10px, 1.6vh, 16px) 18px; border-radius: 40px; background: radial-gradient(ellipse at 45% 50%, rgba(255,247,250,0.5) 0%, rgba(255,247,250,0.28) 55%, rgba(255,247,250,0) 100%); font-family: 'Gowun Dodum', sans-serif; font-size: clamp(16px, 2.2vh, 22px); line-height: 1.6; color: #2E2129; text-shadow: 0 0 2px rgba(255,255,255,0.95), 0 0 10px rgba(255,255,255,0.9)">일상도, 고민도, 좋은 순간도<br>언제든 이야기해줘.<br>유이가, 그리고 유미가<br>언제나 네 옆에 있을게요.</p>
     <div class="r2" style="margin-left: 0">
       <a href="#characters" style="min-height: clamp(50px, 6.5vh, 60px); display: inline-flex; align-items: center; gap: 22px; padding: 0 30px; border-radius: 999px; background: #E0567E; color: #FFFFFF; font-size: 19px; font-weight: 500; box-shadow: 0 14px 30px rgba(224,86,126,0.35)">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="6.5" r="4"></circle><circle cx="6.5" cy="12" r="4"></circle><circle cx="17.5" cy="12" r="4"></circle><circle cx="12" cy="17.5" r="4"></circle></svg>
@@ -217,7 +240,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
         <div style="font-size: 15px; line-height: 1.75; color: #5A4652; margin-top: 10px; text-align: center">채널의 새 메시지를 확인하고 게시글을 써요. Drive에서 파일도 찾아 읽어 줘요.</div>
       </div>
       <div class="glass card-hover" style="position: relative; border-radius: 28px; padding: 132px 26px 30px; border: 1px solid rgba(255,255,255,0.9)">
-        <img src="/assets/sd/yumi-sd-5-09.webp" alt="마이크 앞의 SD 유미" style="position: absolute; top: -44px; left: 50%; margin-left: -80px; width: 160px; height: auto">
+        <img src="/assets/sd/edited-f7b984e3.webp" alt="마이크 앞의 SD 유미" style="position: absolute; top: -44px; left: 50%; margin-left: -80px; width: 160px; height: auto">
         <div style="font-weight: 700; font-size: 19px; color: #3E2F38; text-align: center">음성 대화</div>
         <div style="font-size: 15px; line-height: 1.75; color: #5A4652; margin-top: 10px; text-align: center">누르고 말하기, 자동 음성 감지(VAD), 채팅 모두 돼요. 캐릭터마다 목소리가 달라요.</div>
       </div>
@@ -237,7 +260,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
         <div style="font-size: 15px; line-height: 1.7; color: #5A4652">누르고 말하기·VAD·채팅 어느 쪽이든 좋아요. 화면은 3초마다 함께 살펴봐요.</div>
       </li>
       <li style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; border-radius: 24px; background: #FFFFFF">
-        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; border-radius: 50%; background: #E0567E; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">2</span><img src="/assets/sd/yumi-sd-5-07.webp" alt="" style="width: 76px; height: 76px; object-fit: contain"></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; border-radius: 50%; background: #E0567E; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">2</span><img src="/assets/sd/edited-7297b39e.webp" alt="" style="width: 76px; height: 76px; object-fit: contain"></div>
         <div style="font-weight: 700; font-size: 18px; color: #3E2F38">수다인지, 일인지 알아채요</div>
         <div style="font-size: 15px; line-height: 1.7; color: #5A4652">가벼운 말엔 표정과 대사로, 업무는 메일·일정·채팅 도구로 차근차근 처리해요.</div>
       </li>
@@ -352,8 +375,9 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
 </div>
 <div class="mobile-bar glass" style="position: fixed; z-index: 20; left: 12px; right: 12px; bottom: 16px; padding: 8px 8px 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.95); align-items: center; justify-content: space-between; gap: 8px; box-shadow: 0 12px 30px rgba(200,90,130,0.25)">
   <span style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3E2F38; font-weight: 500"><img src="/assets/sd/yumi-sd-2-16.webp" alt="" style="width: 36px; height: 36px; object-fit: contain">설치 없이 · 웹</span>
-  <a href="#download" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 20px; border-radius: 999px; background: #E0567E; color: #FFFFFF; font-weight: 700; font-size: 14px">지금 만나기</a>
+  <a class="js-app" href="#download" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 20px; border-radius: 999px; background: #E0567E; color: #FFFFFF; font-weight: 700; font-size: 14px">지금 만나기</a>
 </div>
+<div id="leave" aria-hidden="true"><img src="/assets/sd/yumi-sd-2-16.webp" alt=""><span>유이유미에게 가는 중…</span></div>
 <script src="/site.js" defer></script>
 </body>
 </html>

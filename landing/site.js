@@ -45,17 +45,57 @@
     }));
   }
 
-  // Web demo link comes from <meta name="app-url">; until it is set the button stays inert.
+  // Demo buttons lead to the web app (<meta name="app-url">). The page veils over, then leaves.
   const appUrl = ($('meta[name="app-url"]')?.content || '').trim();
   const appLink = $('#appLink');
   const appNote = $('#appNote');
-  if (appLink) {
-    if (appUrl) {
-      document.querySelectorAll('.js-app').forEach((a) => { a.href = appUrl; });
-      if (appNote) appNote.hidden = true;
-    } else {
-      appLink.setAttribute('aria-disabled', 'true');
-      appLink.addEventListener('click', (e) => e.preventDefault());
-    }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (appUrl) {
+    if (appNote) appNote.hidden = true;
+    document.querySelectorAll('.js-app').forEach((a) => {
+      a.href = appUrl;
+      a.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        if (reduceMotion) { window.location.href = appUrl; return; }
+        document.body.classList.add('leaving');
+        setTimeout(() => { window.location.href = appUrl; }, 1100);
+      });
+    });
+    // Coming back with the browser's back button restores the page from cache; clear the veil.
+    window.addEventListener('pageshow', () => document.body.classList.remove('leaving'));
+  } else if (appLink) {
+    appLink.setAttribute('aria-disabled', 'true');
+    appLink.addEventListener('click', (e) => e.preventDefault());
   }
+
+  // In-page links scroll there smoothly and keep the address bar clean (no #section).
+  const headerOffset = () => ($('header')?.offsetHeight || 0) + 12;
+  const scrollToId = (id, smooth) => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const start = window.scrollY;
+    const y = id === 'top' ? 0 : el.getBoundingClientRect().top + window.scrollY - headerOffset();
+    const top = Math.max(y, 0);
+    window.scrollTo({ top, behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+    // Some embedded or throttled views never animate a smooth scroll; land there anyway.
+    if (smooth) setTimeout(() => { if (Math.abs(window.scrollY - top) > 4 && window.scrollY === start) window.scrollTo(0, top); }, 700);
+    return true;
+  };
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (scrollToId(decodeURIComponent(a.getAttribute('href').slice(1)), true)) e.preventDefault();
+  });
+  // Arriving with a hash (e.g. /#download from a character page): drop it, then scroll there.
+  const dropHash = () => {
+    if (!location.hash) return;
+    const id = decodeURIComponent(location.hash.slice(1));
+    history.replaceState(null, '', location.pathname + location.search);
+    return id;
+  };
+  const arrived = dropHash();
+  if (arrived) window.addEventListener('load', () => scrollToId(arrived, false), { once: true });
+  // A typed or pasted #section on this page: same treatment.
+  window.addEventListener('hashchange', () => { const id = dropHash(); if (id) scrollToId(id, true); });
 })();
