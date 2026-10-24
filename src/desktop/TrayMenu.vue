@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LANG_INFO, LANGS } from '@shared/languages'
 import { toggledMode } from '@/nunchi/mode'
 import { nunchiStatus } from '@/nunchi/scheduler'
+import { settingsStrings } from '@/settings/i18n'
 import { useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, unlockAudio, voiceState } from '@/voice'
 import { assistantWindow, focusWindow } from './windows'
@@ -14,11 +15,9 @@ const settings = useSettings()
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
 
-const MODES: { value: AssistantMode, label: string }[] = [
-  { value: 'active', label: 'Active' },
-  { value: 'quiet', label: 'Quiet' },
-  { value: 'ornamental', label: 'Ornamental' },
-]
+const MODES: AssistantMode[] = ['active', 'quiet', 'ornamental']
+const S = computed(() => settingsStrings(settings.lang))
+const t = computed(() => S.value.tray)
 
 const watching = computed(() => settings.mode === 'active')
 
@@ -67,40 +66,40 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
         <img src="/models/tt2-icon.png" alt="" draggable="false">
         <div>
           <strong>YuiYumi</strong>
-          <span>{{ watching ? `Watching screen - ${nunchiStatus.dwellSec}s on this view` : 'Paused' }}</span>
+          <span>{{ watching ? t.watching(nunchiStatus.dwellSec) : t.paused }}</span>
         </div>
       </div>
       <button type="button" class="tm-row" @click="toggleWatching">
-        <span class="tm-check">{{ watching ? '✓' : '' }}</span>{{ watching ? 'Pause watching' : 'Resume watching' }}
+        <span class="tm-check">{{ watching ? '✓' : '' }}</span>{{ watching ? t.pause : t.resume }}
       </button>
       <button type="button" class="tm-row" @click="assistantWindow.visible = !assistantWindow.visible">
-        <span class="tm-check" />{{ assistantWindow.visible ? 'Hide character' : 'Show character' }}
+        <span class="tm-check" />{{ assistantWindow.visible ? t.hideChar : t.showChar }}
       </button>
       <button type="button" class="tm-row" @click="settings.mode = settings.mode === 'quiet' ? 'active' : 'quiet'">
-        <span class="tm-check">{{ settings.mode === 'quiet' ? '✓' : '' }}</span>Quiet mode
+        <span class="tm-check">{{ settings.mode === 'quiet' ? '✓' : '' }}</span>{{ t.quiet }}
       </button>
       <div class="tm-sep" />
       <label class="tm-field">
-        <span>Mode</span>
+        <span>{{ t.mode }}</span>
         <select v-model="settings.mode">
-          <option v-for="m in MODES" :key="m.value" :value="m.value">{{ m.label }}</option>
+          <option v-for="m in MODES" :key="m" :value="m">{{ S.general.modes[m].title }}</option>
         </select>
       </label>
       <label class="tm-field">
-        <span>Language</span>
+        <span>{{ t.language }}</span>
         <select v-model="settings.lang">
           <option v-for="code in LANGS" :key="code" :value="code">{{ LANG_INFO[code].label }}</option>
         </select>
       </label>
       <button type="button" class="tm-row" @click="settings.sound = !settings.sound; unlockAudio()">
-        <span class="tm-check">{{ settings.sound ? '✓' : '' }}</span>Sound
+        <span class="tm-check">{{ settings.sound ? '✓' : '' }}</span>{{ t.sound }}
       </button>
       <button type="button" class="tm-row" :disabled="voiceState.vadLoading" @click="toggleVad">
-        <span class="tm-check">{{ voiceState.vadEnabled ? '✓' : '' }}</span>Hands-free voice (VAD){{ voiceState.vadLoading ? ' ...' : '' }}
+        <span class="tm-check">{{ voiceState.vadEnabled ? '✓' : '' }}</span>{{ t.vad }}{{ voiceState.vadLoading ? ' ...' : '' }}
       </button>
       <div class="tm-sep" />
-      <button type="button" class="tm-row" @click="openApp('settings')"><span class="tm-check" />Settings...</button>
-      <button type="button" class="tm-row" @click="openApp('dashboard')"><span class="tm-check" />Dashboard...</button>
+      <button type="button" class="tm-row" @click="openApp('settings')"><span class="tm-check" />{{ t.settings }}</button>
+      <button type="button" class="tm-row" @click="openApp('dashboard')"><span class="tm-check" />{{ t.dashboard }}</button>
     </div>
   </div>
 </template>

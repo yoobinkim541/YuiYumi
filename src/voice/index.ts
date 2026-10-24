@@ -26,7 +26,7 @@ export function initVoice(): void {
   if (initialised) return
   initialised = true
   const settings = useSettings()
-  const sttCtx = (): SttContext => ({ lang: settings.lang, sessionId: settings.sessionId })
+  const sttCtx = (): SttContext => ({ lang: settings.speechLang, sessionId: settings.sessionId })
 
   player = new SpeechPlayer()
   const p = player
@@ -47,7 +47,7 @@ export function initVoice(): void {
   bus.on('character:react', ({ line, emotion }) => {
     const text = line?.trim()
     if (!text || !settings.sound) return
-    void p.say({ text: text.slice(0, 500), lang: settings.lang, emotion, character: useCharacterStore().character, preset: settings.voicePreset, sessionId: settings.sessionId })
+    void p.say({ text: text.slice(0, 500), lang: settings.speechLang, emotion, character: useCharacterStore().character, preset: settings.voicePreset, sessionId: settings.sessionId })
   })
 
   // Turning sound off silences the current line immediately.

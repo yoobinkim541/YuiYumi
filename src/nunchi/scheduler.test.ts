@@ -94,11 +94,27 @@ describe('NunchiEngine utterance path', () => {
     const h = harness({ result: { ok: false, aborted: false, code: 'budget', status: 429 } })
     await h.engine.onTranscript('こんにちは', 'ja')
     await h.engine.onTranscript('もしもし', 'ja')
-    expect(h.events).toHaveLength(1)
-    expect(h.events[0]!.payload).toMatchObject({ source: 'fallback' })
+    const lines = () => h.events.filter(e => e.type === 'character:react')
+    expect(lines()).toHaveLength(1)
+    expect(lines()[0]!.payload).toMatchObject({ source: 'fallback' })
     h.advance(31_000)
     await h.engine.onTranscript('もしもし', 'ja')
-    expect(h.events).toHaveLength(2)
+    expect(lines()).toHaveLength(2)
+  })
+
+  it('drops the typing dots when the reply has no line, and moves only on request', async () => {
+    const h = harness({ actions: [{ type: 'move_self', where: 'center' }] })
+    await h.engine.onTranscript('가운데로 와', 'ko')
+    expect(h.events).toEqual([
+      { type: 'thinking', payload: { on: false } },
+      { type: 'assistant:move', payload: { where: 'center' } },
+    ])
+    const quiet = harness({ actions: [] })
+    await quiet.engine.onTranscript('음', 'ko')
+    expect(quiet.events).toEqual([{ type: 'thinking', payload: { on: false } }])
+    const talk = harness({ actions: [REACT] })
+    await talk.engine.onTranscript('안녕', 'ko')
+    expect(talk.events.map(e => e.type)).toEqual(['character:react'])
   })
 
   it('sends recent dialogue without duplicating the utterance', async () => {

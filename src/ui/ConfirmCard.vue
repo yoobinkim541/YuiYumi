@@ -6,6 +6,8 @@ import { LANG_INFO } from '@shared/languages'
 import { useConfirmQueue } from '@/agent/confirm-queue'
 import type { PreviewField } from '@/agent/confirm-queue'
 import { AGENT_STRINGS } from '@/agent/strings'
+import { stage } from '@/desktop/actuator'
+import { desktop, desktopView } from '@/desktop/windows'
 import { useSettings } from '@/stores/settings'
 
 const queue = useConfirmQueue()
@@ -21,8 +23,27 @@ const opLabel = computed(() => {
   return (s.value.ops as Record<string, string>)[c.op] ?? c.op
 })
 
+const outbound = computed(() => card.value?.card.kind === 'write' && card.value.card.grade === 'outbound')
+
+/**
+ * While the agent works in an app window, the card sits over the lower part of that window
+ * (page coordinates from the scaled desktop). Otherwise it keeps its default spot.
+ */
+const CARD_W = 440
+const placement = computed<Record<string, string> | undefined>(() => {
+  const id = stage.target
+  if (!id || card.value?.card.kind !== 'write') return undefined
+  const w = desktop.windows[id]
+  if (!w?.open) return undefined
+  const s = desktopView.scale || 1
+  const cx = desktopView.x + (w.x + w.w / 2) * s
+  const bottom = desktopView.y + (w.y + w.h) * s - 24 * s
+  const left = Math.max(12, Math.min(window.innerWidth - CARD_W - 12, cx - CARD_W / 2))
+  return { left: `${left}px`, top: 'auto', bottom: `${Math.max(12, window.innerHeight - bottom)}px`, width: `${CARD_W}px` }
+})
+
 function display(f: PreviewField): string {
-  if (f.field === 'start' || f.field === 'end') {
+  if (f.field === 'start' || f.field === 'end' || f.field === 'at') {
     const t = Date.parse(f.value)
     if (!Number.isNaN(t)) {
       return new Intl.DateTimeFormat(LANG_INFO[settings.lang].bcp47, {
@@ -44,7 +65,8 @@ function answer(accepted: boolean) {
       v-if="card"
       :key="card.id"
       class="confirm-card"
-      :class="card.card.kind"
+      :class="[card.card.kind, { outbound }]"
+      :style="placement"
       role="dialog"
       aria-live="polite"
       :aria-label="card.card.kind === 'suggestion' ? s.suggestionTitle : s.writeTitle"
@@ -52,26 +74,26 @@ function answer(accepted: boolean) {
     >
       <template v-if="card.card.kind === 'suggestion'">
         <header class="title">{{ s.suggestionTitle }}</header>
-        <p class="request">{{ card.card.request }}</p>
+        <p class="request">{{ card.card.summary || card.card.request }}</p>
       </template>
 
       <template v-else>
-        <header class="title">{{ s.writeTitle }}</header>
+        <header class="title">{{ outbound ? s.outboundTitle : s.writeTitle }}</header>
         <div class="op">{{ opLabel }}</div>
         <dl class="fields">
-          <template v-for="f in card.card.fields" :key="f.field">
+          <template v-for="(f, i) in card.card.fields" :key="`${f.field}-${i}`">
             <dt>{{ s.fields[f.field] }}</dt>
             <dd :class="{ multiline: f.multiline }">{{ display(f) }}</dd>
           </template>
         </dl>
-        <p class="note">{{ s.draftOnlyNote }}</p>
+        <p class="note">{{ outbound ? s.outboundNote : s.writeNote }}</p>
       </template>
 
       <footer class="actions">
         <span v-if="pending" class="pending">+{{ pending }}</span>
         <button type="button" class="decline" @click="answer(false)">{{ s.decline }}</button>
         <button type="button" class="accept" @click="answer(true)">
-          {{ card.card.kind === 'write' ? s.acceptWrite : s.accept }}
+          {{ card.card.kind === 'write' ? (outbound ? s.acceptOutbound : s.acceptWrite) : s.accept }}
         </button>
       </footer>
     </section>
@@ -104,6 +126,7 @@ function answer(accepted: boolean) {
 }
 .confirm-card.write { border-top: 4px solid #e0a43a; }
 .confirm-card.suggestion { border-top: 4px solid #6c8cff; }
+.confirm-card.outbound { border-top-color: #e2456f; }
 
 .title { font-weight: 700; font-size: 16px; }
 .request { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

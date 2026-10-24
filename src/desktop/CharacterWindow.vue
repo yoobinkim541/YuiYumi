@@ -30,6 +30,8 @@ const settings = useSettings()
 const label = computed(() => CHARACTER_MODELS[store.character].label)
 const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 const expanded = ref(false)
+/** Position changes animate (agent choreography, move_self) except while dragging. */
+const dragging = ref(false)
 
 let drag: { px: number, py: number, x: number, y: number } | null = null
 
@@ -41,6 +43,7 @@ function onPointerDown(e: PointerEvent) {
   // window drags from transparent areas or the move button.
   if (!onMove && characterHitTest(e.clientX, e.clientY) !== null) return
   drag = { px: e.clientX, py: e.clientY, x: assistantWindow.x, y: assistantWindow.y }
+  dragging.value = true
   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 
@@ -52,6 +55,7 @@ function onPointerMove(e: PointerEvent) {
 
 function onPointerUp() {
   drag = null
+  dragging.value = false
 }
 
 function onLeave() {
@@ -96,7 +100,7 @@ function hide() {
   <div
     v-show="assistantWindow.visible"
     class="cw"
-    :class="{ pinned: assistantWindow.pinned, expanded }"
+    :class="{ pinned: assistantWindow.pinned, expanded, dragging }"
     :data-dock-h="dockH"
     :data-dock-v="dockV"
     data-no-capture
@@ -191,7 +195,9 @@ function hide() {
   z-index: 9;
   touch-action: none;
   cursor: grab;
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1), top 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.cw.dragging { transition: none; }
 .cw.pinned { z-index: 90000; }
 .cw:active { cursor: grabbing; }
 .cw-layer { position: absolute; inset: 0; }

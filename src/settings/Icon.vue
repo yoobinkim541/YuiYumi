@@ -27,6 +27,7 @@ const PATHS: Record<string, string> = {
   'trash': '<path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2"/>',
   'volume': '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>',
   'check': '<path d="M20 6 9 17l-5-5"/>',
+  'shield': '<path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.4 7.5 9.5 4.4-1.1 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
   'clock': '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   'chevron-left': '<path d="m15 18-6-6 6-6"/>',
   'chevron-up': '<path d="m18 15-6-6-6 6"/>',

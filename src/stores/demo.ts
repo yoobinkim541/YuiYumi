@@ -15,6 +15,28 @@ export interface Mail {
   lang: string
   read: boolean
   spam?: boolean
+  /** Moved to Trash (reversible). */
+  trashed?: boolean
+}
+
+/** A message sent from the virtual PC (by the user or by the assistant on the user's behalf). */
+export interface SentMail {
+  id: string
+  replyToId?: string
+  to: string
+  subject: string
+  body: string
+  sentAt: string
+  viaAssistant?: boolean
+}
+
+export interface Reminder {
+  id: string
+  title: string
+  /** ISO 8601 date-time when it fires. */
+  at: string
+  createdAt: string
+  status: 'pending' | 'fired' | 'cancelled'
 }
 
 export interface MailDraft {
@@ -46,6 +68,8 @@ export interface ChatMessage {
   author: string
   text: string
   at: string
+  /** Posted by the assistant on the user's behalf (shows a small marker). */
+  viaAssistant?: boolean
 }
 
 export interface DriveFile {
@@ -67,6 +91,10 @@ export const useDemo = defineStore('demo', () => {
   const discordChannels = ref<ChatChannel[]>([])
   const discordMessages = ref<ChatMessage[]>([])
   const files = ref<DriveFile[]>([])
+  const sent = ref<SentMail[]>([])
+  /** Calendar events deleted in this session (reversible). */
+  const deletedEvents = ref<CalendarEvent[]>([])
+  const reminders = ref<Reminder[]>([])
 
   function seed(data: Partial<{
     mails: Mail[], events: CalendarEvent[], slackChannels: ChatChannel[], slackMessages: ChatMessage[],
@@ -93,12 +121,40 @@ export const useDemo = defineStore('demo', () => {
     return ev
   }
 
+  const uid = (p: string) => `${p}-${crypto.randomUUID().slice(0, 8)}`
+
+  function addSent(m: Omit<SentMail, 'id' | 'sentAt'>): SentMail {
+    const item = { ...m, id: uid('sent'), sentAt: new Date().toISOString() }
+    sent.value.push(item)
+    return item
+  }
+
+  function addReminder(r: { title: string, at: string }): Reminder {
+    const item: Reminder = { ...r, id: uid('rem'), createdAt: new Date().toISOString(), status: 'pending' }
+    reminders.value.push(item)
+    return item
+  }
+
+  /** The mailbox owner's display name ("Kim Jiwoo <...>" -> "Kim Jiwoo"); follows the demo language. */
+  function userName(): string {
+    const to = mails.value[0]?.to ?? ''
+    return to.replace(/\s*<[^>]*>\s*/, '').trim() || 'Me'
+  }
+
+  function postChat(service: 'slack' | 'discord', channelId: string, text: string): ChatMessage {
+    const msg: ChatMessage = { id: uid(service === 'slack' ? 'slm-me' : 'dcm-me'), channelId, author: userName(), text, at: new Date().toISOString(), viaAssistant: true }
+    if (service === 'slack') slackMessages.value.push(msg)
+    else discordMessages.value.push(msg)
+    return msg
+  }
+
   function setSlackDraft(channelId: string, text: string) {
     slackDrafts.value = { ...slackDrafts.value, [channelId]: text }
   }
 
   return {
     mails, drafts, events, slackChannels, slackMessages, slackDrafts, discordChannels, discordMessages, files,
-    seed, addDraft, addEvent, setSlackDraft,
+    sent, deletedEvents, reminders,
+    seed, addDraft, addEvent, setSlackDraft, addSent, addReminder, userName, postChat,
   }
 })

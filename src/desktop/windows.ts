@@ -66,11 +66,12 @@ export const CHARACTER_W = 400
 export const PILL_ZONE = 72
 /** Avatar area plus the pill zone. */
 export const CHARACTER_H = 540 + PILL_ZONE
+/** Starts centered on the desktop (between the menu bar and the Dock). */
 export const assistantWindow = reactive({
   visible: true,
   pinned: true,
-  x: DESKTOP_W - CHARACTER_W - 36,
-  y: DESKTOP_H - CHARACTER_H - 120,
+  x: (DESKTOP_W - CHARACTER_W) / 2,
+  y: MENUBAR_H + (DESKTOP_H - MENUBAR_H - DOCK_H - CHARACTER_H) / 2,
 })
 
 export function moveAssistantWindow(x: number, y: number): void {
@@ -79,7 +80,7 @@ export function moveAssistantWindow(x: number, y: number): void {
 }
 
 /** Current CSS scale of the desktop on the page (used to convert pointer deltas). */
-export const desktopView = reactive({ scale: 1 })
+export const desktopView = reactive({ scale: 1, /** Page offset of the scaled desktop. */ x: 0, y: 0 })
 
 export function focusWindow(id: AppId): void {
   const w = desktop.windows[id]

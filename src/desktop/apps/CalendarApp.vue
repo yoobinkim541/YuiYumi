@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useDemo, type CalendarEvent } from '@/stores/demo'
+import { stage } from '../actuator'
 import { hm } from '../format'
 import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
@@ -11,11 +12,20 @@ const HOUR_PX = 60
 
 const demo = useDemo()
 const { t, locale } = useDesktopStrings()
-const day = new Date()
+/** Shown day: today unless the assistant (or the ‹ › buttons) moved it. */
+const day = computed(() => (stage.calendarDay ? new Date(stage.calendarDay) : new Date()))
+const isToday = computed(() => day.value.toDateString() === new Date().toDateString())
+function shiftDay(n: number) {
+  const d = new Date(day.value)
+  d.setDate(d.getDate() + n)
+  stage.calendarDay = d.toDateString() === new Date().toDateString() ? null : d.toISOString()
+}
+/** Event the assistant just created (highlighted briefly). */
+const freshId = computed(() => (stage.reveal?.op === 'calendar_create_event' ? stage.reveal.data.eventId as string | undefined : undefined))
 
 const todays = computed(() =>
   demo.events
-    .filter(e => new Date(e.start).toDateString() === day.toDateString())
+    .filter(e => new Date(e.start).toDateString() === day.value.toDateString())
     .sort((a, b) => a.start.localeCompare(b.start)))
 
 interface Placed { ev: CalendarEvent, top: number, height: number, col: number, cols: number, conflict: boolean }
@@ -50,11 +60,15 @@ const placed = computed<Placed[]>(() => {
 
 const conflicts = computed(() => placed.value.filter(p => p.conflict))
 const hours = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i)
-const nowTop = computed(() => (day.getHours() + day.getMinutes() / 60 - START_H) * HOUR_PX)
+const nowTop = computed(() => {
+  if (!isToday.value) return -1
+  const n = new Date()
+  return (n.getHours() + n.getMinutes() / 60 - START_H) * HOUR_PX
+})
 
-const dayTitle = computed(() => day.toLocaleDateString(locale.value, { year: 'numeric', month: 'long', day: 'numeric' }))
-const weekday = computed(() => day.toLocaleDateString(locale.value, { weekday: 'long' }))
-const nowLabel = computed(() => day.toLocaleTimeString(locale.value, { hour: 'numeric', minute: '2-digit' }))
+const dayTitle = computed(() => day.value.toLocaleDateString(locale.value, { year: 'numeric', month: 'long', day: 'numeric' }))
+const weekday = computed(() => day.value.toLocaleDateString(locale.value, { weekday: 'long' }))
+const nowLabel = computed(() => new Date().toLocaleTimeString(locale.value, { hour: 'numeric', minute: '2-digit' }))
 function hourLabel(h: number) {
   return new Date(2000, 0, 1, h).toLocaleTimeString(locale.value, { hour: 'numeric' })
 }
@@ -65,7 +79,10 @@ function evColor(ev: CalendarEvent) {
   for (const c of ev.id) h = (h * 31 + c.charCodeAt(0)) >>> 0
   return CAL_COLORS[h % CAL_COLORS.length]!
 }
-watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today (${c.length} events overlap)` : 'Calendar — Today'), { immediate: true })
+watch([conflicts, isToday, dayTitle], ([c, today, title]) => {
+  const label = today ? 'Today' : title
+  setWindowTitle('calendar', c.length ? `Calendar — ${label} (${c.length} events overlap)` : `Calendar — ${label}`)
+}, { immediate: true })
 </script>
 
 <template>
@@ -86,7 +103,7 @@ watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today 
         <div class="cal-weekday">{{ weekday }}</div>
       </div>
       <div class="nav">
-        <span>‹</span><b>{{ t.calendar.today }}</b><span>›</span>
+        <button type="button" @click="shiftDay(-1)">‹</button><button type="button" class="today-btn" :class="{ off: isToday }" @click="stage.calendarDay = null">{{ t.calendar.today }}</button><button type="button" @click="shiftDay(1)">›</button>
       </div>
     </div>
     <div v-if="conflicts.length" class="cal-warn">{{ t.calendar.overlapAt(hm(conflicts[0]!.ev.start)) }}</div>
@@ -103,7 +120,7 @@ watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today 
           v-for="p in placed"
           :key="p.ev.id"
           class="event"
-          :class="{ conflict: p.conflict }"
+          :class="{ conflict: p.conflict, fresh: p.ev.id === freshId }"
           :style="{
             '--c': evColor(p.ev),
             top: `${p.top}px`,
@@ -155,4 +172,8 @@ watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today 
 .ev-title { font-size: 16px; font-weight: 600; line-height: 1.25; }
 .ev-meta { font-size: 13px; opacity: 0.85; }
 .badge { position: absolute; right: 6px; top: 5px; background: #ff3b30; color: #fff; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.nav button { border: none; background: none; font: inherit; cursor: pointer; width: 26px; text-align: center; font-size: 22px; color: #5c5c62; }
+.nav .today-btn { width: auto; font-size: 15px; color: inherit; font-weight: 500; padding: 2px 10px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.12); }
+.event.fresh { box-shadow: 0 0 0 3px rgba(226, 69, 111, 0.55); animation: fresh-pop 0.6s ease-out; }
+@keyframes fresh-pop { from { transform: scale(0.96); opacity: 0.4; } to { transform: none; opacity: 1; } }
 </style>

@@ -7,6 +7,7 @@ import { computed, ref, watch } from 'vue'
 import type { Persona } from '@shared/contracts'
 import type { CharacterId } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
+import { useSettings } from '@/stores/settings'
 
 export interface PersonaCard {
   id: string
@@ -65,12 +66,19 @@ function load(): Saved {
 }
 
 /** Folds a card into the wire persona (bounded by PersonaSchema limits). */
-export function cardToPersona(c: PersonaCard): Persona {
+/** Persona line telling the character what to call the user. */
+export function userNameLine(name: string): string {
+  const n = name.replace(/[\r\n<>]/g, ' ').trim()
+  return n ? `User: The user wants to be called "${n}". Address them by that name naturally (with the honorific or form usual in the reply language), not in every line.` : ''
+}
+
+export function cardToPersona(c: PersonaCard, userName = ''): Persona {
   const parts = [
     c.description.trim() && `Description: ${c.description.trim()}`,
     c.personality.trim() && `Personality: ${c.personality.trim()}`,
     c.scenario.trim() && `Scenario: ${c.scenario.trim()}`,
     c.systemPrompt.trim() && `Instructions: ${c.systemPrompt.trim()}`,
+    userNameLine(userName),
   ].filter(Boolean) as string[]
   const style = c.speakingStyle.trim().slice(0, 400)
   return {
@@ -85,6 +93,7 @@ export const usePersona = defineStore('persona', () => {
   const cards = ref<PersonaCard[]>(saved.cards)
   const selected = ref<Partial<Record<CharacterId, string>>>(saved.selected)
   const character = useCharacterStore()
+  const settings = useSettings()
 
   watch([cards, selected], () => {
     try { localStorage.setItem(KEY, JSON.stringify({ cards: cards.value, selected: selected.value })) }
@@ -97,7 +106,7 @@ export const usePersona = defineStore('persona', () => {
       ?? cards.value.find(c => c.id === DEFAULT_CARDS[character.character].id)
       ?? DEFAULT_CARDS[character.character]
   })
-  const activePersona = computed<Persona>(() => cardToPersona(activeCard.value))
+  const activePersona = computed<Persona>(() => cardToPersona(activeCard.value, settings.userName))
 
   function select(id: string) {
     if (cards.value.some(c => c.id === id)) selected.value = { ...selected.value, [character.character]: id }

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Icon from '@/settings/Icon.vue'
+import { settingsStrings } from '@/settings/i18n'
+import { useSettings } from '@/stores/settings'
 import { closeWindow, desktop, desktopView, focusWindow, moveWindow, type AppId } from './windows'
 
 // `unified`: the app draws its own toolbar (macOS unified title bar). The traffic lights
@@ -9,6 +11,14 @@ const props = defineProps<{ id: AppId, accent?: string, noCapture?: boolean, uni
 
 const w = computed(() => desktop.windows[props.id])
 const focused = computed(() => desktop.focused === props.id)
+const settings = useSettings()
+/** Assistant windows show a localized "YuiYumi <page>" title. */
+const chipTitle = computed(() => {
+  const t = settingsStrings(settings.lang)
+  if (props.id === 'settings') return `YuiYumi ${t.settings}`
+  if (props.id === 'dashboard') return `YuiYumi ${t.dash.title}`
+  return w.value.title
+})
 
 let drag: { px: number, py: number, x: number, y: number } | null = null
 
@@ -62,7 +72,7 @@ function onTitlePointerUp() {
       <!-- Assistant windows use the companion's title bar (adapted from AIRI (MIT)): small icon and title, left-aligned. -->
       <div v-if="noCapture" class="wf-chip">
         <Icon :name="id === 'dashboard' ? 'dashboard' : 'settings'" :size="16" />
-        <span>{{ w.title }}</span>
+        <span>{{ chipTitle }}</span>
       </div>
       <div v-else-if="!unified" class="wf-text">{{ w.title }}</div>
     </header>

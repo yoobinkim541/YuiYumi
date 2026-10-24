@@ -172,6 +172,8 @@ function mailMenus(ctx: MenuContext, t: DesktopStrings): MenuDef[] {
       item(t.mail.inbox, 'mail:folder:inbox', { shortcut: sc('1'), checked: mail.folder === 'inbox' }),
       item(t.mail.drafts, 'mail:folder:drafts', { shortcut: sc('2'), checked: mail.folder === 'drafts' }),
       item(t.mail.junk, 'mail:folder:spam', { shortcut: sc('3'), checked: mail.folder === 'spam' }),
+      item(t.mail.sent, 'mail:folder:sent', { shortcut: sc('4'), checked: mail.folder === 'sent' }),
+      item(t.trash, 'mail:folder:trash', { shortcut: sc('5'), checked: mail.folder === 'trash' }),
     ] },
     { id: 'message', title: m.message, entries: [
       item(m.reply, mail.canReply ? 'mail:reply' : undefined, { shortcut: sc('R') }),
@@ -257,6 +259,6 @@ export function shortcutAction(e: KeyLike, ctx: { app: MenuApp, editable: boolea
   if (k === 'n') return ctx.app === 'mail' ? 'mail:new' : null
   if (k === 'w') return ctx.hasFocusedWindow ? 'win:close' : null
   if (k === 'm') return ctx.hasFocusedWindow ? 'win:minimize' : null
-  if (ctx.app === 'mail' && (k === '1' || k === '2' || k === '3')) return `mail:folder:${(['inbox', 'drafts', 'spam'] as const)[Number(k) - 1]}`
+  if (ctx.app === 'mail' && /^[1-5]$/.test(k)) return `mail:folder:${(['inbox', 'drafts', 'spam', 'sent', 'trash'] as const)[Number(k) - 1]}`
   return null
 }

@@ -1,20 +1,21 @@
 // Browser-side agent loop. The server does one model call per /api/agent request; this
-// loop runs the tools, asks for confirmation before any write, and feeds results back.
+// loop runs the tools, asks for confirmation as the permission level requires, and feeds
+// results back.
 // Pure over its dependencies so it can be tested with a fake fetch.
 
-import { getOpSpec, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorOpName, type DelegateOrigin, type Emotion, type Persona } from '@shared/contracts'
+import { getOpSpec, requiresConfirmation, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorGrade, type ConnectorOpName, type DelegateOrigin, type Emotion, type PermissionLevel, type Persona } from '@shared/contracts'
 import type { Lang } from '@shared/languages'
 import type { BusEvents } from '@/core/bus'
 import type { ToolOutcome } from '@/connectors/registry'
 import type { ConfirmCardInput } from './confirm-queue'
-import { buildWritePreview } from './preview'
+import { buildWritePreview, type PreviewLookup } from './preview'
 import { AGENT_STRINGS } from './strings'
 import { apiUrl } from '@/core/api'
 
 export const MAX_STEPS = 8
 export const SUGGESTION_TIMEOUT_MS = 45_000
 const MAX_TOOL_RESULT_CHARS = 12_000
-export const DECLINED_RESULT = 'The user declined; nothing was saved.'
+export const DECLINED_RESULT = 'The user declined; nothing was saved or sent.'
 
 // ---------------------------------------------------------------------------
 // Transport
@@ -46,6 +47,15 @@ export function createStepClient(fetchImpl: typeof fetch = (...a) => fetch(...a)
 
 type Emit = <K extends keyof BusEvents>(type: K, payload: BusEvents[K]) => void
 
+/**
+ * Shows tool work on the virtual desktop (focus the app, slide the avatar aside, type into
+ * the composer, reveal the result). Optional; every hook may be a no-op.
+ */
+export interface Actuator {
+  before: (op: ConnectorOpName, input: Record<string, unknown>, grade: ConnectorGrade) => Promise<void>
+  after: (op: ConnectorOpName, input: Record<string, unknown>, outcome: ToolOutcome | null) => Promise<void> | void
+}
+
 export interface AgentDeps {
   step: (req: AgentStepRequest) => Promise<AgentStepResponse>
   runTool: (name: string, input: unknown) => Promise<ToolOutcome>
@@ -56,6 +66,11 @@ export interface AgentDeps {
   /** Active character card, sent with every step. */
   persona?: () => Persona | undefined
   channelName?: (channelId: string) => string | undefined
+  /** Id lookups for the confirm card preview (mail subject, draft, event). */
+  preview?: Omit<PreviewLookup, 'channelName'>
+  /** Permission level; decides which grades need a confirm card. Defaults to manual. */
+  permission?: () => PermissionLevel
+  actuator?: Actuator
   now?: () => Date
   maxSteps?: number
 }
@@ -93,7 +108,7 @@ export function buildUserContent(request: string, origin: DelegateOrigin, lang: 
   try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local' } catch { /* keep default */ }
   const how = origin === 'screen'
     ? 'You offered this based on what is on the user\'s screen, and the user accepted.'
-    : 'The user asked for this by voice.'
+    : 'The user asked for this directly (voice or typed chat).'
   return `${request}\n\n<context>\nNow: ${localIso(now)} (${weekday}, ${tz})\nUser language: ${lang}\n${how}\n</context>`
 }
 
@@ -132,19 +147,33 @@ function toolResult(id: string, outcome: ToolOutcome): ToolResultBlock {
   return { type: 'tool_result', tool_use_id: id, content: s }
 }
 
+async function act(deps: AgentDeps, fn: (a: Actuator) => Promise<void> | void): Promise<void> {
+  if (!deps.actuator) return
+  try { await fn(deps.actuator) } catch (e) { console.warn('[agent] actuator', e) }
+}
+
 async function runToolUse(tu: ToolUseBlock, deps: AgentDeps): Promise<ToolResultBlock> {
   const spec = getOpSpec(tu.name)
   if (!spec) return toolResult(tu.id, { ok: false, error: `Unknown tool "${tu.name}".` })
-  if (spec.grade === 'read') return toolResult(tu.id, await deps.runTool(spec.name, tu.input))
-
-  // Write: always behind a confirm card. Validate first so the card shows real values.
+  const op = spec.name as ConnectorOpName
   const parsed = spec.input.safeParse(tu.input ?? {})
   if (!parsed.success) return toolResult(tu.id, { ok: false, error: `Invalid input for ${spec.name}: ${parsed.error.message}` })
-  const fields = buildWritePreview(spec.name as ConnectorOpName, parsed.data as Record<string, unknown>, deps.channelName)
-  const accepted = await deps.confirm({ kind: 'write', op: spec.name as ConnectorOpName, fields })
-  deps.emit('character:node', { node: 'working' })
-  if (!accepted) return { type: 'tool_result', tool_use_id: tu.id, content: DECLINED_RESULT, is_error: false }
-  return toolResult(tu.id, await deps.runTool(spec.name, parsed.data))
+  const input = parsed.data as Record<string, unknown>
+
+  await act(deps, a => a.before(op, input, spec.grade))
+  if (requiresConfirmation(spec.grade, deps.permission?.() ?? 'manual')) {
+    // Validated values go on the card, so the user approves exactly what will run.
+    const fields = buildWritePreview(op, input, { ...deps.preview, channelName: deps.channelName })
+    const accepted = await deps.confirm({ kind: 'write', op, grade: spec.grade === 'outbound' ? 'outbound' : 'write', fields })
+    deps.emit('character:node', { node: 'working' })
+    if (!accepted) {
+      await act(deps, a => a.after(op, input, null))
+      return { type: 'tool_result', tool_use_id: tu.id, content: DECLINED_RESULT, is_error: false }
+    }
+  }
+  const outcome = await deps.runTool(spec.name, input)
+  await act(deps, a => a.after(op, input, outcome))
+  return toolResult(tu.id, outcome)
 }
 
 export async function runAgentTask(request: string, origin: DelegateOrigin, deps: AgentDeps): Promise<AgentResult> {
@@ -180,7 +209,7 @@ function speak(deps: AgentDeps, text: string, emotion: Emotion, source: 'agent' 
 
 export async function handleDelegate(payload: BusEvents['agent:delegate'], deps: AgentDeps): Promise<AgentResult | null> {
   if (payload.origin === 'screen') {
-    const accepted = await deps.confirm({ kind: 'suggestion', request: payload.request, timeoutMs: SUGGESTION_TIMEOUT_MS })
+    const accepted = await deps.confirm({ kind: 'suggestion', request: payload.request, summary: payload.summary, timeoutMs: SUGGESTION_TIMEOUT_MS })
     if (!accepted) {
       deps.emit('character:node', { node: 'idle' })
       deps.emit('character:react', { emotion: 'neutral', source: 'agent' })

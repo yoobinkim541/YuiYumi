@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // Pill-shaped control panel under the avatar. It also hides the edge where the model
 // is cut below the waist. Pictogram buttons: talk (hold), VAD, screen watching, sound,
-// settings.
-import { computed } from 'vue'
+// settings, and a keyboard button that opens a small text chat input above the pill.
+import { computed, nextTick, ref } from 'vue'
+import { bus } from '@/core/bus'
 import { focusWindow } from '@/desktop/windows'
 import { formatShortcut, isMacPlatform } from '@/settings/shortcut'
 import { useSettings } from '@/stores/settings'
@@ -14,11 +15,11 @@ const character = useCharacterStore()
 const watching = computed(() => settings.mode === 'active')
 
 const LABELS = {
-  'ko': { talk: '누르고 말하기', vad: 'VAD (자동 음성 감지)', watch: '화면 보기', sound: '소리', settings: '설정' },
-  'ja': { talk: '押して話す', vad: 'VAD（音声自動検出）', watch: '画面を見る', sound: 'サウンド', settings: '設定' },
-  'en': { talk: 'Hold to talk', vad: 'VAD (voice detection)', watch: 'Watch screen', sound: 'Sound', settings: 'Settings' },
-  'zh-Hans': { talk: '按住说话', vad: 'VAD（语音检测）', watch: '查看屏幕', sound: '声音', settings: '设置' },
-  'zh-Hant': { talk: '按住說話', vad: 'VAD（語音偵測）', watch: '查看螢幕', sound: '聲音', settings: '設定' },
+  'ko': { talk: '누르고 말하기', vad: 'VAD (자동 음성 감지)', watch: '화면 보기', sound: '소리', settings: '설정', chat: '채팅으로 말하기', placeholder: '메시지 입력 후 Enter (Esc 닫기)' },
+  'ja': { talk: '押して話す', vad: 'VAD（音声自動検出）', watch: '画面を見る', sound: 'サウンド', settings: '設定', chat: 'チャットで話す', placeholder: '入力して Enter（Esc で閉じる）' },
+  'en': { talk: 'Hold to talk', vad: 'VAD (voice detection)', watch: 'Watch screen', sound: 'Sound', settings: 'Settings', chat: 'Type a message', placeholder: 'Type and press Enter (Esc to close)' },
+  'zh-Hans': { talk: '按住说话', vad: 'VAD（语音检测）', watch: '查看屏幕', sound: '声音', settings: '设置', chat: '文字聊天', placeholder: '输入后按 Enter（Esc 关闭）' },
+  'zh-Hant': { talk: '按住說話', vad: 'VAD（語音偵測）', watch: '查看螢幕', sound: '聲音', settings: '設定', chat: '文字聊天', placeholder: '輸入後按 Enter（Esc 關閉）' },
 } as const
 const L = computed(() => LABELS[settings.lang] ?? LABELS.en)
 const onOff = (on: boolean) => (on ? ' · ON' : ' · OFF')
@@ -44,6 +45,31 @@ function toggleWatching() {
 function toggleSound() {
   unlockAudio()
   settings.sound = !settings.sound
+}
+
+const chatOpen = ref(false)
+const chatText = ref('')
+const chatInput = ref<HTMLInputElement | null>(null)
+
+function toggleChat() {
+  unlockAudio()
+  chatOpen.value = !chatOpen.value
+  if (chatOpen.value) void nextTick(() => chatInput.value?.focus())
+}
+
+/** A typed message takes the same path as a spoken one (and wakes quiet mode the same way). */
+function sendChat() {
+  const text = chatText.value.trim()
+  if (!text) return
+  chatText.value = ''
+  bus.emit('thinking', { on: true })
+  bus.emit('voice:transcript', { text, confidence: 1, lang: settings.lang, source: 'chat' })
+}
+
+function onChatKey(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return
+  if (e.key === 'Enter') { e.preventDefault(); sendChat() }
+  else if (e.key === 'Escape') { e.preventDefault(); chatOpen.value = false }
 }
 </script>
 
@@ -95,10 +121,30 @@ function toggleSound() {
       <svg v-if="settings.sound" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></svg>
       <svg v-else viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path d="M16 10l4 4M20 10l-4 4" /></svg>
     </button>
+    <button type="button" class="pb chat-btn" :class="{ on: chatOpen }" :data-tip="L.chat" :aria-label="L.chat" :aria-pressed="chatOpen" @click="toggleChat">
+      <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M7.5 14h9" /></svg>
+    </button>
     <button type="button" class="pb" :data-tip="L.settings" :aria-label="L.settings" @click="focusWindow('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>
     </button>
     <span class="status" :data-status="status" />
+    <form v-if="chatOpen" class="chat" @submit.prevent="sendChat">
+      <input
+        ref="chatInput"
+        v-model="chatText"
+        class="chat-input"
+        type="text"
+        :placeholder="L.placeholder"
+        :lang="settings.lang"
+        maxlength="500"
+        spellcheck="false"
+        autocomplete="off"
+        @keydown="onChatKey"
+      >
+      <button type="submit" class="chat-send" :disabled="!chatText.trim()" aria-label="Send">
+        <svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2.5-6.5z" /></svg>
+      </button>
+    </form>
   </div>
 </template>
 
@@ -170,6 +216,42 @@ function toggleSound() {
 }
 .pb[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
 .pb svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.chat {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 30px rgba(40, 24, 70, 0.22), 0 1px 3px rgba(40, 24, 70, 0.12);
+}
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: 500 16px/1.4 system-ui, -apple-system, sans-serif;
+  color: #2b2433;
+}
+.chat-send {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #e2456f;
+  color: #fff;
+  cursor: pointer;
+}
+.chat-send:disabled { background: #d9d3e0; cursor: default; }
+.chat-send svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
 .status {
   position: absolute;
   top: 7px;

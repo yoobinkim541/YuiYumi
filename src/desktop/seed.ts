@@ -93,6 +93,7 @@ export interface SessionState {
   mails: Mail[]
   events: CalendarEvent[]
   slackMessages: ChatMessage[]
+  discordMessages?: ChatMessage[]
 }
 
 /**
@@ -103,8 +104,11 @@ export interface SessionState {
 export function reseedDemoData(seedTime: Date, lang: Lang, prev: SessionState): DemoData {
   const next = buildDemoData(seedTime, lang)
   const sc = scenarioTexts(lang)
-  const readById = new Map(prev.mails.map(m => [m.id, m.read]))
-  next.mails = next.mails.map(m => (readById.has(m.id) ? { ...m, read: readById.get(m.id)! } : m))
+  const prevById = new Map(prev.mails.map(m => [m.id, m]))
+  next.mails = next.mails.map((m) => {
+    const p = prevById.get(m.id)
+    return p ? { ...m, read: p.read, ...(p.trashed ? { trashed: true } : {}) } : m
+  })
   const seededMailIds = new Set(next.mails.map(m => m.id))
   for (const m of prev.mails) {
     if (seededMailIds.has(m.id)) continue
@@ -119,5 +123,7 @@ export function reseedDemoData(seedTime: Date, lang: Lang, prev: SessionState): 
     if (seededSlackIds.has(m.id)) continue
     next.slackMessages.push(m.id.startsWith('slm-live-') ? { ...m, author: sc.slack.author, text: sc.slack.text } : m)
   }
+  const seededDiscordIds = new Set(next.discordMessages.map(m => m.id))
+  next.discordMessages.push(...(prev.discordMessages ?? []).filter(m => !seededDiscordIds.has(m.id)))
   return next
 }

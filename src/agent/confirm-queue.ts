@@ -5,18 +5,19 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { ConnectorOpName } from '@shared/contracts'
 import { bus } from '@/core/bus'
+import type { PreviewFieldKey } from './strings'
 
 export interface PreviewField {
   /** Key into AGENT_STRINGS.fields. */
-  field: 'to' | 'subject' | 'body' | 'title' | 'start' | 'end' | 'channel' | 'text'
+  field: PreviewFieldKey
   value: string
   /** Long text (mail body, message): rendered as a scrollable block. */
   multiline?: boolean
 }
 
 export type ConfirmCardInput =
-  | { kind: 'suggestion', request: string, /** Auto-decline after this many ms. */ timeoutMs?: number }
-  | { kind: 'write', op: ConnectorOpName, fields: PreviewField[] }
+  | { kind: 'suggestion', request: string, /** Localized summary shown instead of the English request. */ summary?: string, /** Auto-decline after this many ms. */ timeoutMs?: number }
+  | { kind: 'write', op: ConnectorOpName, /** outbound: leaves the user (send/post). */ grade?: 'write' | 'outbound', fields: PreviewField[] }
 
 export interface QueuedCard { id: number, card: ConfirmCardInput }
 

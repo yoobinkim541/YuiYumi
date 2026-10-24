@@ -1,6 +1,6 @@
 // Typed in-page event bus. Tracks talk to each other only through these events.
 
-import type { DelegateOrigin, Emotion, Transcript } from '@shared/contracts'
+import type { DelegateOrigin, Emotion, MoveTarget, Transcript } from '@shared/contracts'
 import type { CharacterNode, MouthPose } from './types'
 
 export interface BusEvents {
@@ -15,13 +15,17 @@ export interface BusEvents {
 
   'voice:speech-start': { source: 'vad' | 'ptt' }
   'voice:speech-end': { source: 'vad' | 'ptt' }
-  'voice:transcript': Transcript & { source: 'vad' | 'ptt' }
+  /** A user utterance: speech (vad/ptt) or a typed chat message (chat). Same handling path. */
+  'voice:transcript': Transcript & { source: 'vad' | 'ptt' | 'chat' }
   'tts:start': { text: string }
   'tts:end': { interrupted: boolean }
 
   /** Observer or user asked for work. Origin decides immediate run vs confirm card. */
-  'agent:delegate': { request: string, origin: DelegateOrigin }
+  'agent:delegate': { request: string, origin: DelegateOrigin, /** Localized one-liner for the suggestion card. */ summary?: string }
   'agent:busy': { busy: boolean }
+
+  /** Move the avatar window (user asked it to step aside, come to the center, ...). */
+  'assistant:move': { where: MoveTarget }
 
   /** Proactive interjection actually shown (counts toward the daily limit). */
   'nunchi:interjected': { at: number }

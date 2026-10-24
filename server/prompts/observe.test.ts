@@ -27,7 +27,7 @@ describe('buildObserveRequest', () => {
     expect(p.max_tokens).toBe(1024)
     expect(p.tool_choice).toEqual({ type: 'auto' })
     expect(p.output_config).toEqual({ effort: 'low' })
-    expect(p.tools?.map(t => ('name' in t ? t.name : ''))).toEqual(['react', 'delegate_task'])
+    expect(p.tools?.map(t => ('name' in t ? t.name : ''))).toEqual(['react', 'delegate_task', 'move_self'])
     const react = p.tools![0] as { input_schema: Record<string, unknown> }
     expect(react.input_schema.type).toBe('object')
     expect(react.input_schema.$schema).toBeUndefined()
@@ -65,6 +65,18 @@ describe('parseObserveActions', () => {
   })
   it('returns no actions for silence', () => {
     expect(parseObserveActions([])).toEqual([])
+  })
+  it('parses move_self and delegate_task summary; rejects unknown move targets', () => {
+    const blocks = [
+      { type: 'tool_use', id: '1', name: 'move_self', input: { where: 'left' } },
+      { type: 'tool_use', id: '2', name: 'delegate_task', input: { request: 'Reply to Jung', summary: '정하은 씨에게 답장 보내기' } },
+    ] as unknown as ContentBlock[]
+    expect(parseObserveActions(blocks)).toEqual([
+      { type: 'move_self', where: 'left' },
+      { type: 'delegate_task', request: 'Reply to Jung', summary: '정하은 씨에게 답장 보내기' },
+    ])
+    const bad = [{ type: 'tool_use', id: '1', name: 'move_self', input: { where: 'upside-down' } }] as unknown as ContentBlock[]
+    expect(parseObserveActions(bad)).toEqual([])
   })
 })
 

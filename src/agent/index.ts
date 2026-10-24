@@ -3,6 +3,7 @@
 import type { DelegateOrigin } from '@shared/contracts'
 import { bus } from '@/core/bus'
 import { runConnector } from '@/connectors/registry'
+import { desktopActuator, resetStage } from '@/desktop/actuator'
 import { useDemo } from '@/stores/demo'
 import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
@@ -25,10 +26,17 @@ export function initAgent(): void {
     runTool: (name, input) => runConnector(name, input, { demo, sessionId: settings.sessionId }),
     confirm: card => confirmQueue.requestConfirm(card),
     emit: (type, payload) => bus.emit(type, payload),
-    lang: () => settings.lang,
+    lang: () => settings.speechLang,
     sessionId: settings.sessionId,
     persona: () => persona.activePersona,
-    channelName: id => demo.slackChannels.find(c => c.id === id)?.name,
+    channelName: id => (demo.slackChannels.find(c => c.id === id) ?? demo.discordChannels.find(c => c.id === id))?.name,
+    preview: {
+      mail: id => demo.mails.find(m => m.id === id),
+      draft: id => demo.drafts.find(d => d.id === id),
+      event: id => demo.events.find(e => e.id === id),
+    },
+    permission: () => settings.permission,
+    actuator: desktopActuator,
   }
 
   let busy = false
@@ -45,8 +53,9 @@ export function initAgent(): void {
       for (const c of confirmQueue.queue) if (c.card.kind === 'suggestion') confirmQueue.answer(c.id, false)
     }
     chain = chain
-      .then(() => handleDelegate({ request, origin: payload.origin }, deps))
+      .then(() => handleDelegate({ request, origin: payload.origin, summary: payload.summary }, deps))
       .catch(e => console.error('[agent]', e))
+      .finally(resetStage)
   })
   bus.on('agent:busy', ({ busy: b }) => { busy = b })
 
@@ -54,6 +63,7 @@ export function initAgent(): void {
   if (import.meta.env.DEV) {
     (window as unknown as Record<string, unknown>).__yuiDelegate =
       (request: string, origin: DelegateOrigin = 'utterance') => bus.emit('agent:delegate', { request, origin })
+    ;(window as unknown as Record<string, unknown>).__yuiBus = bus
   }
 }
 

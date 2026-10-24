@@ -1,6 +1,7 @@
 // Connector registry: one client per CONNECTOR_OPS entry. Mock (demo session store) by
 // default; read ops of a service can go live behind a per-service flag. Live failures fall
-// back to the mock so the demo never stalls (AC-8). There are no send or delete ops (AC-6).
+// back to the mock so the demo never stalls (AC-8). Write and outbound ops always act on the
+// in-page virtual PC; live services stay read-only.
 
 import { getOpSpec, type ConnectorService } from '@shared/contracts'
 import { useDemo } from '@/stores/demo'
@@ -24,6 +25,7 @@ export interface RunOptions {
   sessionId?: string
   live?: Partial<Record<ConnectorService, boolean>>
   fetchImpl?: typeof fetch
+  now?: () => Date
 }
 
 /** Validates the input against the op schema, then runs it. Never throws. */
@@ -47,7 +49,7 @@ export async function runConnector(name: string, rawInput: unknown, opts: RunOpt
   try {
     const demo = opts.demo ?? useDemo()
     const fn = MOCK_OPS[opName] as MockOp<OpName>
-    return { ok: true, data: await fn(demo, parsed.data as never) }
+    return { ok: true, data: await fn(demo, parsed.data as never, opts.now?.() ?? new Date()) }
   } catch (e) {
     if (e instanceof ConnectorError) return { ok: false, error: e.message }
     console.error(`[connectors] ${opName}`, e)

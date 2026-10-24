@@ -4,7 +4,7 @@
 
 import { reactive, shallowReactive } from 'vue'
 
-export type MailFolder = 'inbox' | 'drafts' | 'spam'
+export type MailFolder = 'inbox' | 'drafts' | 'spam' | 'sent' | 'trash'
 
 /** Commands and state an app window publishes for its menus. All members are optional. */
 export interface MailCommands {

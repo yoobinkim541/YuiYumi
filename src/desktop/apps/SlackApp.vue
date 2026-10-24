@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useDemo } from '@/stores/demo'
+import { stage } from '../actuator'
+import { useAssistantMarks } from '../assistant-strings'
 import { colorFor, initials, timeLabel } from '../format'
 import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const demo = useDemo()
-const { locale } = useDesktopStrings()
+const marks = useAssistantMarks()
 const channelId = ref('sl-orbit')
+/** Text the assistant is typing into this app's composer. */
+const agentTyping = computed(() => (stage.typing?.app === 'slack' ? stage.typing : null))
+// Follow the assistant: the channel it types into or just posted to.
+watch(() => agentTyping.value?.channelId, (id) => { if (id) channelId.value = id })
+watch(() => stage.reveal?.seq, () => {
+  const r = stage.reveal
+  if (r?.app === 'slack' && typeof r.input.channelId === 'string') channelId.value = r.input.channelId
+})
+const { locale } = useDesktopStrings()
 
 const channel = computed(() => demo.slackChannels.find(c => c.id === channelId.value) ?? demo.slackChannels[0] ?? null)
 const messages = computed(() =>
@@ -54,10 +65,15 @@ watch(channel, c => setWindowTitle('slack', c ? `Slack — #${c.name} (${c.works
           <div>
             <div><strong>{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at, undefined, locale) }}</span></div>
             <div class="text">{{ m.text }}</div>
+            <div v-if="m.viaAssistant" class="via">{{ marks.via }}</div>
           </div>
         </div>
       </div>
-      <div class="composer" :class="{ has: draft }">
+      <div v-if="agentTyping" class="composer agent">
+        <div class="agent-note">{{ marks.typing }}</div>
+        <div class="agent-text">{{ agentTyping.text }}<i class="caret" /></div>
+      </div>
+      <div v-else class="composer" :class="{ has: draft }">
         <div v-if="draft" class="draft-note">Draft — not sent</div>
         <textarea v-model="draft" :placeholder="`Message #${channel?.name ?? ''}`" spellcheck="false" />
       </div>
@@ -86,4 +102,10 @@ watch(channel, c => setWindowTitle('slack', c ? `Slack — #${c.name} (${c.works
 .composer.has { border-color: #e0a100; box-shadow: 0 0 0 2px #fde68a; }
 .draft-note { background: #fef3c7; color: #92400e; font-size: 15px; font-weight: 700; padding: 4px 12px; }
 .composer textarea { width: 100%; height: 96px; border: none; outline: none; resize: none; padding: 10px 14px; font-family: inherit; font-size: 19px; box-sizing: border-box; }
+.via { font-size: 13px; color: #c2185b; font-weight: 600; margin-top: 2px; }
+.composer.agent { border-color: #e2456f; box-shadow: 0 0 0 2px rgba(226, 69, 111, 0.25); }
+.agent-note { background: #fde7ef; color: #a1134a; font-size: 15px; font-weight: 700; padding: 4px 12px; }
+.agent-text { min-height: 96px; padding: 10px 14px; font-size: 19px; line-height: 1.5; white-space: pre-wrap; box-sizing: border-box; }
+.caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 1px; vertical-align: text-bottom; background: #e2456f; animation: caret-blink 0.9s steps(1) infinite; }
+@keyframes caret-blink { 50% { opacity: 0; } }
 </style>

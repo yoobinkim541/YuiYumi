@@ -37,6 +37,8 @@ onMounted(() => {
   const measure = () => {
     box.value = { w: el.clientWidth || DESKTOP_W, h: el.clientHeight || DESKTOP_H }
     desktopView.scale = fit.value.s
+    desktopView.x = fit.value.x
+    desktopView.y = fit.value.y
   }
   ro = new ResizeObserver(measure)
   ro.observe(el)

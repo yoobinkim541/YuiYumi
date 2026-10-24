@@ -4,7 +4,7 @@
 // card grid and editor, radio cards and field rows. Re-created in plain CSS.
 
 import { computed, onBeforeUnmount, ref } from 'vue'
-import type { ConnectorService } from '@shared/contracts'
+import { PERMISSION_LEVELS, VOICE_PRESETS, type ConnectorService } from '@shared/contracts'
 import { LANG_INFO, LANGS } from '@shared/languages'
 import { CHARACTER_MODELS, type CharacterId } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
@@ -13,32 +13,32 @@ import { nunchiStatus } from '@/nunchi'
 import { NUNCHI_DEFAULTS, nunchiConfig, resetNunchiConfig } from '@/nunchi/config'
 import { POLL_MS } from '@/nunchi/scheduler'
 import { usePersona, type PersonaCard } from '@/stores/persona'
-import { useSettings, type AssistantMode } from '@/stores/settings'
+import { USER_NAME_MAX, useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
 import Icon from './Icon.vue'
+import { useSettingsI18n, type SettingsPageId } from './i18n'
 import { captureShortcut, DEFAULT_PTT, isMacPlatform, shortcutCaps } from './shortcut'
-import type { VoicePreset } from '@shared/contracts'
-
-const VOICE_STYLES: { id: VoicePreset, title: string, desc: string }[] = [
-  { id: 'lively', title: 'Lively (default)', desc: 'Spoken and expressive, about 0.6 s' },
-  { id: 'conversational', title: 'Conversational', desc: 'Most natural, about 3–4 s' },
-  { id: 'fast', title: 'Fast', desc: 'Quickest, flatter delivery' },
-]
 import './theme.css'
 
-type PageId = 'index' | 'card' | 'general' | 'voice' | 'observation' | 'connectors' | 'about'
+type PageId = 'index' | SettingsPageId
 
-const PAGES: { id: PageId, title: string, description: string, icon: string }[] = [
-  { id: 'card', title: 'Character', description: 'Model and character card', icon: 'card' },
-  { id: 'general', title: 'General', description: 'Language, mode and sound', icon: 'settings' },
-  { id: 'voice', title: 'Voice input', description: 'Push-to-talk shortcut, VAD', icon: 'mic' },
-  { id: 'observation', title: 'Observation', description: 'Limits for unprompted remarks', icon: 'eye' },
-  { id: 'connectors', title: 'Connectors', description: 'Mock or live data per service', icon: 'plug' },
-  { id: 'about', title: 'About', description: 'Open source notices', icon: 'info' },
+const PAGES: { id: SettingsPageId, icon: string }[] = [
+  { id: 'card', icon: 'card' },
+  { id: 'general', icon: 'settings' },
+  { id: 'voice', icon: 'mic' },
+  { id: 'permissions', icon: 'shield' },
+  { id: 'observation', icon: 'eye' },
+  { id: 'connectors', icon: 'plug' },
+  { id: 'about', icon: 'info' },
 ]
 
+const settings = useSettings()
+const character = useCharacterStore()
+const persona = usePersona()
+const { t, bcp47 } = useSettingsI18n(() => settings.lang)
+
 const page = ref<PageId>('index')
-const current = computed(() => PAGES.find(p => p.id === page.value))
+const current = computed(() => (page.value === 'index' ? null : t.value.pages[page.value]))
 const scroller = ref<HTMLElement | null>(null)
 
 function go(id: PageId) {
@@ -47,21 +47,18 @@ function go(id: PageId) {
   scroller.value?.scrollTo({ top: 0 })
 }
 
-const settings = useSettings()
-const character = useCharacterStore()
-const persona = usePersona()
-
 // --- Character card
 
 const MODEL_IDS = Object.keys(CHARACTER_MODELS) as CharacterId[]
 const editing = computed(() => persona.activeCard)
 
-const CARD_FIELDS: { key: keyof Omit<PersonaCard, 'id' | 'builtinFor'>, label: string, sub: string, rows: number, max: number }[] = [
-  { key: 'description', label: 'Description', sub: 'Who the character is, in a sentence or two.', rows: 2, max: 600 },
-  { key: 'personality', label: 'Personality', sub: 'Temperament and habits.', rows: 3, max: 800 },
-  { key: 'scenario', label: 'Scenario', sub: 'Where and how the character meets the user.', rows: 2, max: 600 },
-  { key: 'systemPrompt', label: 'System prompt', sub: 'Extra instructions. Safety rules always win over this card.', rows: 4, max: 1800 },
-  { key: 'speakingStyle', label: 'Speaking style', sub: 'Tone and register. Replies still follow the selected language.', rows: 2, max: 400 },
+type CardFieldKey = keyof Omit<PersonaCard, 'id' | 'builtinFor' | 'name'>
+const CARD_FIELDS: { key: CardFieldKey, rows: number, max: number }[] = [
+  { key: 'description', rows: 2, max: 600 },
+  { key: 'personality', rows: 3, max: 800 },
+  { key: 'scenario', rows: 2, max: 600 },
+  { key: 'systemPrompt', rows: 4, max: 1800 },
+  { key: 'speakingStyle', rows: 2, max: 400 },
 ]
 
 function setField(key: keyof Omit<PersonaCard, 'id' | 'builtinFor'>, value: string) {
@@ -74,18 +71,15 @@ function cardInitial(c: PersonaCard) {
 
 // --- General
 
-const MODES: { id: AssistantMode, title: string, description: string }[] = [
-  { id: 'active', title: 'Active', description: 'Watches the screen and may speak up' },
-  { id: 'quiet', title: 'Quiet', description: 'Answers only when spoken to' },
-  { id: 'ornamental', title: 'Ornamental', description: 'Just stays on the desktop' },
-]
+const MODES: AssistantMode[] = ['active', 'quiet', 'ornamental']
 
-// --- Voice input: push-to-talk shortcut recorder
+// --- Voice: push-to-talk shortcut recorder
 
 const mac = isMacPlatform()
+const modKey = mac ? 'Cmd' : 'Win'
 const pttCaps = computed(() => shortcutCaps(settings.pttKey, mac))
 const recording = ref(false)
-const recordError = ref('')
+const recordError = ref(false)
 
 /** Capture-phase window listener so the next key goes here, not to push-to-talk. */
 function onRecordKey(e: KeyboardEvent) {
@@ -94,16 +88,16 @@ function onRecordKey(e: KeyboardEvent) {
   if (e.type !== 'keydown' || e.repeat) return
   const res = captureShortcut(e)
   if (res.kind === 'wait') return
-  if (res.kind === 'reject') { recordError.value = res.reason; return }
+  if (res.kind === 'reject') { recordError.value = true; return }
   if (res.kind === 'ok') settings.pttKey = res.shortcut
-  recordError.value = ''
+  recordError.value = false
   stopRecording()
 }
 
 function startRecording() {
-  if (recording.value) { recordError.value = ''; stopRecording(); return }
+  if (recording.value) { recordError.value = false; stopRecording(); return }
   recording.value = true
-  recordError.value = ''
+  recordError.value = false
   window.addEventListener('keydown', onRecordKey, true)
   window.addEventListener('keyup', onRecordKey, true)
   window.addEventListener('blur', stopRecording)
@@ -119,7 +113,7 @@ function stopRecording() {
 
 function resetPtt() {
   stopRecording()
-  recordError.value = ''
+  recordError.value = false
   settings.pttKey = { ...DEFAULT_PTT }
 }
 
@@ -145,12 +139,12 @@ function clamp(v: number, lo: number, hi: number) {
 
 // --- Connectors
 
-const CONNECTORS: { id: ConnectorService, title: string, icon: string, description: string, liveCapable: boolean }[] = [
-  { id: 'mail', title: 'Gmail', icon: 'mail', description: 'Read inbox, save reply drafts (never sends)', liveCapable: false },
-  { id: 'calendar', title: 'Calendar', icon: 'calendar', description: 'List events, find conflicts, create events', liveCapable: false },
-  { id: 'drive', title: 'Drive', icon: 'drive', description: 'Search and read files', liveCapable: false },
-  { id: 'slack', title: 'Slack', icon: 'slack', description: 'Read channels, put replies in the composer', liveCapable: true },
-  { id: 'discord', title: 'Discord', icon: 'discord', description: 'Read channels', liveCapable: true },
+const CONNECTORS: { id: Exclude<ConnectorService, 'reminders'>, title: string, icon: string, liveCapable: boolean }[] = [
+  { id: 'mail', title: 'Gmail', icon: 'mail', liveCapable: false },
+  { id: 'calendar', title: 'Calendar', icon: 'calendar', liveCapable: false },
+  { id: 'drive', title: 'Drive', icon: 'drive', liveCapable: false },
+  { id: 'slack', title: 'Slack', icon: 'slack', liveCapable: true },
+  { id: 'discord', title: 'Discord', icon: 'discord', liveCapable: true },
 ]
 // Mirror of the registry flags; the registry reads LIVE_SERVICES on every call.
 const live = ref<Partial<Record<ConnectorService, boolean>>>({ ...LIVE_SERVICES })
@@ -159,20 +153,31 @@ function toggleLive(id: ConnectorService) {
   live.value = { ...live.value, [id]: on }
   LIVE_SERVICES[id] = on
 }
+
+// --- About: open source notices (names and licenses stay as published)
+
+const NOTICES: string[] = [
+  '<b>AIRI</b> (moeru-ai/airi) — MIT.',
+  '<b>Ayagami</b> — MIT OR Apache-2.0.',
+  '<b>cubism-web-batched-renderer</b> — Live2D Open Software License. <b>pixi.js</b>, <b>pixi-live2d-display</b> — MIT.',
+  '<b>Vue</b>, <b>Vite</b>, <b>Pinia</b>, <b>zod</b>, <b>modern-screenshot</b>, <b>jszip</b> — MIT.',
+  '<b>@ricky0123/vad-web</b> (ISC), <b>Silero VAD</b>, <b>onnxruntime-web</b>, <b>wLipSync</b> — MIT.',
+  '<b>Anthropic SDK</b> (Apache-2.0), <b>Deepgram SDK</b>, <b>ElevenLabs SDK</b> (MIT).',
+]
 </script>
 
 <template>
-  <div class="yy-airi settings-app">
+  <div class="yy-airi settings-app" :lang="bcp47">
     <div ref="scroller" class="content scroll">
       <div class="inner">
         <!-- Page header (AIRI PageHeader): back arrow, small subtitle above a large title -->
         <header class="page-header">
-          <button type="button" class="back" :class="{ hidden: !current }" aria-label="Back" @click="go('index')">
+          <button type="button" class="back" :class="{ hidden: !current }" :aria-label="t.back" @click="go('index')">
             <Icon name="chevron-left" :size="26" />
           </button>
           <h1>
-            <span v-if="current" class="subtitle">Settings</span>
-            <span class="title">{{ current ? current.title : 'Settings' }}</span>
+            <span v-if="current" class="subtitle">{{ t.settings }}</span>
+            <span class="title">{{ current ? current.title : t.settings }}</span>
           </h1>
         </header>
 
@@ -184,8 +189,8 @@ function toggleLive(id: ConnectorService) {
             @click="go(p.id)"
           >
             <span class="mi-text">
-              <span class="mi-title">{{ p.title }}</span>
-              <span class="mi-desc">{{ p.description }}</span>
+              <span class="mi-title">{{ t.pages[p.id].title }}</span>
+              <span class="mi-desc">{{ t.pages[p.id].desc }}</span>
             </span>
             <span class="mi-icon"><Icon :name="p.icon" :size="72" /></span>
           </button>
@@ -194,8 +199,8 @@ function toggleLive(id: ConnectorService) {
       <!-- Character card (AIRI airi-card) -->
       <template v-if="page === 'card'">
         <section class="section">
-          <h2>Model</h2>
-          <p class="hint">Each model remembers its own character card.</p>
+          <h2>{{ t.card.model }}</h2>
+          <p class="hint">{{ t.card.modelHint }}</p>
           <div class="radio-grid">
             <button
               v-for="id in MODEL_IDS" :key="id" type="button"
@@ -204,7 +209,7 @@ function toggleLive(id: ConnectorService) {
             >
               <img :src="CHARACTER_MODELS[id].icon" alt="" @error="($event.target as HTMLImageElement).style.visibility = 'hidden'">
               <b>{{ CHARACTER_MODELS[id].label }}</b>
-              <span>{{ character.character === id ? 'In use' : 'Switch to this model' }}</span>
+              <span>{{ character.character === id ? t.card.inUse : t.card.switchTo }}</span>
             </button>
           </div>
         </section>
@@ -212,12 +217,12 @@ function toggleLive(id: ConnectorService) {
         <section class="section">
           <div class="sec-head">
             <div>
-              <h2>Cards</h2>
-              <p class="hint">Pick the card for {{ CHARACTER_MODELS[character.character].label }}.</p>
+              <h2>{{ t.card.cards }}</h2>
+              <p class="hint">{{ t.card.cardsHint(CHARACTER_MODELS[character.character].label) }}</p>
             </div>
             <div class="actions">
-              <button type="button" class="btn" @click="persona.create()"><Icon name="plus" :size="15" />New</button>
-              <button type="button" class="btn" @click="persona.create(editing)"><Icon name="copy" :size="15" />Duplicate</button>
+              <button type="button" class="btn" @click="persona.create()"><Icon name="plus" :size="15" />{{ t.card.newCard }}</button>
+              <button type="button" class="btn" @click="persona.create(editing)"><Icon name="copy" :size="15" />{{ t.card.duplicate }}</button>
             </div>
           </div>
           <div class="card-grid">
@@ -229,11 +234,11 @@ function toggleLive(id: ConnectorService) {
               <span class="cc-body">
                 <span class="cc-head">
                   <span class="avatar">{{ cardInitial(c) }}</span>
-                  <b>{{ c.name || 'Untitled' }}</b>
+                  <b>{{ c.name || t.card.untitled }}</b>
                   <span v-if="persona.activeCard.id === c.id" class="cc-check"><Icon name="check" :size="14" /></span>
                 </span>
-                <span class="cc-desc">{{ c.description || 'No description' }}</span>
-                <span class="cc-stats">{{ c.builtinFor ? `Default · ${CHARACTER_MODELS[c.builtinFor].label}` : 'Custom' }}</span>
+                <span class="cc-desc">{{ c.description || t.card.noDescription }}</span>
+                <span class="cc-stats">{{ c.builtinFor ? t.card.defaultFor(CHARACTER_MODELS[c.builtinFor].label) : t.card.custom }}</span>
               </span>
             </button>
           </div>
@@ -242,20 +247,20 @@ function toggleLive(id: ConnectorService) {
         <section class="section">
           <div class="sec-head">
             <div>
-              <h2>Edit “{{ editing.name || 'Untitled' }}”</h2>
-              <p class="hint">Changes save automatically and apply to the next observation and task.</p>
+              <h2>{{ t.card.edit(editing.name || t.card.untitled) }}</h2>
+              <p class="hint">{{ t.card.editHint }}</p>
             </div>
             <div class="actions">
-              <button v-if="editing.builtinFor" type="button" class="btn" @click="persona.resetToDefault(editing.id)"><Icon name="reset" :size="15" />Reset to default</button>
-              <button v-else type="button" class="btn danger" @click="persona.remove(editing.id)"><Icon name="trash" :size="15" />Delete</button>
+              <button v-if="editing.builtinFor" type="button" class="btn" @click="persona.resetToDefault(editing.id)"><Icon name="reset" :size="15" />{{ t.card.resetDefault }}</button>
+              <button v-else type="button" class="btn danger" @click="persona.remove(editing.id)"><Icon name="trash" :size="15" />{{ t.card.remove }}</button>
             </div>
           </div>
           <div class="field">
-            <label>Name <span class="sub">— shown and used by the character (max 40)</span></label>
+            <label>{{ t.card.name }} <span class="sub">— {{ t.card.nameSub }}</span></label>
             <input type="text" maxlength="40" :value="editing.name" @input="setField('name', ($event.target as HTMLInputElement).value)">
           </div>
           <div v-for="f in CARD_FIELDS" :key="f.key" class="field">
-            <label>{{ f.label }} <span class="sub">— {{ f.sub }}</span></label>
+            <label>{{ t.card.fields[f.key].label }} <span class="sub">— {{ t.card.fields[f.key].sub }}</span></label>
             <textarea :rows="f.rows" :maxlength="f.max" :value="editing[f.key]" @input="setField(f.key, ($event.target as HTMLTextAreaElement).value)" />
           </div>
         </section>
@@ -264,8 +269,18 @@ function toggleLive(id: ConnectorService) {
       <!-- General -->
       <template v-else-if="page === 'general'">
         <section class="section">
-          <h2>Language</h2>
-          <p class="hint">Speech recognition, replies and the voice all follow this language.</p>
+          <h2>{{ t.general.userName }}</h2>
+          <p class="hint">{{ t.general.userNameHint }}</p>
+          <div class="field">
+            <input
+              type="text" :maxlength="USER_NAME_MAX" :value="settings.userName" :placeholder="t.general.userNamePlaceholder"
+              :aria-label="t.general.userName" @input="settings.userName = ($event.target as HTMLInputElement).value"
+            >
+          </div>
+        </section>
+        <section class="section">
+          <h2>{{ t.general.language }}</h2>
+          <p class="hint">{{ t.general.languageHint }}</p>
           <div class="radio-grid">
             <button
               v-for="l in LANGS" :key="l" type="button"
@@ -277,35 +292,54 @@ function toggleLive(id: ConnectorService) {
           </div>
         </section>
         <section class="section">
-          <h2>Mode</h2>
-          <p class="hint">Quiet and ornamental modes never capture the screen.</p>
+          <h2>{{ t.general.mode }}</h2>
+          <p class="hint">{{ t.general.modeHint }}</p>
           <div class="radio-grid">
             <button
-              v-for="m in MODES" :key="m.id" type="button"
-              class="radio-card" :class="{ active: settings.mode === m.id }"
-              @click="settings.mode = m.id"
+              v-for="m in MODES" :key="m" type="button"
+              class="radio-card" :class="{ active: settings.mode === m }"
+              @click="settings.mode = m"
             >
-              <b>{{ m.title }}</b><span>{{ m.description }}</span>
+              <b>{{ t.general.modes[m].title }}</b><span>{{ t.general.modes[m].desc }}</span>
             </button>
           </div>
         </section>
         <section class="section">
           <div class="row">
-            <div class="txt"><b>Sound</b><span>Speak lines aloud. Turning it off stops the current line.</span></div>
-            <button type="button" class="switch" :class="{ on: settings.sound }" :aria-pressed="settings.sound" @click="settings.sound = !settings.sound" />
+            <div class="txt"><b>{{ t.general.sound }}</b><span>{{ t.general.soundDesc }}</span></div>
+            <button type="button" class="switch" :class="{ on: settings.sound }" :aria-pressed="settings.sound" :aria-label="t.general.sound" @click="settings.sound = !settings.sound" />
           </div>
         </section>
       </template>
 
-      <!-- Voice input -->
+      <!-- Voice -->
       <template v-else-if="page === 'voice'">
         <section class="section">
-          <h2>Push-to-talk shortcut</h2>
-          <p class="hint">Letters and digits need Ctrl, Alt or {{ mac ? 'Cmd' : 'Win' }} so typing on the desktop is not taken over. A shortcut without those keys is ignored while you type in a text field.</p>
+          <h2>{{ t.voice.voiceLang }}</h2>
+          <p class="hint">{{ t.voice.voiceLangHint }}</p>
+          <div class="radio-grid">
+            <button
+              type="button" class="radio-card" :class="{ active: settings.voiceLang === null }"
+              @click="settings.voiceLang = null"
+            >
+              <b>{{ t.voice.followUi(LANG_INFO[settings.lang].label) }}</b><span>auto</span>
+            </button>
+            <button
+              v-for="l in LANGS" :key="l" type="button"
+              class="radio-card" :class="{ active: settings.voiceLang === l }"
+              @click="settings.voiceLang = l"
+            >
+              <b>{{ LANG_INFO[l].label }}</b><span>{{ l }}</span>
+            </button>
+          </div>
+        </section>
+        <section class="section">
+          <h2>{{ t.voice.ptt }}</h2>
+          <p class="hint">{{ t.voice.pttHint(modKey) }}</p>
           <div class="row">
             <div class="txt">
-              <b>Push-to-talk (default)</b>
-              <span>{{ recording ? 'Press the new key combination. Esc cancels.' : 'Hold to talk. Works anywhere on the desktop.' }}</span>
+              <b>{{ t.voice.pttDefault }}</b>
+              <span>{{ recording ? t.voice.pttRecording : t.voice.pttIdle }}</span>
             </div>
             <div class="ptt-right">
               <span class="caps" :class="{ armed: recording }" aria-live="polite">
@@ -313,42 +347,58 @@ function toggleLive(id: ConnectorService) {
                 <kbd v-for="(k, i) in pttCaps" v-else :key="i" class="cap">{{ k }}</kbd>
               </span>
               <button type="button" class="btn" :class="{ primary: recording }" @click="startRecording">
-                <Icon name="keyboard" :size="15" />{{ recording ? 'Cancel' : 'Record shortcut' }}
+                <Icon name="keyboard" :size="15" />{{ recording ? t.voice.cancel : t.voice.record }}
               </button>
               <button type="button" class="btn" :disabled="!recording && settings.pttKey.code === 'Space' && pttCaps.length === 1" @click="resetPtt">
                 <Icon name="reset" :size="15" />Space
               </button>
             </div>
           </div>
-          <p v-if="recordError" class="error">{{ recordError }}</p>
+          <p v-if="recordError" class="error">{{ t.voice.keyReject(modKey) }}</p>
         </section>
         <section class="section">
-          <h2>Voice style</h2>
-          <p class="hint">How the character's voice is generated. Lively is the default.</p>
+          <h2>{{ t.voice.style }}</h2>
+          <p class="hint">{{ t.voice.styleHint }}</p>
           <div class="radio-grid">
             <button
-              v-for="v in VOICE_STYLES" :key="v.id" type="button" class="radio-card"
-              :class="{ active: settings.voicePreset === v.id }" @click="settings.voicePreset = v.id"
+              v-for="v in VOICE_PRESETS" :key="v" type="button" class="radio-card"
+              :class="{ active: settings.voicePreset === v }" @click="settings.voicePreset = v"
             >
-              <b>{{ v.title }}</b><span>{{ v.desc }}</span>
+              <b>{{ t.voice.styles[v].title }}</b><span>{{ t.voice.styles[v].desc }}</span>
             </button>
           </div>
         </section>
         <section class="section">
-          <h2>VAD</h2>
-          <p class="hint">Voice activity detection listens hands-free and sends what you say when you stop. Push-to-talk keeps working while it is on.</p>
+          <h2>{{ t.voice.vad }}</h2>
+          <p class="hint">{{ t.voice.vadHint }}</p>
           <div class="row">
             <div class="txt">
-              <b>Voice activity detection</b>
-              <span>{{ voiceState.vadLoading ? 'Loading model…' : voiceState.vadEnabled ? 'Listening for speech' : 'Off' }}</span>
+              <b>{{ t.voice.vadName }}</b>
+              <span>{{ voiceState.vadLoading ? t.voice.vadLoading : voiceState.vadEnabled ? t.voice.vadOn : t.voice.off }}</span>
             </div>
             <button
               type="button" class="switch" :class="{ on: voiceState.vadEnabled }" :aria-pressed="voiceState.vadEnabled"
-              aria-label="Voice activity detection" :disabled="voiceState.vadLoading"
+              :aria-label="t.voice.vadName" :disabled="voiceState.vadLoading"
               @click="setVadEnabled(!voiceState.vadEnabled)"
             />
           </div>
           <p v-if="voiceState.error" class="error">{{ voiceState.error }}</p>
+        </section>
+      </template>
+
+      <!-- Permissions -->
+      <template v-else-if="page === 'permissions'">
+        <section class="section">
+          <p class="hint">{{ t.permissions.hint }}</p>
+          <div class="radio-grid">
+            <button
+              v-for="lv in PERMISSION_LEVELS" :key="lv" type="button" class="radio-card"
+              :class="{ active: settings.permission === lv, danger: lv === 'bypass' }" @click="settings.permission = lv"
+            >
+              <b>{{ t.permissions.levels[lv].title }}</b><span>{{ t.permissions.levels[lv].desc }}</span>
+            </button>
+          </div>
+          <p v-if="settings.permission === 'bypass'" class="warn">{{ t.permissions.bypassWarn }}</p>
         </section>
       </template>
 
@@ -357,21 +407,21 @@ function toggleLive(id: ConnectorService) {
         <section class="section">
           <div class="sec-head">
             <div>
-              <h2>Proactive limits</h2>
-              <p class="hint">In active mode the screen is checked every {{ POLL_MS / 1000 }} s. Only unprompted remarks are limited; answers to your voice never count. Today: {{ nunchiStatus.interjectionsToday }} of {{ nunchiConfig.maxPerDay }}.</p>
+              <h2>{{ t.observation.title }}</h2>
+              <p class="hint">{{ t.observation.hint(POLL_MS / 1000, nunchiStatus.interjectionsToday, nunchiConfig.maxPerDay) }}</p>
             </div>
-            <button type="button" class="btn" @click="resetNunchiConfig()"><Icon name="reset" :size="15" />Defaults</button>
+            <button type="button" class="btn" @click="resetNunchiConfig()"><Icon name="reset" :size="15" />{{ t.observation.defaults }}</button>
           </div>
           <div class="row">
-            <div class="txt"><b>Daily maximum</b><span>Default {{ NUNCHI_DEFAULTS.maxPerDay }}</span></div>
+            <div class="txt"><b>{{ t.observation.dailyMax }}</b><span>{{ t.observation.defaultN(NUNCHI_DEFAULTS.maxPerDay) }}</span></div>
             <input v-model.number="maxPerDay" type="number" min="0" max="50">
           </div>
           <div class="row">
-            <div class="txt"><b>Minimum interval (minutes)</b><span>Default {{ NUNCHI_DEFAULTS.cooldownMs / 60_000 }}</span></div>
+            <div class="txt"><b>{{ t.observation.minInterval }}</b><span>{{ t.observation.defaultN(NUNCHI_DEFAULTS.cooldownMs / 60_000) }}</span></div>
             <input v-model.number="cooldownMin" type="number" min="0" max="240">
           </div>
           <div class="row">
-            <div class="txt"><b>Dwell before speaking (seconds)</b><span>Same screen for at least this long. Default {{ NUNCHI_DEFAULTS.minDwellSec }}</span></div>
+            <div class="txt"><b>{{ t.observation.dwell }}</b><span>{{ t.observation.dwellSub(NUNCHI_DEFAULTS.minDwellSec) }}</span></div>
             <input v-model.number="minDwell" type="number" min="0" max="600">
           </div>
         </section>
@@ -380,15 +430,15 @@ function toggleLive(id: ConnectorService) {
       <!-- Connectors -->
       <template v-else-if="page === 'connectors'">
         <section class="section">
-          <p class="hint">Nothing can be sent or deleted. Writes are drafts and need your confirmation. Live reads fall back to mock data on failure.</p>
+          <p class="hint">{{ t.connectors.hint }}</p>
           <div v-for="c in CONNECTORS" :key="c.id" class="row">
             <div class="conn">
               <span class="conn-icon"><Icon :name="c.icon" :size="20" /></span>
-              <div class="txt"><b>{{ c.title }}</b><span>{{ c.description }}</span></div>
+              <div class="txt"><b>{{ c.title }}</b><span>{{ t.connectors.desc[c.id] }}</span></div>
             </div>
             <div class="conn-right">
-              <span class="badge" :class="live[c.id] ? 'live' : 'mock'"><span class="dot" />{{ live[c.id] ? 'Live' : 'Mock' }}</span>
-              <button v-if="c.liveCapable" type="button" class="switch" :class="{ on: live[c.id] }" :aria-label="`Live ${c.title}`" @click="toggleLive(c.id)" />
+              <span class="badge" :class="live[c.id] ? 'live' : 'mock'"><span class="dot" />{{ live[c.id] ? t.connectors.live : t.connectors.mock }}</span>
+              <button v-if="c.liveCapable" type="button" class="switch" :class="{ on: live[c.id] }" :aria-label="`${t.connectors.live} ${c.title}`" @click="toggleLive(c.id)" />
             </div>
           </div>
         </section>
@@ -398,19 +448,15 @@ function toggleLive(id: ConnectorService) {
       <template v-else-if="page === 'about'">
         <section class="section">
           <h2>YuiYumi</h2>
-          <p class="hint">A desktop companion that watches with you, speaks up rarely, and drafts work for you to send.</p>
+          <p class="hint">{{ t.about.tagline }}</p>
         </section>
         <section class="section">
-          <h2>Open source notices</h2>
-          <p class="hint">Full list with licenses and usage: THIRD_PARTY_NOTICES.md in the repository root.</p>
+          <h2>{{ t.about.notices }}</h2>
+          <p class="hint">{{ t.about.noticesHint }}</p>
           <ul class="notices">
-            <li><b>AIRI</b> (moeru-ai/airi) — MIT. Live2D wiring, audio pipeline, lip sync structure, and the look of these settings and dashboard windows.</li>
-            <li><b>Ayagami</b> — MIT OR Apache-2.0. Character core built to WASM.</li>
-            <li><b>cubism-web-batched-renderer</b> — Live2D Open Software License. <b>pixi.js</b>, <b>pixi-live2d-display</b> — MIT. Character rendering.</li>
-            <li><b>Vue</b>, <b>Vite</b>, <b>Pinia</b>, <b>zod</b>, <b>modern-screenshot</b>, <b>jszip</b> — MIT.</li>
-            <li><b>@ricky0123/vad-web</b> (ISC), <b>Silero VAD</b>, <b>onnxruntime-web</b>, <b>wLipSync</b> — MIT.</li>
-            <li><b>Anthropic SDK</b> (Apache-2.0), <b>Deepgram SDK</b>, <b>ElevenLabs SDK</b> (MIT).</li>
-            <li>Live2D Cubism Core and character models are not redistributed in the repository.</li>
+            <!-- eslint-disable-next-line vue/no-v-html -- static notice markup defined above -->
+            <li v-for="(n, i) in NOTICES" :key="i"><span v-html="n" /> {{ t.about.items[i] }}</li>
+            <li>{{ t.about.notRedistributed }}</li>
           </ul>
         </section>
       </template>
@@ -523,4 +569,6 @@ function toggleLive(id: ConnectorService) {
 .notices { margin: 0; padding-left: 18px; color: var(--n600); font-size: 13px; }
 .notices li { margin: 4px 0; }
 .radio-card:disabled { opacity: .5; cursor: wait; }
+.radio-card.danger.active { border-color: #f87171; background: #fef2f2; }
+.warn { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; }
 </style>

@@ -45,12 +45,17 @@ export const nunchiStatus = reactive({
 export type RoutedEvent =
   | { type: 'character:react', payload: BusEvents['character:react'] }
   | { type: 'agent:delegate', payload: BusEvents['agent:delegate'] }
+  | { type: 'assistant:move', payload: BusEvents['assistant:move'] }
 
 /** Pure mapping from observer actions to bus events. */
 export function routeActions(actions: ObserveAction[], origin: DelegateOrigin): RoutedEvent[] {
-  return actions.map((a): RoutedEvent => a.type === 'react'
-    ? { type: 'character:react', payload: { emotion: a.emotion, line: a.line, motion: a.motion, source: 'observer' } }
-    : { type: 'agent:delegate', payload: { request: a.request, origin } })
+  return actions.map((a): RoutedEvent => {
+    switch (a.type) {
+      case 'react': return { type: 'character:react', payload: { emotion: a.emotion, line: a.line, motion: a.motion, source: 'observer' } }
+      case 'delegate_task': return { type: 'agent:delegate', payload: { request: a.request, origin, ...(a.summary ? { summary: a.summary } : {}) } }
+      case 'move_self': return { type: 'assistant:move', payload: { where: a.where } }
+    }
+  })
 }
 
 export class NunchiEngine {
@@ -162,16 +167,23 @@ export class NunchiEngine {
     if (this.utterCtl === ctl) { this.utterCtl = null; nunchiStatus.inFlight = false }
     if (!res.ok) {
       if (!res.aborted) this.fallback(lang)
+      if (this.utterCtl === null) this.d.emit('thinking', { on: false })
       return
     }
-    nunchiStatus.last = res.response.actions.length ? 'acted' : 'silent'
-    this.dispatch(res.response.actions, 'utterance')
+    const actions = res.response.actions
+    nunchiStatus.last = actions.length ? 'acted' : 'silent'
+    // No spoken line and no delegated work: drop the typing dots now instead of on timeout.
+    const speaks = actions.some(a => (a.type === 'react' && a.line) || a.type === 'delegate_task')
+    if (!speaks) this.d.emit('thinking', { on: false })
+    this.dispatch(actions, 'utterance')
   }
 
   private dispatch(actions: ObserveAction[], origin: DelegateOrigin): void {
     for (const ev of routeActions(actions, origin)) {
       if (ev.type === 'character:react') this.d.emit('character:react', ev.payload)
-      else this.d.emit('agent:delegate', ev.payload)
+      else if (ev.type === 'agent:delegate') this.d.emit('agent:delegate', ev.payload)
+      // Moving is only ever done on the user's request, never from a screen poll.
+      else if (origin === 'utterance') this.d.emit('assistant:move', ev.payload)
     }
   }
 

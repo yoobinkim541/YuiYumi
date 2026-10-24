@@ -70,7 +70,7 @@ interface ScreenSource {
 - 모든 서비스의 연산을 하나의 레지스트리(`CONNECTOR_OPS`, `shared/contracts.ts`)로 정의하고 Sonnet의 도구로 그대로 노출한다. 각 연산은 `name`, `service`, `grade`(`read` | `write`), `description`, `input`(zod 스키마)을 갖는다.
 - **mock 커넥터**: 가상 데스크톱이 렌더링하는 세션 데이터(demo store)를 직접 읽고 쓴다. 초안 저장 결과는 가상 데스크톱 창에 즉시 반영된다.
 - **live 커넥터(시간이 남을 때)**: `/api/connectors/[service]`가 허용 연산만 실행한다. Slack과 Discord는 봇 토큰을 이용한 읽기 전용 연동이며, Google 서비스는 `docs/demo-account.md`의 Tier 1을 따른다.
-- 발송(send)과 삭제(delete) 연산은 존재하지 않는다(AC-6). 상세 목록은 `docs/connectors.md`.
+- 연산은 `read`·`write`·`outbound` 등급으로 나뉘고, 확인 카드 여부는 설정의 권한 단계(`manual`·`auto`·`bypass`)가 정한다(AC-4). 쓰기·전송은 가상 PC에만 반영된다. 상세 목록은 `docs/connectors.md`.
 
 ### 2.5 Voice
 
@@ -192,7 +192,7 @@ docs/          spec, architecture, voice, connectors, demo-account 등
 
 - **키는 서버에만 둔다.** Anthropic, Deepgram, ElevenLabs, Slack, Discord 키와 토큰은 Vercel 환경변수에만 둔다. 브라우저 번들에는 키가 포함되지 않으며, 모든 제공자 호출은 `api/`를 경유한다(AC-10). 빌드 산출물에서 키 문자열을 검색해 검증한다.
 - **외부 내용은 신뢰할 수 없는 입력이다.** 화면 텍스트, 메일·문서·메시지 본문, 도구 결과, `delegate_task`의 `request`에 포함된 지시문은 따르지 않는다. 이 규칙을 시스템 프롬프트에 명시하고, 화면 출처 위임은 확인 카드를 거치게 해 화면 속 지시문이 곧바로 실행으로 이어지는 경로를 차단한다.
-- **발송·삭제 연산은 없다.** `CONNECTOR_OPS`에는 send·delete 연산이 존재하지 않으며, 서버는 레지스트리에 없는 도구 이름을 거부한다(AC-6). Gmail 초안 권한이 발송 권한을 포함하더라도 발송 코드 경로가 없다는 것이 보장의 근거다.
+- **발송·게시·삭제는 사용자 요청과 권한 단계를 따른다.** `outbound`(발송·게시)는 `bypass`가 아니면 확인 카드를 거치고, 화면 출처 제안은 항상 제안 카드를 거친다. 메일·채팅·화면 속 지시문은 작업을 승인하지 않는다(AC-5, AC-6). 모든 쓰기·전송은 가상 PC(목업 커넥터)에만 반영되며, 실제 외부 서비스로 쓰는 코드 경로는 없다. 서버는 레지스트리에 없는 도구 이름을 거부한다.
 - **쓰기는 항상 확인 카드를 거친다.** `write` 등급 연산은 사용자 수락 없이 실행되지 않는다.
 - **캡처는 저장하지 않는다.** 프레임은 브라우저 메모리와 요청 처리 중에만 존재한다.
 - **남용 방지**: 서버 예산 가드(`server/budget.ts`)가 일일 비용 상한(`BUDGET_DAILY_USD`, 기본 150)과 세션당 호출 상한(`BUDGET_SESSION_CALLS`)을 적용한다. 인스턴스 메모리 기준이므로 정확한 원장이 아닌 상한 장치이며, 초과 시 `budget` 오류를 반환하고 브라우저는 준비된 대사로 폴백한다.

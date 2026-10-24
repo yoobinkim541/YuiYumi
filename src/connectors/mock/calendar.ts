@@ -59,3 +59,11 @@ export const calendarCreateEvent: MockOp<'calendar_create_event'> = (demo, input
   const ev = demo.addEvent({ title: input.title, start: input.start, end: input.end })
   return { eventId: ev.id, created: true, title: ev.title, start: ev.start, end: ev.end }
 }
+
+export const calendarDeleteEvent: MockOp<'calendar_delete_event'> = (demo, input) => {
+  const i = demo.events.findIndex(e => e.id === input.id)
+  if (i < 0) throw new ConnectorError(`No event with id "${input.id}".`)
+  const [ev] = demo.events.splice(i, 1)
+  demo.deletedEvents.push(ev!)
+  return { eventId: ev!.id, deleted: true, title: ev!.title, start: ev!.start, reversible: true }
+}

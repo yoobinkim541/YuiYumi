@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentStepRequest } from '@shared/contracts'
+import type { AgentStepRequest, PermissionLevel } from '@shared/contracts'
 import type { ToolOutcome } from '@/connectors/registry'
 import { createStepClient, DECLINED_RESULT, handleDelegate, splitForSpeech, type AgentDeps } from './agent-loop'
 import type { ConfirmCardInput } from './confirm-queue'
@@ -20,7 +20,7 @@ function fakeFetch(replies: Reply[]) {
   return { fetch: fn as unknown as typeof fetch, bodies, fn }
 }
 
-function makeDeps(f: typeof fetch, opts: { confirm?: (c: ConfirmCardInput) => Promise<boolean>, runTool?: (n: string, i: unknown) => Promise<ToolOutcome> } = {}) {
+function makeDeps(f: typeof fetch, opts: { confirm?: (c: ConfirmCardInput) => Promise<boolean>, runTool?: (n: string, i: unknown) => Promise<ToolOutcome>, permission?: PermissionLevel } = {}) {
   const events: [string, unknown][] = []
   const runTool = vi.fn(opts.runTool ?? (async (name: string) => ({ ok: true as const, data: { from: name } })))
   const confirm = vi.fn(opts.confirm ?? (async () => true))
@@ -32,6 +32,7 @@ function makeDeps(f: typeof fetch, opts: { confirm?: (c: ConfirmCardInput) => Pr
     lang: () => 'en',
     sessionId: 'sess-1',
     now: () => new Date('2026-10-24T12:00:00+09:00'),
+    ...(opts.permission ? { permission: () => opts.permission! } : {}),
   }
   return { deps, events, runTool, confirm }
 }
@@ -52,7 +53,7 @@ describe('agent loop', () => {
     // Reads ran, the write did not.
     expect(runTool.mock.calls.map(c => c[0])).toEqual(['mail_list', 'mail_read'])
     expect(confirm).toHaveBeenCalledWith({
-      kind: 'write', op: 'mail_create_draft',
+      kind: 'write', op: 'mail_create_draft', grade: 'write',
       fields: [{ field: 'to', value: 'a@x.com' }, { field: 'subject', value: 'Re' }, { field: 'body', value: 'Hi', multiline: true }],
     })
 
@@ -168,5 +169,51 @@ describe('agent loop persona', () => {
     const second = fakeFetch([{ body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Hi' }] } }])
     await handleDelegate({ request: 'Say hi', origin: 'utterance' }, makeDeps(second.fetch).deps)
     expect('persona' in second.bodies[0]!).toBe(false)
+  })
+
+  it('confirms per permission level: auto skips write cards, bypass skips all', async () => {
+    const script = () => [
+      { body: { stopReason: 'tool_use', content: [
+        { type: 'tool_use', id: 'w', name: 'mail_trash', input: { id: 'm1' } },
+        { type: 'tool_use', id: 'o', name: 'mail_reply', input: { id: 'm2', body: 'OK' } },
+      ] } },
+      { body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] } },
+    ]
+    const auto = makeDeps(fakeFetch(script()).fetch, { permission: 'auto' })
+    await handleDelegate({ request: 'x', origin: 'utterance' }, auto.deps)
+    expect(auto.confirm.mock.calls.map(c => (c[0] as { op: string }).op)).toEqual(['mail_reply'])
+    expect(auto.confirm.mock.calls[0]![0]).toMatchObject({ grade: 'outbound' })
+    expect(auto.runTool.mock.calls.map(c => c[0])).toEqual(['mail_trash', 'mail_reply'])
+
+    const bypass = makeDeps(fakeFetch(script()).fetch, { permission: 'bypass' })
+    await handleDelegate({ request: 'x', origin: 'utterance' }, bypass.deps)
+    expect(bypass.confirm).not.toHaveBeenCalled()
+    expect(bypass.runTool).toHaveBeenCalledTimes(2)
+
+    const manual = makeDeps(fakeFetch(script()).fetch)
+    await handleDelegate({ request: 'x', origin: 'utterance' }, manual.deps)
+    expect(manual.confirm).toHaveBeenCalledTimes(2)
+  })
+
+  it('still shows the suggestion card for screen-origin work under bypass, with the localized summary', async () => {
+    const { deps, confirm } = makeDeps(fakeFetch([]).fetch, { permission: 'bypass', confirm: async () => false })
+    const r = await handleDelegate({ request: 'Draft a reply', summary: '답장 초안을 써 둘까?', origin: 'screen' }, deps)
+    expect(r).toBeNull()
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ kind: 'suggestion', summary: '답장 초안을 써 둘까?' }))
+  })
+
+  it('calls the actuator around tools and on decline', async () => {
+    const { fetch } = fakeFetch([
+      { body: { stopReason: 'tool_use', content: [{ type: 'tool_use', id: 'p', name: 'discord_post', input: { channelId: 'D1', text: 'hi' } }] } },
+      { body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Okay.' }] } },
+    ])
+    const calls: string[] = []
+    const { deps } = makeDeps(fetch, { confirm: async () => false })
+    deps.actuator = {
+      before: async (op, _i, grade) => { calls.push(`before:${op}:${grade}`) },
+      after: (op, _i, outcome) => { calls.push(`after:${op}:${outcome === null ? 'declined' : 'ran'}`) },
+    }
+    await handleDelegate({ request: 'x', origin: 'utterance' }, deps)
+    expect(calls).toEqual(['before:discord_post:outbound', 'after:discord_post:declined'])
   })
 })

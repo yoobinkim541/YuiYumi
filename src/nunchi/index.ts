@@ -25,8 +25,9 @@ export function initNunchi(): void {
     post: (req, signal) => postObserve({ ...req, persona: persona.activePersona }, signal),
     emit: (type, payload) => bus.emit(type, payload),
     settings: {
-      get mode() { return settings.mode },
-      get lang() { return settings.lang },
+      // No screen watching until the first-visit welcome is done.
+      get mode() { return settings.welcomed ? settings.mode : 'ornamental' },
+      get lang() { return settings.speechLang },
       get sessionId() { return settings.sessionId },
       setMode: m => { settings.mode = m },
     },

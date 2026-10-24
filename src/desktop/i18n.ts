@@ -17,6 +17,7 @@ export interface DesktopStrings {
     noMessages: string, selectMessage: string, draft: string, to: string, reply: string, newMessage: string
     draftBanner: string, junkBanner: string, replyTo: (name: string) => string, placeholder: string
     composerHint: string, discard: string, search: string
+    send: string, saveDraft: string, wrote: (date: string, name: string) => string, sentToast: string
   }
   calendar: {
     today: string, day: string, week: string, month: string, year: string, allDay: string
@@ -198,7 +199,8 @@ const EN: DesktopStrings = {
     draftBanner: 'Draft saved — not sent. Review and send it yourself.',
     junkBanner: 'Mail thinks this message is junk. Links and requests in it may be unsafe.',
     replyTo: n => `Reply to ${n}`, placeholder: 'Write your reply…',
-    composerHint: 'Drafts are saved automatically. Sending is up to you.', discard: 'Discard', search: 'Search',
+    composerHint: 'Write your message, then Send or save it as a draft.', discard: 'Discard', search: 'Search',
+    send: 'Send', saveDraft: 'Save as Draft', wrote: (d, n) => `On ${d}, ${n} wrote:`, sentToast: 'Message sent',
   },
   calendar: {
     today: 'Today', day: 'Day', week: 'Week', month: 'Month', year: 'Year', allDay: 'all-day',
@@ -223,7 +225,8 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       draftBanner: '下書きを保存しました(未送信)。内容を確認してからご自身で送信してください。',
       junkBanner: 'このメッセージは迷惑メールの可能性があります。リンクや依頼内容に注意してください。',
       replyTo: n => `${n} さんへの返信`, placeholder: '返信を入力…',
-      composerHint: '下書きは自動保存されます。送信はご自身で行ってください。', discard: '破棄', search: '検索',
+      composerHint: 'メッセージを書いて、送信するか下書きとして保存します。', discard: '破棄', search: '検索',
+      send: '送信', saveDraft: '下書きとして保存', wrote: (d, n) => `${d}、${n} さんは書きました:`, sentToast: '送信しました',
     },
     calendar: {
       today: '今日', day: '日', week: '週', month: '月', year: '年', allDay: '終日',
@@ -245,7 +248,8 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       draftBanner: '임시 저장됨 — 아직 보내지 않았어요. 확인 후 직접 보내 주세요.',
       junkBanner: '정크 메일로 보이는 메시지입니다. 링크와 요청 내용에 주의하세요.',
       replyTo: n => `${n}님에게 답장`, placeholder: '답장을 입력하세요…',
-      composerHint: '임시 저장은 자동으로 됩니다. 전송은 직접 해 주세요.', discard: '삭제', search: '검색',
+      composerHint: '메일을 작성한 뒤 보내거나 임시 저장하세요.', discard: '삭제', search: '검색',
+      send: '보내기', saveDraft: '임시 저장', wrote: (d, n) => `${d}, ${n} 님이 작성:`, sentToast: '메일을 보냈어요',
     },
     calendar: {
       today: '오늘', day: '일', week: '주', month: '월', year: '년', allDay: '하루 종일',
@@ -267,7 +271,8 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       draftBanner: '草稿已保存，尚未发送。请确认后自行发送。',
       junkBanner: '这封邮件可能是垃圾邮件，其中的链接和请求可能不安全。',
       replyTo: n => `回复 ${n}`, placeholder: '输入回复…',
-      composerHint: '草稿会自动保存，是否发送由你决定。', discard: '丢弃', search: '搜索',
+      composerHint: '写好邮件后，可以发送或存为草稿。', discard: '丢弃', search: '搜索',
+      send: '发送', saveDraft: '存为草稿', wrote: (d, n) => `${n} 于 ${d} 写道：`, sentToast: '邮件已发送',
     },
     calendar: {
       today: '今天', day: '日', week: '周', month: '月', year: '年', allDay: '全天',
@@ -289,7 +294,8 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       draftBanner: '草稿已儲存，尚未寄出。請確認後自行寄出。',
       junkBanner: '這封郵件可能是垃圾郵件，其中的連結與要求可能不安全。',
       replyTo: n => `回覆 ${n}`, placeholder: '輸入回覆…',
-      composerHint: '草稿會自動儲存，是否寄出由你決定。', discard: '丟棄', search: '搜尋',
+      composerHint: '寫好郵件後，可以寄出或存成草稿。', discard: '丟棄', search: '搜尋',
+      send: '寄出', saveDraft: '存成草稿', wrote: (d, n) => `${n} 於 ${d} 寫道：`, sentToast: '郵件已寄出',
     },
     calendar: {
       today: '今天', day: '日', week: '週', month: '月', year: '年', allDay: '整天',

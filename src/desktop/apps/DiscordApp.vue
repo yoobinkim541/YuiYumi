@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useDemo } from '@/stores/demo'
+import { stage } from '../actuator'
+import { useAssistantMarks } from '../assistant-strings'
 import { colorFor, initials, timeLabel } from '../format'
 import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const demo = useDemo()
-const { locale } = useDesktopStrings()
+const marks = useAssistantMarks()
 const channelId = ref('dc-lounge')
+/** Text the assistant is typing into this app's composer. */
+const agentTyping = computed(() => (stage.typing?.app === 'discord' ? stage.typing : null))
+// Follow the assistant: the channel it types into or just posted to.
+watch(() => agentTyping.value?.channelId, (id) => { if (id) channelId.value = id })
+watch(() => stage.reveal?.seq, () => {
+  const r = stage.reveal
+  if (r?.app === 'discord' && typeof r.input.channelId === 'string') channelId.value = r.input.channelId
+})
+const { locale } = useDesktopStrings()
 /** Local composer text only; there is no send action. */
 const composer = ref<Record<string, string>>({})
 
@@ -47,10 +58,15 @@ watch(channel, c => setWindowTitle('discord', c ? `Discord — #${c.name} | ${c.
           <div>
             <div><strong :style="{ color: colorFor(m.author) }">{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at, undefined, locale) }}</span></div>
             <div class="text">{{ m.text }}</div>
+            <div v-if="m.viaAssistant" class="via">{{ marks.via }}</div>
           </div>
         </div>
       </div>
-      <div class="composer">
+      <div v-if="agentTyping" class="composer agent">
+        <div class="agent-note">{{ marks.typing }}</div>
+        <div class="agent-text">{{ agentTyping.text }}<i class="caret" /></div>
+      </div>
+      <div v-else class="composer">
         <textarea v-model="text" :placeholder="`Message #${channel?.name ?? ''}`" spellcheck="false" />
       </div>
     </main>
@@ -76,4 +92,10 @@ watch(channel, c => setWindowTitle('discord', c ? `Discord — #${c.name} | ${c.
 .text { font-size: 19px; line-height: 1.5; color: #dbdee1; }
 .composer { margin: 0 20px 20px; background: #383a40; border-radius: 10px; }
 .composer textarea { width: 100%; height: 64px; border: none; outline: none; resize: none; background: transparent; color: #dbdee1; padding: 12px 16px; font-family: inherit; font-size: 19px; box-sizing: border-box; }
+.via { font-size: 13px; color: #f47fa4; font-weight: 600; margin-top: 2px; }
+.composer.agent { box-shadow: 0 0 0 2px rgba(244, 127, 164, 0.6); }
+.agent-note { color: #f47fa4; font-size: 14px; font-weight: 700; padding: 8px 16px 0; }
+.agent-text { min-height: 64px; padding: 6px 16px 12px; font-size: 19px; line-height: 1.5; white-space: pre-wrap; color: #f2f3f5; box-sizing: border-box; }
+.caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 1px; vertical-align: text-bottom; background: #f47fa4; animation: caret-blink 0.9s steps(1) infinite; }
+@keyframes caret-blink { 50% { opacity: 0; } }
 </style>

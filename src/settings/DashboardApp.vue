@@ -15,6 +15,7 @@ import { useSettings } from '@/stores/settings'
 import { voiceState } from '@/voice'
 import { activity } from './activity'
 import Icon from './Icon.vue'
+import { useSettingsI18n } from './i18n'
 import { formatShortcut, isMacPlatform } from './shortcut'
 import './theme.css'
 
@@ -22,6 +23,7 @@ const settings = useSettings()
 const character = useCharacterStore()
 const persona = usePersona()
 const demo = useDemo()
+const { t, bcp47 } = useSettingsI18n(() => settings.lang)
 
 // Clock for relative times; also refreshes the dialogue copy (DialogueLog is not reactive).
 const now = ref(Date.now())
@@ -35,26 +37,12 @@ onMounted(() => { refresh(); timer = setInterval(refresh, 1500) })
 onBeforeUnmount(() => clearInterval(timer))
 watch(() => activity.dialogueTick, () => setTimeout(refresh, 50))
 
-const DECISION_LABEL: Record<string, string> = {
-  'idle': 'Idle',
-  'silent': 'Stayed silent',
-  'acted': 'Spoke up / acted',
-  'error': 'Observer error',
-  'budget': 'Budget reached (fallback lines)',
-  'dropped:daily_limit': 'Held back: daily limit',
-  'dropped:cooldown': 'Held back: cooldown',
-  'dropped:dwell': 'Held back: screen just opened',
-  'dropped:typing': 'Held back: you were typing',
-  'dropped:speaking': 'Held back: you were speaking',
-}
-const decision = computed(() => DECISION_LABEL[nunchiStatus.last] ?? nunchiStatus.last)
+const decision = computed(() => t.value.dash.decisions[nunchiStatus.last] ?? nunchiStatus.last)
 
 function ago(at: number | undefined | null): string {
   if (!at) return ''
   const s = Math.max(0, Math.round((now.value - at) / 1000))
-  if (s < 60) return `${s}s ago`
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`
-  return `${Math.floor(s / 3600)}h ago`
+  return t.value.dash.ago(s)
 }
 
 const slackDraftCount = computed(() => Object.values(demo.slackDrafts).filter(t => t.trim()).length)
@@ -63,28 +51,27 @@ const quotaPct = computed(() => nunchiConfig.maxPerDay > 0
   ? Math.min(100, Math.round(nunchiStatus.interjectionsToday / nunchiConfig.maxPerDay * 100))
   : 100)
 
-const MODE_LABEL = { active: 'Active', quiet: 'Quiet', ornamental: 'Ornamental' } as const
 const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 
-const SERVICES: { id: ConnectorService, title: string, icon: string, count: () => string }[] = [
-  { id: 'mail', title: 'Gmail', icon: 'mail', count: () => `${demo.mails.length} mails` },
-  { id: 'calendar', title: 'Calendar', icon: 'calendar', count: () => `${demo.events.length} events` },
-  { id: 'drive', title: 'Drive', icon: 'drive', count: () => `${demo.files.length} files` },
-  { id: 'slack', title: 'Slack', icon: 'slack', count: () => `${demo.slackChannels.length} channels` },
-  { id: 'discord', title: 'Discord', icon: 'discord', count: () => `${demo.discordChannels.length} channels` },
+const SERVICES: { id: Exclude<ConnectorService, 'reminders'>, title: string, icon: string, n: () => number }[] = [
+  { id: 'mail', title: 'Gmail', icon: 'mail', n: () => demo.mails.length },
+  { id: 'calendar', title: 'Calendar', icon: 'calendar', n: () => demo.events.length },
+  { id: 'drive', title: 'Drive', icon: 'drive', n: () => demo.files.length },
+  { id: 'slack', title: 'Slack', icon: 'slack', n: () => demo.slackChannels.length },
+  { id: 'discord', title: 'Discord', icon: 'discord', n: () => demo.discordChannels.length },
 ]
 // LIVE_SERVICES is a plain object; re-read it on the clock tick.
 const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } })
 </script>
 
 <template>
-  <div class="yy-airi dash scroll">
+  <div class="yy-airi dash scroll" :lang="bcp47">
     <div class="dash-inner">
       <!-- Page header (AIRI PageHeader): small subtitle above a large title -->
       <header class="page-header">
         <h1>
           <span class="subtitle">YuiYumi</span>
-          <span class="title">Dashboard</span>
+          <span class="title">{{ t.dash.title }}</span>
         </h1>
       </header>
 
@@ -92,39 +79,39 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
       <div class="tiles">
         <div class="tile">
           <div class="t-icon"><Icon name="spark" :size="64" /></div>
-          <span class="t-label">Interjections today</span>
+          <span class="t-label">{{ t.dash.interjections }}</span>
           <span class="t-value">{{ nunchiStatus.interjectionsToday }}<small> / {{ nunchiConfig.maxPerDay }}</small></span>
           <div class="meter"><div :style="{ width: `${quotaPct}%` }" /></div>
         </div>
         <div class="tile">
           <div class="t-icon"><Icon name="eye" :size="64" /></div>
-          <span class="t-label">Last observer decision</span>
+          <span class="t-label">{{ t.dash.lastDecision }}</span>
           <span class="t-value small">{{ decision }}</span>
-          <span class="t-sub">{{ nunchiStatus.inFlight ? 'Checking the screen…' : ago(activity.lastDecision?.at) || 'No check yet' }} · dwell {{ Math.round(nunchiStatus.dwellSec) }} s</span>
+          <span class="t-sub">{{ nunchiStatus.inFlight ? t.dash.checking : ago(activity.lastDecision?.at) || t.dash.noCheck }} · {{ t.dash.dwell(Math.round(nunchiStatus.dwellSec)) }}</span>
         </div>
         <div class="tile">
           <div class="t-icon"><Icon name="dashboard" :size="64" /></div>
-          <span class="t-label">Agent tasks run</span>
+          <span class="t-label">{{ t.dash.tasksRun }}</span>
           <span class="t-value">{{ activity.tasksRun }}</span>
-          <span class="t-sub">{{ activity.tasksFromScreen }} offered from the screen</span>
+          <span class="t-sub">{{ t.dash.fromScreen(activity.tasksFromScreen) }}</span>
         </div>
         <div class="tile">
           <div class="t-icon"><Icon name="draft" :size="64" /></div>
-          <span class="t-label">Drafts saved</span>
+          <span class="t-label">{{ t.dash.drafts }}</span>
           <span class="t-value">{{ draftsSaved }}</span>
-          <span class="t-sub">{{ demo.drafts.length }} mail · {{ slackDraftCount }} Slack · never sent</span>
+          <span class="t-sub">{{ t.dash.draftsBreakdown(demo.drafts.length, slackDraftCount) }}</span>
         </div>
       </div>
 
       <div class="cols">
         <!-- Recent dialogue -->
         <section class="section dialogue">
-          <h2><Icon name="chat" :size="16" /> Recent dialogue</h2>
+          <h2><Icon name="chat" :size="16" /> {{ t.dash.dialogue }}</h2>
           <div class="msgs scroll">
-            <p v-if="!dialogue.length" class="empty">No conversation yet. Hold {{ pttLabel }} or the talk button and say hello.</p>
-            <div v-for="(t, i) in dialogue" :key="i" class="msg" :class="t.role">
-              <span class="who">{{ t.role === 'user' ? 'You' : persona.activeCard.name }}</span>
-              <span class="bubble">{{ t.text }}</span>
+            <p v-if="!dialogue.length" class="empty">{{ t.dash.emptyDialogue(pttLabel) }}</p>
+            <div v-for="(turn, i) in dialogue" :key="i" class="msg" :class="turn.role">
+              <span class="who">{{ turn.role === 'user' ? (settings.userName.trim() || t.dash.you) : persona.activeCard.name }}</span>
+              <span class="bubble">{{ turn.text }}</span>
             </div>
           </div>
         </section>
@@ -132,23 +119,23 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
         <div class="side-col">
           <!-- Now -->
           <section class="section">
-            <h2><Icon name="clock" :size="16" /> Now</h2>
-            <div class="kv"><span>Mode</span><span class="badge" :class="settings.mode === 'active' ? 'primary' : 'mock'">{{ MODE_LABEL[settings.mode] }}</span></div>
-            <div class="kv"><span>Model</span><b>{{ CHARACTER_MODELS[character.character].label }}</b></div>
-            <div class="kv"><span>Character</span><b>{{ persona.activeCard.name }}</b></div>
-            <div class="kv"><span>Voice</span><b>{{ voiceState.speaking ? 'Speaking' : voiceState.vadEnabled ? 'Listening (VAD)' : `Push-to-talk (${pttLabel})` }}</b></div>
-            <div class="kv"><span>Sound</span><b>{{ settings.sound ? 'On' : 'Off' }}</b></div>
+            <h2><Icon name="clock" :size="16" /> {{ t.dash.now }}</h2>
+            <div class="kv"><span>{{ t.dash.mode }}</span><span class="badge" :class="settings.mode === 'active' ? 'primary' : 'mock'">{{ t.general.modes[settings.mode].title }}</span></div>
+            <div class="kv"><span>{{ t.dash.model }}</span><b>{{ CHARACTER_MODELS[character.character].label }}</b></div>
+            <div class="kv"><span>{{ t.dash.character }}</span><b>{{ persona.activeCard.name }}</b></div>
+            <div class="kv"><span>{{ t.dash.voice }}</span><b>{{ voiceState.speaking ? t.dash.speaking : voiceState.vadEnabled ? t.dash.listeningVad : t.dash.ptt(pttLabel) }}</b></div>
+            <div class="kv"><span>{{ t.dash.sound }}</span><b>{{ settings.sound ? t.dash.on : t.dash.off }}</b></div>
           </section>
 
           <!-- Connected services -->
           <section class="section">
-            <h2><Icon name="plug" :size="16" /> Connected services</h2>
+            <h2><Icon name="plug" :size="16" /> {{ t.dash.services }}</h2>
             <div class="svc-grid">
               <div v-for="s in SERVICES" :key="s.id" class="svc">
                 <Icon :name="s.icon" :size="18" />
                 <span class="svc-name">{{ s.title }}</span>
-                <span class="svc-count">{{ s.count() }}</span>
-                <span class="badge" :class="liveFlags[s.id] ? 'live' : 'mock'">{{ liveFlags[s.id] ? 'Live' : 'Mock' }}</span>
+                <span class="svc-count">{{ t.dash.counts[s.id](s.n()) }}</span>
+                <span class="badge" :class="liveFlags[s.id] ? 'live' : 'mock'">{{ liveFlags[s.id] ? t.connectors.live : t.connectors.mock }}</span>
               </div>
             </div>
           </section>
