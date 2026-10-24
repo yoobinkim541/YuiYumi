@@ -1,0 +1,64 @@
+{
+  "_note": "Fictional demo data. at is computed at seed time from minutesAgo.",
+  "channels": [
+    {
+      "id": "sl-general",
+      "name": "general",
+      "workspace": "極光實驗室"
+    },
+    {
+      "id": "sl-orbit",
+      "name": "proj-orbit",
+      "workspace": "極光實驗室"
+    },
+    {
+      "id": "sl-design",
+      "name": "design",
+      "workspace": "極光實驗室"
+    }
+  ],
+  "messages": [
+    {
+      "id": "slm-001",
+      "channelId": "sl-general",
+      "author": "蔡佳穎",
+      "text": "提醒大家，今天下午 4 點會清理辦公室茶水間，請記得把自己的便當盒帶回家喔！",
+      "minutesAgo": 140
+    },
+    {
+      "id": "slm-002",
+      "channelId": "sl-general",
+      "author": "張承翰",
+      "text": "10 月的雲端帳單已經放在財務系統囉。",
+      "minutesAgo": 175
+    },
+    {
+      "id": "slm-003",
+      "channelId": "sl-orbit",
+      "author": "吳冠宇",
+      "text": "星空系統對 Orbit 的回覆很正面，他們想約個會議討論價格。",
+      "minutesAgo": 30
+    },
+    {
+      "id": "slm-004",
+      "channelId": "sl-orbit",
+      "author": "吳冠宇",
+      "text": "@子安 可以在下午 5 點前把最新的星空系統報價單分享到這裡嗎？審查簡報要用到。",
+      "minutesAgo": 8
+    },
+    {
+      "id": "slm-005",
+      "channelId": "sl-design",
+      "author": "李書瑋",
+      "text": "三版新手引導草稿已經上傳到雲端硬碟了，3 點審查前歡迎大家給意見。",
+      "minutesAgo": 90
+    },
+    {
+      "id": "slm-006",
+      "channelId": "sl-design",
+      "author": "蔡佳穎",
+      "text": "第 2 版看起來很棒，不過標題感覺有點太長。",
+      "minutesAgo": 60
+    }
+  ]
+}

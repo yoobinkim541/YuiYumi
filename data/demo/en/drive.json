@@ -1,0 +1,33 @@
+{
+  "_note": "Fictional demo data. modifiedAt is computed at seed time from minutesAgo.",
+  "files": [
+    {
+      "id": "file-proposal",
+      "name": "Orbit_Proposal_Hoshizora_v3.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "minutesAgo": 1500,
+      "content": "Orbit Adoption Proposal for Hoshizora Systems (v3)\n\n1. Goal\nReduce weekly reporting time of the sales team by 40% with Orbit's automatic summaries.\n\n2. Scope\n- Phase 1 (4 weeks): sales team, 25 seats\n- Phase 2 (8 weeks): customer support, 40 seats\n\n3. Timeline\nKick-off in the second week of next month, Phase 1 review after 4 weeks.\n\n4. Success metrics\nReporting time, adoption rate, and satisfaction survey score."
+    },
+    {
+      "id": "file-quote",
+      "name": "Hoshizora_Quote_2026Q4.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "minutesAgo": 300,
+      "content": "Quote No. AQ-2026-114 (valid for 30 days)\n\nItem | Qty | Unit price (JPY) | Amount (JPY)\nOrbit Business license (annual) | 25 | 36,000 | 900,000\nOnboarding workshop | 1 | 150,000 | 150,000\nPriority support (annual) | 1 | 120,000 | 120,000\n\nSubtotal: 1,170,000\nTax (10%): 117,000\nTotal: 1,287,000"
+    },
+    {
+      "id": "file-notes",
+      "name": "Weekly_Meeting_Notes.md",
+      "mimeType": "text/markdown",
+      "minutesAgo": 2900,
+      "content": "Weekly meeting notes\n\n- Orbit beta feedback: sync speed improved\n- Hoshizora deal: waiting for meeting date\n- Lumen: Q4 co-marketing proposal received\n- Action: Alex to send the quote to Daniel"
+    },
+    {
+      "id": "file-onboarding",
+      "name": "Onboarding_Variants_v2.pdf",
+      "mimeType": "application/pdf",
+      "minutesAgo": 92,
+      "content": "Onboarding screen variants\n\nVariant 1: 'Welcome to Orbit'\nVariant 2: 'Your weekly report, written while you were busy'\nVariant 3: 'Less reporting, more building'"
+    }
+  ]
+}

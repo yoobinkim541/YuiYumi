@@ -1,0 +1,28 @@
+[package]
+name = "ayagami-web"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Feasibility spike: Ayagami driver behind a C-ABI surface for wasm32-unknown-unknown"
+
+# Standalone package; do not attach to any parent workspace.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "ayagami-web-native"
+path = "src/main.rs"
+
+[dependencies]
+ayagami = { git = "https://github.com/AyagamiDev/ayagami", rev = "0d1d7aa3efe57b1b363b72e672e353c52a9c15d6" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[patch."https://github.com/AyagamiDev/ayagami"]
+ayagami = { path = "vendor/ayagami" }

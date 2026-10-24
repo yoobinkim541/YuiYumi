@@ -1,0 +1,14 @@
+{
+  "slack": {
+    "author": "오도윤",
+    "text": "공지: 별빛시스템 리뷰가 오후 4시로 앞당겨졌어요. 그 전에 최신 견적서 PDF를 여기에 올려주실 분 계신가요?",
+    "notifyTitle": "#proj-orbit의 오도윤"
+  },
+  "mail": {
+    "from": "정하은 <haeun.jung@byeolbit-sys.example>",
+    "to": "김지우 <jiwoo.kim@aurora-lab.example>",
+    "subject": "Re: Orbit 가격 문의 - 오늘 중 수정 견적 요청",
+    "body": "김지우 님 안녕하세요,\n\n아까 통화 감사했습니다. 물량 할인이 반영된 Orbit 수정 견적서를 오늘 중으로 보내주실 수 있을까요? 저희 구매 회의가 내일 오전에 있습니다.\n\n감사합니다.\n정하은 드림\n별빛시스템",
+    "notifyTitle": "정하은"
+  }
+}

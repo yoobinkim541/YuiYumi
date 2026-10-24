@@ -1,0 +1,11 @@
+{
+  "_note": "Fictional demo data (ja). start/end are local times of the seed day (HH:MM), dayOffset 0 = today.",
+  "events": [
+    { "id": "ev-001", "title": "チーム朝会", "dayOffset": 0, "start": "09:30", "end": "09:45", "location": "ハドルルーム" },
+    { "id": "ev-002", "title": "小林さんとランチ", "dayOffset": 0, "start": "12:00", "end": "13:00", "location": "カフェ ルミ" },
+    { "id": "ev-003", "title": "オンボーディング デザインレビュー", "dayOffset": 0, "start": "15:00", "end": "16:00", "location": "会議室ネビュラ" },
+    { "id": "ev-004", "title": "ルーメン提携打ち合わせ", "dayOffset": 0, "start": "15:00", "end": "15:30", "location": "オンライン" },
+    { "id": "ev-005", "title": "週報作成", "dayOffset": 0, "start": "17:00", "end": "18:00" },
+    { "id": "ev-006", "title": "Orbit スプリント計画", "dayOffset": 1, "start": "11:00", "end": "12:00", "location": "会議室ネビュラ" }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "yuiyumi-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit -p tsconfig.app.json && vite build",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "model": "node scripts/build-web-model.mjs",
+    "predev": "node scripts/copy-vad-assets.mjs",
+    "prebuild": "node scripts/copy-vad-assets.mjs",
+    "assets": "node scripts/build-ayagami.mjs && node scripts/build-web-model.mjs && node scripts/copy-vad-assets.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@deepgram/sdk": "^5.16.0",
+    "@elevenlabs/elevenlabs-js": "^2.74.0",
+    "@ricky0123/vad-web": "^0.0.31",
+    "cubism-web-batched-renderer": "github:FMsongX2/cubism-web-batched-renderer",
+    "jszip": "^3.10.2",
+    "modern-screenshot": "^4.7.0",
+    "onnxruntime-web": "^1.30.0",
+    "pinia": "^3.0.0",
+    "pixi-live2d-display": "0.4.0",
+    "pixi.js": "^6.5.10",
+    "vue": "^3.5.0",
+    "wlipsync": "^1.3.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vercel/node": "^5.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "sharp": "^0.34.0",
+    "smol-toml": "^1.4.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.0",
+    "vue-tsc": "^3.0.0"
+  }
+}

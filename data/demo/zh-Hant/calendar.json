@@ -1,0 +1,52 @@
+{
+  "_note": "Fictional demo data. start/end are local times of the seed day (HH:MM), dayOffset 0 = today.",
+  "events": [
+    {
+      "id": "ev-001",
+      "title": "團隊站會",
+      "dayOffset": 0,
+      "start": "09:30",
+      "end": "09:45",
+      "location": "小型討論室"
+    },
+    {
+      "id": "ev-002",
+      "title": "和書瑋吃午餐",
+      "dayOffset": 0,
+      "start": "12:00",
+      "end": "13:00",
+      "location": "路米咖啡"
+    },
+    {
+      "id": "ev-003",
+      "title": "新手引導設計審查",
+      "dayOffset": 0,
+      "start": "15:00",
+      "end": "16:00",
+      "location": "星雲會議室"
+    },
+    {
+      "id": "ev-004",
+      "title": "光點科技合作洽談",
+      "dayOffset": 0,
+      "start": "15:00",
+      "end": "15:30",
+      "location": "線上"
+    },
+    {
+      "id": "ev-005",
+      "title": "撰寫週報",
+      "dayOffset": 0,
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "ev-006",
+      "title": "Orbit 衝刺規劃會議",
+      "dayOffset": 1,
+      "start": "11:00",
+      "end": "12:00",
+      "location": "星雲會議室"
+    }
+  ]
+}

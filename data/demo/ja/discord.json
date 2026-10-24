@@ -1,0 +1,14 @@
+{
+  "_note": "Fictional demo data (ja). at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "dc-lounge", "name": "lounge", "workspace": "インディーメーカーズギルド" },
+    { "id": "dc-orbit", "name": "orbit-dev", "workspace": "インディーメーカーズギルド" }
+  ],
+  "messages": [
+    { "id": "dcm-001", "channelId": "dc-lounge", "author": "pixelfox", "text": "もう3杯目のコーヒー飲んでる人、他にいる？", "minutesAgo": 50 },
+    { "id": "dcm-002", "channelId": "dc-lounge", "author": "mochi_dev", "text": "3杯目？まだまだ甘いな笑", "minutesAgo": 48 },
+    { "id": "dcm-003", "channelId": "dc-lounge", "author": "kaito", "text": "土曜にゲーム会やらない？うちでよければ場所出すよ", "minutesAgo": 20 },
+    { "id": "dcm-004", "channelId": "dc-orbit", "author": "mochi_dev", "text": "新しい同期エンジンをbetaブランチにpushしました。各自の環境で試してもらえると助かります", "minutesAgo": 70 },
+    { "id": "dcm-005", "channelId": "dc-orbit", "author": "kaito", "text": "こっちではbeta問題なく動いた！起動が体感で3割くらい速くなってる", "minutesAgo": 35 }
+  ]
+}

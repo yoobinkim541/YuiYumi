@@ -1,0 +1,14 @@
+{
+  "slack": {
+    "author": "吳冠宇",
+    "text": "跟大家說一聲：星空系統的審查提前到下午 4 點了。可以請誰在那之前把最新版報價單 PDF 丟到這裡嗎？",
+    "notifyTitle": "吳冠宇 在 #proj-orbit"
+  },
+  "mail": {
+    "from": "王雅婷 <yating.wang@hsingkong-sys.example>",
+    "to": "林子安 <zian.lin@aurora-lab.example>",
+    "subject": "Re: Orbit 報價：今天需要更新版報價單",
+    "body": "子安您好，\n\n感謝您稍早的通話。可以麻煩您今天下班前，把含量大折扣的 Orbit 更新版報價單寄給我嗎？我們的採購會議就在明天早上。\n\n順頌商祺，\n王雅婷\n星空系統",
+    "notifyTitle": "王雅婷"
+  }
+}

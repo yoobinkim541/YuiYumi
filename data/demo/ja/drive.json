@@ -1,0 +1,33 @@
+{
+  "_note": "Fictional demo data (ja). modifiedAt is computed at seed time from minutesAgo.",
+  "files": [
+    {
+      "id": "file-proposal",
+      "name": "Orbit_ご提案書_星空システム_v3.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "minutesAgo": 1500,
+      "content": "星空システム株式会社 御中　Orbit 導入のご提案（v3）\n\n1. 目的\nOrbit の自動要約機能により、営業チームの週次報告にかかる時間を40%削減します。\n\n2. 導入範囲\n- フェーズ1（4週間）：営業チーム 25ライセンス\n- フェーズ2（8週間）：カスタマーサポート 40ライセンス\n\n3. スケジュール\n来月第2週にキックオフし、4週間後にフェーズ1の振り返りを実施します。\n\n4. 成功指標\n報告作成時間、利用定着率、満足度アンケートのスコア。"
+    },
+    {
+      "id": "file-quote",
+      "name": "星空システム_お見積書_2026Q4.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "minutesAgo": 300,
+      "content": "お見積書 No. AQ-2026-114（有効期限：30日間）\n\n項目 | 数量 | 単価（円） | 金額（円）\nOrbit Business ライセンス（年額） | 25 | 36,000 | 900,000\n導入ワークショップ | 1 | 150,000 | 150,000\n優先サポート（年額） | 1 | 120,000 | 120,000\n\n小計：1,170,000\n消費税（10%）：117,000\n合計：1,287,000"
+    },
+    {
+      "id": "file-notes",
+      "name": "週次ミーティング議事録.md",
+      "mimeType": "text/markdown",
+      "minutesAgo": 2900,
+      "content": "週次ミーティング議事録\n\n- Orbit ベータ版のフィードバック：同期速度が改善\n- 星空システム案件：打ち合わせ日程の返答待ち\n- ルーメン：第4四半期の共同マーケティング提案を受領\n- アクション：木村から吉田さんへ見積もりを送付"
+    },
+    {
+      "id": "file-onboarding",
+      "name": "オンボーディング案_v2.pdf",
+      "mimeType": "application/pdf",
+      "minutesAgo": 92,
+      "content": "オンボーディング画面の案\n\n案1：「Orbit へようこそ」\n案2：「忙しい間に、今週の報告書が出来上がっています」\n案3：「報告は少なく、ものづくりは多く」"
+    }
+  ]
+}

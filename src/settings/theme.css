@@ -1,0 +1,69 @@
+/* AIRI settings look (neutral surfaces, cyan primary, rounded cards), re-created in
+   plain CSS for the settings and dashboard windows. Adapted from AIRI (MIT). */
+
+.yy-airi {
+  --p50: #effafd; --p100: #d9f2fa; --p200: #b3e5f4; --p300: #7fd2eb; --p400: #4dbfe1; --p500: #22a9d2; --p600: #1789ad;
+  --n50: #fafafa; --n100: #f5f5f5; --n200: #e5e5e5; --n300: #d4d4d4; --n400: #a3a3a3; --n500: #737373; --n600: #525252; --n700: #404040; --n800: #262626; --n900: #171717;
+  box-sizing: border-box;
+  width: 100%; height: 100%; min-width: 0; min-height: 0;
+  display: flex; overflow: hidden;
+  background: #fff; color: var(--n800);
+  font-family: "DM Sans", system-ui, -apple-system, "Hiragino Sans", "Noto Sans KR", sans-serif;
+  font-size: 14px; line-height: 1.45;
+}
+.yy-airi *, .yy-airi *::before, .yy-airi *::after { box-sizing: border-box; }
+
+/* Console section (AIRI settings pages): flat neutral-50 panel, small medium-weight title. */
+.yy-airi .section { position: relative; z-index: 1; background: var(--n50); border: 0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.yy-airi .section h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--n900); }
+.yy-airi .section .hint { margin: 0 0 12px; color: var(--n500); font-size: 12px; line-height: 1.6; }
+.yy-airi .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.yy-airi .field:last-child { margin-bottom: 0; }
+.yy-airi .field > label { font-size: 13px; font-weight: 500; color: var(--n700); }
+.yy-airi .field .sub { font-size: 12px; color: var(--n500); font-weight: 400; }
+.yy-airi .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--n100); }
+.yy-airi .row:first-of-type { border-top: 0; }
+.yy-airi .row .txt { display: flex; flex-direction: column; min-width: 0; }
+.yy-airi .row .txt b { font-weight: 500; font-size: 14px; color: var(--n800); }
+.yy-airi .row .txt span { font-size: 12.5px; color: var(--n500); }
+
+.yy-airi input[type=text], .yy-airi input[type=number], .yy-airi textarea {
+  width: 100%; font: inherit; color: var(--n800); background: #fff;
+  border: 2px solid var(--n100); border-radius: 8px; padding: 7px 10px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.yy-airi textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+.yy-airi input:focus, .yy-airi textarea:focus { border-color: var(--p300); box-shadow: 0 0 0 3px rgb(34 169 210 / 0.12); }
+.yy-airi input[type=number] { width: 110px; }
+
+/* Switch (AIRI Checkbox as toggle). */
+.yy-airi .switch { position: relative; flex: none; width: 40px; height: 22px; border-radius: 999px; background: var(--n200); border: 0; cursor: pointer; transition: background .25s; padding: 0; }
+.yy-airi .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .2); transition: transform .25s; }
+.yy-airi .switch.on { background: var(--p500); }
+.yy-airi .switch.on::after { transform: translateX(18px); }
+
+/* Radio cards (AIRI RadioCardSimple). */
+.yy-airi .radio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.yy-airi .radio-card { display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: #fff; border: 2px solid var(--n100); border-radius: 10px; padding: 10px 12px; transition: border-color .25s, background .25s; }
+.yy-airi .radio-card:hover { border-color: var(--p200); }
+.yy-airi .radio-card.active { border-color: var(--p400); background: var(--p50); }
+.yy-airi .radio-card b { font-weight: 500; }
+.yy-airi .radio-card span { font-size: 12px; color: var(--n500); }
+
+/* Buttons (AIRI Button variants). */
+.yy-airi .btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; cursor: pointer;
+  border-radius: 8px; padding: 6px 12px; border: 2px solid var(--n200); background: #fff; color: var(--n700); transition: all .2s; }
+.yy-airi .btn:hover { border-color: var(--p300); color: var(--p600); }
+.yy-airi .btn.primary { background: var(--p500); border-color: var(--p500); color: #fff; }
+.yy-airi .btn.primary:hover { background: var(--p600); border-color: var(--p600); }
+.yy-airi .btn.danger:hover { border-color: #fca5a5; color: #dc2626; }
+.yy-airi .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.yy-airi .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--n100); color: var(--n600); }
+.yy-airi .badge.live { background: #dcfce7; color: #15803d; }
+.yy-airi .badge.mock { background: var(--n100); color: var(--n600); }
+.yy-airi .badge.primary { background: var(--p100); color: var(--p600); }
+.yy-airi .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+.yy-airi .scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--n200) transparent; }

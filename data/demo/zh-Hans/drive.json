@@ -1,0 +1,33 @@
+{
+  "_note": "Fictional demo data (zh-Hans). modifiedAt is computed at seed time from minutesAgo.",
+  "files": [
+    {
+      "id": "file-proposal",
+      "name": "Orbit_星空系统_引入方案_v3.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "minutesAgo": 1500,
+      "content": "星空系统 Orbit 引入方案（v3）\n\n1. 目标\n借助 Orbit 的自动摘要功能，将销售团队每周的汇报耗时降低40%。\n\n2. 范围\n- 第一阶段（4周）：销售团队，25个席位\n- 第二阶段（8周）：客户支持团队，40个席位\n\n3. 时间安排\n下个月第二周启动，第一阶段满4周后进行复盘。\n\n4. 成功指标\n汇报耗时、使用率、满意度问卷得分。"
+    },
+    {
+      "id": "file-quote",
+      "name": "星空系统_报价单_2026Q4.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "minutesAgo": 300,
+      "content": "报价单编号 AQ-2026-114（有效期30天）\n\n项目 | 数量 | 单价（人民币元） | 金额（人民币元）\nOrbit 企业版授权（年度） | 25 | 3,600 | 90,000\n上线培训工作坊 | 1 | 15,000 | 15,000\n优先技术支持（年度） | 1 | 12,000 | 12,000\n\n小计：117,000\n增值税（6%）：7,020\n合计：124,020"
+    },
+    {
+      "id": "file-notes",
+      "name": "每周会议纪要.md",
+      "mimeType": "text/markdown",
+      "minutesAgo": 2900,
+      "content": "每周会议纪要\n\n- Orbit beta 反馈：同步速度有提升\n- 星空系统项目：等待确认会议时间\n- 流明科技：已收到第四季度联合营销提案\n- 待办：林晓把报价单发给吴浩"
+    },
+    {
+      "id": "file-onboarding",
+      "name": "新手引导方案_v2.pdf",
+      "mimeType": "application/pdf",
+      "minutesAgo": 92,
+      "content": "新手引导页方案\n\n方案1：“欢迎使用 Orbit”\n方案2：“你忙的时候，周报已经写好了”\n方案3：“少一点汇报，多一点创造”"
+    }
+  ]
+}
