@@ -111,7 +111,7 @@ export class CubismRuntime implements CharacterRuntime {
 
     model.scale.set(1)
     this.baseSize = { w: model.width || 1, h: model.height || 1 }
-    model.anchor.set(0.5, 1)
+    model.anchor.set(0.5, 0)
     this.app.stage.addChild(model)
     this.fit()
 
@@ -189,9 +189,12 @@ export class CubismRuntime implements CharacterRuntime {
   private fit() {
     if (!this.model || !this.app) return
     const { width, height } = this.app.screen
-    const s = Math.min(width / this.baseSize.w, height / this.baseSize.h)
+    const { visible, topCut } = this.def.framing
+    // Fill the window height with the upper part of the model; the legs fall below the
+    // window edge and are clipped by the window.
+    const s = height / (this.baseSize.h * (visible - topCut))
     this.model.scale.set(s)
-    this.model.position.set(width / 2, height)
+    this.model.position.set(width / 2, -this.baseSize.h * s * topCut)
   }
 
   private resize() {

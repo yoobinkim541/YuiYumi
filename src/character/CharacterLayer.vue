@@ -48,45 +48,84 @@ const spriteClass = computed(() => [
     <div class="bubble-anchor">
       <SpeechBubble />
     </div>
-    <div ref="stage" class="stage" />
-    <div v-if="characterView.mode === 'fallback'" class="fallback">
-      <img :key="characterView.pulse" :src="icon" alt="Character" class="sprite" :class="spriteClass" draggable="false">
-    </div>
-    <div class="switcher" role="group" aria-label="Character">
-      <button
-        v-for="o in store.options"
-        :key="o.id"
-        type="button"
-        :class="{ active: store.character === o.id }"
-        :aria-pressed="store.character === o.id"
-        @click="store.setCharacter(o.id)"
-      >
-        {{ o.label }}
-      </button>
+    <!-- The character lives in its own window; the legs fall below the window edge. -->
+    <div class="window">
+      <div class="titlebar">
+        <span class="dot" :class="characterView.node" />
+        <span class="name">{{ CHARACTER_MODELS[store.character].label }}</span>
+        <div class="switcher" role="group" aria-label="Character">
+          <button
+            v-for="o in store.options"
+            :key="o.id"
+            type="button"
+            :class="{ active: store.character === o.id }"
+            :aria-pressed="store.character === o.id"
+            @click="store.setCharacter(o.id)"
+          >
+            {{ o.label }}
+          </button>
+        </div>
+      </div>
+      <div class="viewport">
+        <div ref="stage" class="stage" />
+        <div v-if="characterView.mode === 'fallback'" class="fallback">
+          <img :key="characterView.pulse" :src="icon" alt="Character" class="sprite" :class="spriteClass" draggable="false">
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .character-layer {
-  width: min(520px, 45vw);
-  height: min(780px, 92vh);
+  width: min(380px, 30vw);
+  height: min(520px, 62vh);
   pointer-events: none;
   user-select: none;
 }
+.window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 246, 251, 0.92) 0%, rgba(238, 236, 255, 0.92) 100%);
+  box-shadow: 0 18px 40px rgba(40, 24, 70, 0.28), 0 2px 6px rgba(40, 24, 70, 0.12);
+  backdrop-filter: blur(10px);
+}
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 14px;
+  flex: none;
+  color: #4a3f5c;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(120, 100, 160, 0.12);
+}
+.titlebar .name { flex: 1; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #9be38f; }
+.dot.working, .dot.waiting { background: #f5c451; }
+.dot.speaking, .dot.listening { background: #7aa7ff; }
+.dot.failed { background: #ff8a8a; }
+.dot.sleeping { background: #c9c3d6; }
+.viewport { position: relative; flex: 1; overflow: hidden; }
 .stage { position: absolute; inset: 0; }
 .bubble-anchor {
   position: absolute;
   left: 50%;
-  top: 4%;
+  top: -10px;
   transform: translate(-50%, -100%);
   z-index: 2;
   display: flex;
   justify-content: center;
   width: max-content;
-  max-width: 90%;
+  max-width: 120%;
 }
-.character-layer[data-mode='fallback'] .bubble-anchor { top: 50%; }
 .fallback {
   position: absolute;
   inset: 0;
@@ -111,18 +150,12 @@ const spriteClass = computed(() => [
 .anim-droop { animation: droop 1.2s ease-in-out 1 forwards; }
 .anim-pulse { animation: pulse 1.4s ease-in-out 2; }
 .switcher {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  z-index: 3;
   display: flex;
   gap: 2px;
   padding: 2px;
   border-radius: 999px;
-  background: rgba(20, 16, 28, 0.45);
+  background: rgba(74, 63, 92, 0.1);
   pointer-events: auto;
-  opacity: 0.55;
-  transition: opacity 0.2s ease;
 }
 .switcher:hover { opacity: 1; }
 .switcher button {
@@ -130,11 +163,11 @@ const spriteClass = computed(() => [
   border-radius: 999px;
   padding: 3px 9px;
   background: transparent;
-  color: #fff;
+  color: #4a3f5c;
   font-size: 11px;
   cursor: pointer;
 }
-.switcher button.active { background: rgba(255, 255, 255, 0.9); color: #2a2230; }
+.switcher button.active { background: #fff; color: #2a2230; box-shadow: 0 1px 3px rgba(40, 24, 70, 0.15); }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px) scale(1.02, 0.98); } }
 @keyframes jump { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-28px) scale(0.96, 1.06); } 100% { transform: translateY(0) scale(1); } }
 @keyframes tilt { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-6deg); } 70% { transform: rotate(4deg); } }

@@ -21,5 +21,5 @@ import ObservingIndicator from './ui/ObservingIndicator.vue'
 <style scoped>
 .stage { position: relative; width: 100%; height: 100%; }
 .desktop { position: absolute; inset: 0; }
-.character { position: absolute; right: 0; bottom: 0; pointer-events: none; }
+.character { position: absolute; right: 20px; bottom: 20px; pointer-events: none; }
 </style>

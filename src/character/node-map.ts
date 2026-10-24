@@ -22,7 +22,7 @@ export interface NodeSettings {
 const base = { blink: true, breath: true, lookAt: false, idleNoise: false } as const
 
 export const NODE_MAP_TT2: Record<CharacterNode, NodeSettings> = {
-  idle: { ...base, lookAt: true, motion: null },
+  idle: { ...base, motion: null },
   listening: { ...base, motion: { name: '2-0-tt2-0-simleidle', loop: true } },
   working: { ...base, motion: { name: '2-0-tt2-0-questionmotion', loop: true } },
   waiting: { ...base, motion: { name: '2-0-tt2-0-poutidle', loop: true } },
@@ -51,7 +51,8 @@ export function graphNodeSettings(graph: AnimGraph, node: CharacterNode): NodeSe
   return {
     blink: proc('blink'),
     breath: proc('breath'),
-    lookAt: proc('look_at') || def.gaze?.type === 'cursor',
+    // Cursor gaze is disabled in the web app: the character faces forward.
+    lookAt: false,
     idleNoise: proc('idle_noise'),
     motion: motion ? { name: motion.name, loop: motion.looping } : null,
   }

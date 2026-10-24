@@ -17,6 +17,12 @@ export interface CharacterModelDef {
   emotions: EmotionMap
   /** Node settings; `graph` is the pack's anim-graph.json when the model has one. */
   nodes: (node: CharacterNode, graph: AnimGraph | null) => NodeSettings
+  /**
+   * Upper-body framing inside the character window. `visible`: fraction of the model's
+   * height (from the top of its bounds) that fills the window; the rest (legs) is cut.
+   * `topCut`: fraction of the model's height above the head that is empty and skipped.
+   */
+  framing: { visible: number, topCut: number }
 }
 
 const base = `${import.meta.env.BASE_URL}models/`
@@ -29,6 +35,7 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     icon: `${base}tt2-icon.png`,
     emotions: TT2_EMOTIONS,
     nodes: node => NODE_MAP_TT2[node] ?? NODE_MAP_TT2.idle,
+    framing: { visible: 0.5, topCut: 0.02 },
   },
   yui: {
     id: 'yui',
@@ -38,7 +45,8 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     emotions: YUI_EMOTIONS,
     nodes: (node, graph) => graph
       ? graphNodeSettings(graph, node)
-      : { blink: true, breath: true, lookAt: node === 'idle', idleNoise: false, motion: null },
+      : { blink: true, breath: true, lookAt: false, idleNoise: false, motion: null },
+    framing: { visible: 0.5, topCut: 0.02 },
   },
 }
 
