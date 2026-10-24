@@ -152,6 +152,10 @@ export const TranscriptSchema = z.object({
 })
 export type Transcript = z.infer<typeof TranscriptSchema>
 
+/** Voice style presets: lively (default, ~0.6 s), conversational (most natural, ~3-4 s), fast (~0.4 s, flatter). */
+export const VOICE_PRESETS = ['lively', 'conversational', 'fast'] as const
+export type VoicePreset = (typeof VOICE_PRESETS)[number]
+
 /** TTS: POST JSON to /api/tts, response body is audio/mpeg. */
 export const SpeechRequestSchema = z.object({
   text: z.string().min(1).max(500),
@@ -159,6 +163,7 @@ export const SpeechRequestSchema = z.object({
   emotion: EmotionSchema.optional(),
   /** Character speaking; selects its voice (ELEVENLABS_VOICE_<ID>) before the per-language voice. */
   character: z.enum(['tt2', 'yui']).optional(),
+  preset: z.enum(VOICE_PRESETS).optional(),
   sessionId: z.string(),
 })
 export type SpeechRequest = z.infer<typeof SpeechRequestSchema>

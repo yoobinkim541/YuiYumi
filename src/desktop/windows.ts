@@ -96,6 +96,36 @@ export function closeWindow(id: AppId): void {
   }
 }
 
+/** No minimized state exists, so minimizing hides the window like the yellow button does. */
+export function minimizeWindow(id: AppId): void {
+  closeWindow(id)
+}
+
+/** Saved geometry per window while it is zoomed (green button behavior). */
+const zoomed: Partial<Record<AppId, { x: number, y: number, w: number, h: number }>> = {}
+
+/** Toggle between filling the area between the menu bar and the Dock and the previous frame. */
+export function zoomWindow(id: AppId): void {
+  const w = desktop.windows[id]
+  const prev = zoomed[id]
+  if (prev) {
+    Object.assign(w, prev)
+    delete zoomed[id]
+  } else {
+    zoomed[id] = { x: w.x, y: w.y, w: w.w, h: w.h }
+    Object.assign(w, { x: 8, y: MENUBAR_H + 8, w: DESKTOP_W - 16, h: DESKTOP_H - MENUBAR_H - DOCK_H - 40 })
+  }
+  focusWindow(id)
+}
+
+/** Raise every open user window, keeping their stacking order, and keep the focused one on top. */
+export function bringAllToFront(): void {
+  const open = Object.values(desktop.windows).filter(w => w.open && !isAssistantApp(w.id)).sort((a, b) => a.z - b.z)
+  for (const w of open) w.z = ++zTop
+  const f = desktop.focused
+  if (f && desktop.windows[f].open) desktop.windows[f].z = ++zTop
+}
+
 export function setWindowTitle(id: AppId, title: string): void {
   desktop.windows[id].title = title
 }

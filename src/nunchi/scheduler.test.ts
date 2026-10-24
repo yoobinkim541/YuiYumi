@@ -5,7 +5,7 @@ import type { ActivitySnapshot, ScreenSource } from '@/core/types'
 import type { AssistantMode } from '@/stores/settings'
 import type { KV } from './gate'
 import type { ObserveResult } from './observer-client'
-import { NunchiEngine } from './scheduler'
+import { NunchiEngine, POLL_MS, POLL_STALE_MS } from './scheduler'
 
 function harness(opts: { actions?: ObserveAction[], result?: ObserveResult, mode?: AssistantMode } = {}) {
   let t = new Date(2026, 9, 24, 14, 0, 0).getTime()
@@ -106,5 +106,64 @@ describe('NunchiEngine utterance path', () => {
     h.engine.onAssistantLine('こんにちは!')
     await h.engine.onTranscript('元気?', 'ja')
     expect(h.sent[0]!.recent).toEqual([{ role: 'assistant', text: 'こんにちは!' }])
+  })
+})
+
+describe('NunchiEngine slow observer', () => {
+  it('lets a slow poll finish instead of aborting it on the next tick, until it is stale', async () => {
+    let t = new Date(2026, 9, 24, 14, 0, 0).getTime()
+    const source: ScreenSource = {
+      capture: async () => ({ jpegBase64: 'AAAA', width: 1920, height: 1080, hash: '0'.repeat(36) }),
+      activity: () => ({ activeApp: 'Mail', windowTitle: 'Mail', typing: false }),
+    }
+    const signals: AbortSignal[] = []
+    const engine = new NunchiEngine({
+      source: () => source,
+      post: (_req, signal) => { signals.push(signal); return new Promise<ObserveResult>(() => {}) },
+      emit: () => {},
+      settings: { mode: 'active', lang: 'ko', sessionId: 's', setMode() {} },
+      storage: { getItem: () => null, setItem: () => {} },
+      visible: () => true,
+      now: () => t,
+    })
+    void engine.tick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(signals).toHaveLength(1)
+    t += POLL_MS
+    void engine.tick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(signals).toHaveLength(1)
+    expect(signals[0]!.aborted).toBe(false)
+    t += POLL_STALE_MS
+    void engine.tick()
+    await new Promise(r => setTimeout(r, 0))
+    expect(signals).toHaveLength(2)
+    expect(signals[0]!.aborted).toBe(true)
+  })
+})
+
+describe('NunchiEngine utterance during a capture', () => {
+  it('reuses the in-flight frame instead of sending none', async () => {
+    let release!: () => void
+    const gate = new Promise<void>(r => { release = r })
+    const source: ScreenSource = {
+      capture: async () => { await gate; return { jpegBase64: 'BBBB', width: 1920, height: 1080, hash: '0'.repeat(36) } },
+      activity: () => ({ activeApp: 'Mail', windowTitle: 'Mail', typing: false }),
+    }
+    const sent: ObserveRequest[] = []
+    const engine = new NunchiEngine({
+      source: () => source,
+      post: async req => { sent.push(req); return { ok: true, response: { actions: [] } } },
+      emit: () => {},
+      settings: { mode: 'active', lang: 'ko', sessionId: 's', setMode() {} },
+      storage: { getItem: () => null, setItem: () => {} },
+      visible: () => true,
+    })
+    const tick = engine.tick()
+    const utter = engine.onTranscript('안녕', 'ko')
+    release()
+    await Promise.all([tick, utter])
+    const withUtterance = sent.find(r => r.utterance)
+    expect(withUtterance?.frame?.jpegBase64).toBe('BBBB')
   })
 })

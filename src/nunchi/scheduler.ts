@@ -15,6 +15,12 @@ import { modeAfterTranscript } from './mode'
 import type { ObserveResult } from './observer-client'
 
 export const POLL_MS = 3000
+/**
+ * A poll still in flight is left alone until it is this old. Observer calls that end in a
+ * tool call routinely take longer than POLL_MS, so aborting on every tick would cancel
+ * exactly the responses that carry an action.
+ */
+export const POLL_STALE_MS = 15_000
 
 type Emit = <K extends keyof BusEvents>(type: K, payload: BusEvents[K]) => void
 
@@ -54,8 +60,10 @@ export class NunchiEngine {
   private ledger: Ledger
   private timer: ReturnType<typeof setInterval> | null = null
   private pollCtl: AbortController | null = null
+  private pollStartedAt = 0
   private utterCtl: AbortController | null = null
   private capturing = false
+  private capturePromise: Promise<Frame | null> | null = null
   private agentBusy = false
   private speaking = false
   private lastFallbackAt = -Infinity
@@ -92,10 +100,12 @@ export class NunchiEngine {
   async tick(): Promise<void> {
     if (this.d.settings.mode !== 'active' || !this.d.visible()) { this.pause(); return }
     if (this.agentBusy || this.capturing || this.utterCtl) return
+    if (this.pollCtl && this.now() - this.pollStartedAt < POLL_STALE_MS) return
 
     this.pollCtl?.abort()
     const ctl = new AbortController()
     this.pollCtl = ctl
+    this.pollStartedAt = this.now()
 
     const frame = await this.captureSafe()
     if (ctl.signal.aborted || !frame) return
@@ -173,17 +183,22 @@ export class NunchiEngine {
     this.d.emit('character:react', { emotion: f.emotion, line: f.line, source: 'fallback' })
   }
 
-  private async captureSafe(): Promise<Frame | null> {
-    if (this.capturing) return null
+  /** One capture at a time; a caller arriving mid-capture shares that frame instead of getting none. */
+  private captureSafe(): Promise<Frame | null> {
+    if (this.capturing) return this.capturePromise ?? Promise.resolve(null)
     this.capturing = true
-    try {
-      return await this.d.source().capture()
-    } catch (e) {
-      console.warn('[nunchi] capture failed', e)
-      return null
-    } finally {
-      this.capturing = false
-    }
+    this.capturePromise = (async () => {
+      try {
+        return await this.d.source().capture()
+      } catch (e) {
+        console.warn('[nunchi] capture failed', e)
+        return null
+      } finally {
+        this.capturing = false
+        this.capturePromise = null
+      }
+    })()
+    return this.capturePromise
   }
 
   private buildRequest(frame: Frame | null, dwellSec: number, utterance?: string, lang?: Lang): ObserveRequest {

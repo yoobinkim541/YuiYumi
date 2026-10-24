@@ -23,6 +23,166 @@ export interface DesktopStrings {
     conflict: string, overlapAt: (hm: string) => string
   }
   now: string
+  mb: MenuBarStrings
+}
+
+/** Menu bar, menus, status panels and system dialogs. */
+export interface MenuBarStrings {
+  // System menu
+  aboutPC: string, systemSettings: string, sleep: string, restart: string, shutDown: string
+  lockScreen: string, logOut: (user: string) => string
+  // App menu
+  about: (app: string) => string, settings: string, hide: (app: string) => string
+  hideOthers: string, showAll: string, quit: (app: string) => string
+  // Menu titles
+  file: string, edit: string, view: string, go: string, window: string, help: string
+  mailbox: string, message: string, format: string
+  // File
+  newMessage: string, newWindow: string, newFolder: string, newEvent: string, open: string
+  closeWindow: string, save: string, print: string
+  // Edit
+  undo: string, redo: string, cut: string, copy: string, paste: string, selectAll: string, find: string
+  // View
+  showSidebar: string, hideSidebar: string, enterFullScreen: string, asIcons: string, asList: string
+  // Go
+  back: string, forward: string, documents: string, desktop: string, downloads: string
+  // Mailbox / Message
+  getNewMail: string, reply: string, replyAll: string, forwardMsg: string
+  // Window
+  minimize: string, zoom: string, bringAllToFront: string
+  // Help
+  search: string, appHelp: (app: string) => string
+  // Calendar
+  goToday: string
+  // Wi-Fi panel
+  wifi: string, knownNetwork: string, otherNetworks: string, wifiSettings: string
+  // Battery panel
+  battery: string, powerSource: string, powerBattery: string, batterySettings: string
+  // Control Center
+  bluetooth: string, airdrop: string, contactsOnly: string, on: string, off: string
+  display: string, sound: string, focus: string, screenMirroring: string, assistantVoice: string
+  // Clock widget
+  today: string, noEvents: string, upNext: string
+  // Dialogs and overlays
+  chip: string, memory: string, startupDisk: string, serial: string, version: string, moreInfo: string
+  clickToUnlock: string, general: string, network: string, displays: string
+  /** Mail composer field label. */
+  subject: string
+}
+
+const MB_EN: MenuBarStrings = {
+  aboutPC: 'About This PC', systemSettings: 'System Settings…', sleep: 'Sleep', restart: 'Restart…', shutDown: 'Shut Down…',
+  lockScreen: 'Lock Screen', logOut: u => `Log Out ${u}…`,
+  about: a => `About ${a}`, settings: 'Settings…', hide: a => `Hide ${a}`, hideOthers: 'Hide Others', showAll: 'Show All', quit: a => `Quit ${a}`,
+  file: 'File', edit: 'Edit', view: 'View', go: 'Go', window: 'Window', help: 'Help', mailbox: 'Mailbox', message: 'Message', format: 'Format',
+  newMessage: 'New Message', newWindow: 'New Window', newFolder: 'New Folder', newEvent: 'New Event', open: 'Open…',
+  closeWindow: 'Close Window', save: 'Save', print: 'Print…',
+  undo: 'Undo', redo: 'Redo', cut: 'Cut', copy: 'Copy', paste: 'Paste', selectAll: 'Select All', find: 'Find…',
+  showSidebar: 'Show Sidebar', hideSidebar: 'Hide Sidebar', enterFullScreen: 'Enter Full Screen', asIcons: 'as Icons', asList: 'as List',
+  back: 'Back', forward: 'Forward', documents: 'Documents', desktop: 'Desktop', downloads: 'Downloads',
+  getNewMail: 'Get New Mail', reply: 'Reply', replyAll: 'Reply All', forwardMsg: 'Forward',
+  minimize: 'Minimize', zoom: 'Zoom', bringAllToFront: 'Bring All to Front',
+  search: 'Search', appHelp: a => `${a} Help`,
+  goToday: 'Go to Today',
+  wifi: 'Wi‑Fi', knownNetwork: 'Known Network', otherNetworks: 'Other Networks', wifiSettings: 'Wi‑Fi Settings…',
+  battery: 'Battery', powerSource: 'Power Source:', powerBattery: 'Battery', batterySettings: 'Battery Settings…',
+  bluetooth: 'Bluetooth', airdrop: 'AirDrop', contactsOnly: 'Contacts Only', on: 'On', off: 'Off',
+  display: 'Display', sound: 'Sound', focus: 'Focus', screenMirroring: 'Screen Mirroring', assistantVoice: 'Mute',
+  today: 'Today', noEvents: 'No events today', upNext: 'Up Next',
+  chip: 'Chip', memory: 'Memory', startupDisk: 'Startup disk', serial: 'Serial number', version: 'Version', moreInfo: 'More Info…',
+  clickToUnlock: 'Click to unlock', general: 'General', network: 'Network', displays: 'Displays', subject: 'Subject',
+}
+
+const MB_JA: MenuBarStrings = {
+  aboutPC: 'このPCについて', systemSettings: 'システム設定…', sleep: 'スリープ', restart: '再起動…', shutDown: 'システム終了…',
+  lockScreen: '画面をロック', logOut: u => `${u}をログアウト…`,
+  about: a => `${a}について`, settings: '設定…', hide: a => `${a}を非表示`, hideOthers: 'ほかを非表示', showAll: 'すべてを表示', quit: a => `${a}を終了`,
+  file: 'ファイル', edit: '編集', view: '表示', go: '移動', window: 'ウインドウ', help: 'ヘルプ', mailbox: 'メールボックス', message: 'メッセージ', format: 'フォーマット',
+  newMessage: '新規メッセージ', newWindow: '新規ウインドウ', newFolder: '新規フォルダ', newEvent: '新規イベント', open: '開く…',
+  closeWindow: 'ウインドウを閉じる', save: '保存', print: 'プリント…',
+  undo: '取り消す', redo: 'やり直す', cut: 'カット', copy: 'コピー', paste: 'ペースト', selectAll: 'すべてを選択', find: '検索…',
+  showSidebar: 'サイドバーを表示', hideSidebar: 'サイドバーを非表示', enterFullScreen: 'フルスクリーンにする', asIcons: 'アイコン', asList: 'リスト',
+  back: '戻る', forward: '進む', documents: '書類', desktop: 'デスクトップ', downloads: 'ダウンロード',
+  getNewMail: '新規メールを受信', reply: '返信', replyAll: '全員に返信', forwardMsg: '転送',
+  minimize: 'しまう', zoom: '拡大/縮小', bringAllToFront: 'すべてを手前に移動',
+  search: '検索', appHelp: a => `${a} ヘルプ`,
+  goToday: '今日へ移動',
+  wifi: 'Wi‑Fi', knownNetwork: '既知のネットワーク', otherNetworks: 'その他のネットワーク', wifiSettings: 'Wi‑Fi設定…',
+  battery: 'バッテリー', powerSource: '電源:', powerBattery: 'バッテリー', batterySettings: 'バッテリー設定…',
+  bluetooth: 'Bluetooth', airdrop: 'AirDrop', contactsOnly: '連絡先のみ', on: 'オン', off: 'オフ',
+  display: 'ディスプレイ', sound: 'サウンド', focus: '集中モード', screenMirroring: '画面ミラーリング', assistantVoice: '消音',
+  today: '今日', noEvents: '今日の予定はありません', upNext: '次の予定',
+  chip: 'チップ', memory: 'メモリ', startupDisk: '起動ディスク', serial: 'シリアル番号', version: 'バージョン', moreInfo: '詳細情報…',
+  clickToUnlock: 'クリックしてロック解除', general: '一般', network: 'ネットワーク', displays: 'ディスプレイ', subject: '件名',
+}
+
+const MB_KO: MenuBarStrings = {
+  aboutPC: '이 PC에 관하여', systemSettings: '시스템 설정…', sleep: '잠자기', restart: '재시동…', shutDown: '시스템 종료…',
+  lockScreen: '화면 잠금', logOut: u => `${u} 로그아웃…`,
+  about: a => `${a}에 관하여`, settings: '설정…', hide: a => `${a} 가리기`, hideOthers: '기타 가리기', showAll: '모두 보기', quit: a => `${a} 종료`,
+  file: '파일', edit: '편집', view: '보기', go: '이동', window: '윈도우', help: '도움말', mailbox: '메일상자', message: '메시지', format: '포맷',
+  newMessage: '새로운 메시지', newWindow: '새로운 윈도우', newFolder: '새로운 폴더', newEvent: '새로운 이벤트', open: '열기…',
+  closeWindow: '윈도우 닫기', save: '저장', print: '프린트…',
+  undo: '실행 취소', redo: '실행 복귀', cut: '오려두기', copy: '복사하기', paste: '붙여넣기', selectAll: '전체 선택', find: '찾기…',
+  showSidebar: '사이드바 보기', hideSidebar: '사이드바 가리기', enterFullScreen: '전체 화면 시작', asIcons: '아이콘으로', asList: '목록으로',
+  back: '뒤로', forward: '앞으로', documents: '도큐멘트', desktop: '데스크탑', downloads: '다운로드',
+  getNewMail: '새로운 메일 받기', reply: '답장', replyAll: '전체 답장', forwardMsg: '전달',
+  minimize: '최소화', zoom: '확대/축소', bringAllToFront: '모두 앞으로 가져오기',
+  search: '검색', appHelp: a => `${a} 도움말`,
+  goToday: '오늘로 이동',
+  wifi: 'Wi‑Fi', knownNetwork: '알려진 네트워크', otherNetworks: '기타 네트워크', wifiSettings: 'Wi‑Fi 설정…',
+  battery: '배터리', powerSource: '전원:', powerBattery: '배터리', batterySettings: '배터리 설정…',
+  bluetooth: 'Bluetooth', airdrop: 'AirDrop', contactsOnly: '연락처만', on: '켬', off: '끔',
+  display: '디스플레이', sound: '사운드', focus: '집중 모드', screenMirroring: '화면 미러링', assistantVoice: '음소거',
+  today: '오늘', noEvents: '오늘 일정 없음', upNext: '다음 일정',
+  chip: '칩', memory: '메모리', startupDisk: '시동 디스크', serial: '일련 번호', version: '버전', moreInfo: '추가 정보…',
+  clickToUnlock: '클릭하여 잠금 해제', general: '일반', network: '네트워크', displays: '디스플레이', subject: '제목',
+}
+
+const MB_ZH_HANS: MenuBarStrings = {
+  aboutPC: '关于这台电脑', systemSettings: '系统设置…', sleep: '睡眠', restart: '重新启动…', shutDown: '关机…',
+  lockScreen: '锁定屏幕', logOut: u => `退出登录“${u}”…`,
+  about: a => `关于${a}`, settings: '设置…', hide: a => `隐藏${a}`, hideOthers: '隐藏其他', showAll: '全部显示', quit: a => `退出${a}`,
+  file: '文件', edit: '编辑', view: '显示', go: '前往', window: '窗口', help: '帮助', mailbox: '邮箱', message: '邮件', format: '格式',
+  newMessage: '新邮件', newWindow: '新建窗口', newFolder: '新建文件夹', newEvent: '新建日程', open: '打开…',
+  closeWindow: '关闭窗口', save: '存储', print: '打印…',
+  undo: '撤销', redo: '重做', cut: '剪切', copy: '拷贝', paste: '粘贴', selectAll: '全选', find: '查找…',
+  showSidebar: '显示边栏', hideSidebar: '隐藏边栏', enterFullScreen: '进入全屏幕', asIcons: '图标', asList: '列表',
+  back: '返回', forward: '前进', documents: '文稿', desktop: '桌面', downloads: '下载',
+  getNewMail: '收取新邮件', reply: '回复', replyAll: '全部回复', forwardMsg: '转发',
+  minimize: '最小化', zoom: '缩放', bringAllToFront: '前置全部窗口',
+  search: '搜索', appHelp: a => `${a}帮助`,
+  goToday: '前往今天',
+  wifi: '无线局域网', knownNetwork: '已知网络', otherNetworks: '其他网络', wifiSettings: '无线局域网设置…',
+  battery: '电池', powerSource: '电源：', powerBattery: '电池', batterySettings: '电池设置…',
+  bluetooth: '蓝牙', airdrop: '隔空投送', contactsOnly: '仅限联系人', on: '开', off: '关',
+  display: '显示器', sound: '声音', focus: '专注模式', screenMirroring: '屏幕镜像', assistantVoice: '静音',
+  today: '今天', noEvents: '今天没有日程', upNext: '即将开始',
+  chip: '芯片', memory: '内存', startupDisk: '启动磁盘', serial: '序列号', version: '版本', moreInfo: '更多信息…',
+  clickToUnlock: '点按以解锁', general: '通用', network: '网络', displays: '显示器', subject: '主题',
+}
+
+const MB_ZH_HANT: MenuBarStrings = {
+  aboutPC: '關於這台電腦', systemSettings: '系統設定⋯', sleep: '睡眠', restart: '重新開機⋯', shutDown: '關機⋯',
+  lockScreen: '鎖定螢幕', logOut: u => `登出「${u}」⋯`,
+  about: a => `關於${a}`, settings: '設定⋯', hide: a => `隱藏${a}`, hideOthers: '隱藏其他', showAll: '顯示全部', quit: a => `結束${a}`,
+  file: '檔案', edit: '編輯', view: '顯示方式', go: '前往', window: '視窗', help: '輔助說明', mailbox: '信箱', message: '郵件', format: '格式',
+  newMessage: '新郵件', newWindow: '新增視窗', newFolder: '新增檔案夾', newEvent: '新增行程', open: '打開⋯',
+  closeWindow: '關閉視窗', save: '儲存', print: '列印⋯',
+  undo: '還原', redo: '重做', cut: '剪下', copy: '拷貝', paste: '貼上', selectAll: '全選', find: '尋找⋯',
+  showSidebar: '顯示側邊欄', hideSidebar: '隱藏側邊欄', enterFullScreen: '進入全螢幕', asIcons: '圖像', asList: '列表',
+  back: '上一頁', forward: '下一頁', documents: '文件', desktop: '桌面', downloads: '下載項目',
+  getNewMail: '收取新郵件', reply: '回覆', replyAll: '全部回覆', forwardMsg: '轉寄',
+  minimize: '縮到最小', zoom: '縮放', bringAllToFront: '將全部移至最前',
+  search: '搜尋', appHelp: a => `${a}輔助說明`,
+  goToday: '前往今天',
+  wifi: 'Wi‑Fi', knownNetwork: '已知網路', otherNetworks: '其他網路', wifiSettings: 'Wi‑Fi 設定⋯',
+  battery: '電池', powerSource: '電源：', powerBattery: '電池', batterySettings: '電池設定⋯',
+  bluetooth: '藍牙', airdrop: 'AirDrop', contactsOnly: '僅限聯絡人', on: '開啟', off: '關閉',
+  display: '顯示器', sound: '聲音', focus: '專注模式', screenMirroring: '螢幕鏡像輸出', assistantVoice: '靜音',
+  today: '今天', noEvents: '今天沒有行程', upNext: '即將開始',
+  chip: '晶片', memory: '記憶體', startupDisk: '啟動磁碟', serial: '序號', version: '版本', moreInfo: '更多資訊⋯',
+  clickToUnlock: '按一下以解鎖', general: '一般', network: '網路', displays: '顯示器', subject: '主旨',
 }
 
 const EN: DesktopStrings = {
@@ -45,6 +205,7 @@ const EN: DesktopStrings = {
     conflict: 'Conflict', overlapAt: t => `Overlap at ${t}`,
   },
   now: 'now',
+  mb: MB_EN,
 }
 
 const STRINGS: Record<Lang, DesktopStrings> = {
@@ -69,6 +230,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       conflict: '重複', overlapAt: t => `${t} に予定が重複`,
     },
     now: '今',
+    mb: MB_JA,
   },
   'ko': {
     finder: 'Finder',
@@ -90,6 +252,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       conflict: '겹침', overlapAt: t => `${t} 일정 겹침`,
     },
     now: '지금',
+    mb: MB_KO,
   },
   'zh-Hans': {
     finder: '访达',
@@ -111,6 +274,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       conflict: '冲突', overlapAt: t => `${t} 日程冲突`,
     },
     now: '现在',
+    mb: MB_ZH_HANS,
   },
   'zh-Hant': {
     finder: 'Finder',
@@ -132,7 +296,13 @@ const STRINGS: Record<Lang, DesktopStrings> = {
       conflict: '衝突', overlapAt: t => `${t} 行程衝突`,
     },
     now: '現在',
+    mb: MB_ZH_HANT,
   },
+}
+
+/** Strings for a language without the settings store (tests, non-component code). */
+export function desktopStrings(lang: Lang): DesktopStrings {
+  return STRINGS[lang] ?? EN
 }
 
 export function useDesktopStrings() {

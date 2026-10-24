@@ -4,12 +4,13 @@
 // rendered at 1920x1080 regardless of the page size.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { markKeystroke } from './activity'
-import { APP_ORDER, assistantWindow, desktop, desktopView, DESKTOP_H, DESKTOP_W, focusWindow, isAssistantApp, type UserAppId } from './windows'
+import { APP_ORDER, assistantWindow, desktop, desktopView, DESKTOP_H, DESKTOP_W, focusWindow, type UserAppId } from './windows'
 import AppIcon from './AppIcon.vue'
 import CharacterWindow from './CharacterWindow.vue'
-import { menuBarClock, useDesktopStrings } from './i18n'
+import { useDesktopStrings } from './i18n'
+import MenuBar from './menubar/MenuBar.vue'
+import SystemOverlays from './menubar/SystemOverlays.vue'
 import NotificationCenter from './NotificationCenter.vue'
-import TrayMenu from './TrayMenu.vue'
 import WindowFrame from './WindowFrame.vue'
 import DashboardApp from '@/settings/DashboardApp.vue'
 import SettingsApp from '@/settings/SettingsApp.vue'
@@ -48,18 +49,7 @@ onBeforeUnmount(() => {
   if (clockTimer) clearInterval(clockTimer)
 })
 
-const { t, locale } = useDesktopStrings()
-const clock = computed(() => menuBarClock(now.value, locale.value))
-const activeName = computed(() => {
-  const f = desktop.focused
-  return f && desktop.windows[f].open && !isAssistantApp(f) ? t.value.apps[f as UserAppId] : t.value.finder
-})
-// When an assistant window is focused the menu bar shows its name, but that label is
-// excluded from captures so the observer never reads it.
-const assistantFocused = computed(() => {
-  const f = desktop.focused
-  return !!f && desktop.windows[f].open && isAssistantApp(f)
-})
+const { t } = useDesktopStrings()
 
 function onAssistantDock() {
   assistantWindow.visible = true
@@ -97,24 +87,8 @@ function onKeydown(e: KeyboardEvent) {
           </svg>
         </div>
 
-        <!-- Menu bar -->
-        <div class="vd-menubar">
-          <div class="vd-menu-left">
-            <span class="vd-logo" aria-label="System menu">
-              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.2" /><circle cx="10" cy="10" r="2.4" class="fill" /></svg>
-            </span>
-            <strong v-if="assistantFocused" data-no-capture>YuiYumi</strong>
-            <strong v-else>{{ activeName }}</strong>
-            <span v-for="m in t.menus" :key="m">{{ m }}</span>
-          </div>
-          <div class="vd-menu-right">
-            <TrayMenu />
-            <span class="vd-battery" aria-label="Battery 82%"><svg viewBox="0 0 34 18"><rect x="1" y="2" width="28" height="14" rx="4.5" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.4" /><rect x="3.4" y="4.4" width="19" height="9.2" rx="2.4" fill="currentColor" /><path d="M31 7.2v3.6" stroke="currentColor" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" /></svg></span>
-            <svg class="vd-status" viewBox="0 0 26 20" aria-label="Wi-Fi"><path d="M13 18.2 3.2 7.6a14 14 0 0 1 19.6 0z" fill="currentColor" /></svg>
-            <svg class="vd-status" viewBox="0 0 24 20" aria-label="Control Center"><rect x="2.5" y="3" width="19" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" /><circle cx="18.5" cy="6" r="2" fill="currentColor" /><rect x="2.5" y="11" width="19" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" /><circle cx="5.5" cy="14" r="2" fill="currentColor" /></svg>
-            <span class="vd-clock">{{ clock }}</span>
-          </div>
-        </div>
+        <!-- Menu bar (menus and extras are captured; assistant parts carry data-no-capture) -->
+        <MenuBar :now="now" />
 
         <!-- Windows -->
         <WindowFrame id="mail" :accent="ACCENT.mail" unified><MailApp /></WindowFrame>
@@ -160,6 +134,9 @@ function onKeydown(e: KeyboardEvent) {
             <span class="vd-dot" />
           </button>
         </nav>
+
+        <!-- Brightness, sleep/restart/lock and system dialogs (captured: part of the user's screen). -->
+        <SystemOverlays :now="now" />
       </div>
     </div>
   </div>
@@ -192,33 +169,6 @@ function onKeydown(e: KeyboardEvent) {
 }
 .vd-wallpaper { position: absolute; inset: 0; }
 .vd-wallpaper svg { width: 100%; height: 100%; display: block; filter: blur(0.5px); }
-.vd-menubar {
-  position: absolute;
-  left: 0; right: 0; top: 0;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px 0 24px;
-  background: rgba(246, 246, 250, 0.42);
-  backdrop-filter: saturate(180%) blur(30px);
-  -webkit-backdrop-filter: saturate(180%) blur(30px);
-  font-size: 17px;
-  letter-spacing: -0.01em;
-  color: #1d1d1f;
-  z-index: 100000;
-}
-.vd-menu-left, .vd-menu-right { display: flex; align-items: center; gap: 26px; }
-.vd-menu-right { gap: 20px; }
-.vd-menu-left strong { font-weight: 700; }
-.vd-menu-left span { font-weight: 500; }
-.vd-logo { display: flex; width: 22px; height: 22px; margin-right: 2px; }
-.vd-logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.vd-logo svg .fill { fill: currentColor; stroke: none; }
-.vd-status { width: 24px; height: 20px; color: #1d1d1f; }
-.vd-battery { display: flex; align-items: center; }
-.vd-battery svg { width: 32px; height: 18px; color: #1d1d1f; }
-.vd-clock { font-weight: 500; font-variant-numeric: tabular-nums; white-space: pre; }
 .vd-dock {
   position: absolute;
   left: 50%;

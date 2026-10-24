@@ -47,7 +47,7 @@ export function initVoice(): void {
   bus.on('character:react', ({ line, emotion }) => {
     const text = line?.trim()
     if (!text || !settings.sound) return
-    void p.say({ text: text.slice(0, 500), lang: settings.lang, emotion, character: useCharacterStore().character, sessionId: settings.sessionId })
+    void p.say({ text: text.slice(0, 500), lang: settings.lang, emotion, character: useCharacterStore().character, preset: settings.voicePreset, sessionId: settings.sessionId })
   })
 
   // Turning sound off silences the current line immediately.

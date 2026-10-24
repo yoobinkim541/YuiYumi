@@ -8,6 +8,8 @@ export interface BusEvents {
   'character:react': { emotion: Emotion, line?: string, motion?: string, source: 'observer' | 'agent' | 'fallback' }
   'character:node': { node: CharacterNode }
   'character:mouth': MouthPose | null
+  /** Show or hide the "..." typing bubble while a reply is being generated. */
+  'thinking': { on: boolean }
   /** Speech bubble text; the character layer shows it. */
   'bubble': { text: string, ttlMs?: number } | null
 

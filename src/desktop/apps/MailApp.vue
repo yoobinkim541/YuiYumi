@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useDemo, type Mail, type MailDraft } from '@/stores/demo'
 import { colorFor, displayName, initials } from '../format'
 import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
+import { registerMailCommands } from '../menubar/bridge'
 
 type Folder = 'inbox' | 'drafts' | 'spam'
 
@@ -13,6 +14,10 @@ const folder = ref<Folder>('inbox')
 const selectedId = ref<string | null>('mail-jp-001')
 const composing = ref(false)
 const replyBody = ref('')
+/** Menu bar: File > New Message composer and View > Hide Sidebar. */
+const newMsg = ref<{ to: string, subject: string, body: string } | null>(null)
+const sidebar = ref(true)
+const newToField = ref<HTMLInputElement | null>(null)
 
 const inbox = computed(() => demo.mails.filter(m => !m.spam).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)))
 const spam = computed(() => demo.mails.filter(m => m.spam))
@@ -32,6 +37,7 @@ function isMail(x: Mail | MailDraft): x is Mail {
 function open(id: string) {
   selectedId.value = id
   composing.value = false
+  newMsg.value = null
   const m = demo.mails.find(x => x.id === id)
   if (m) m.read = true
 }
@@ -39,13 +45,29 @@ function open(id: string) {
 function pickFolder(f: Folder) {
   folder.value = f
   composing.value = false
+  newMsg.value = null
   selectedId.value = list.value[0]?.id ?? null
 }
 
 function startReply() {
   composing.value = true
+  newMsg.value = null
   replyBody.value = ''
 }
+
+function startNewMessage() {
+  composing.value = false
+  newMsg.value = { to: '', subject: '', body: '' }
+  void nextTick(() => newToField.value?.focus())
+}
+
+registerMailCommands({
+  newMessage: startNewMessage,
+  showFolder: pickFolder,
+  toggleSidebar: () => { sidebar.value = !sidebar.value },
+  reply: () => { if (selectedMail.value) startReply() },
+  state: () => ({ folder: folder.value, sidebar: sidebar.value, canReply: !!selectedMail.value }),
+})
 
 // Show newly saved drafts (written by the agent) right away.
 watch(() => demo.drafts.length, (n, prev) => {
@@ -59,6 +81,7 @@ watch(() => demo.drafts.length, (n, prev) => {
 watch(selectedMail, m => { if (m && !m.read) m.read = true }, { immediate: true })
 
 const title = computed(() => {
+  if (newMsg.value) return t.value.mail.newMessage
   if (composing.value && selectedMail.value) return `Reply: ${selectedMail.value.subject}`
   if (folder.value === 'drafts') return selectedDraft.value ? `Draft: ${selectedDraft.value.subject}` : 'Drafts'
   if (selectedMail.value) return `${selectedMail.value.subject} — ${displayName(selectedMail.value.from)}`
@@ -86,7 +109,7 @@ function listTime(iso: string) {
 
 <template>
   <div class="mail">
-    <aside class="side" data-wf-drag>
+    <aside v-show="sidebar" class="side" data-wf-drag>
       <div class="side-top" />
       <div class="side-section">{{ t.mail.favorites }}</div>
       <button class="mb" :class="{ on: folder === 'inbox' }" @click="pickFolder('inbox')">
@@ -106,7 +129,7 @@ function listTime(iso: string) {
     </aside>
 
     <div class="list">
-      <div class="toolbar list-bar" data-wf-drag>
+      <div class="toolbar list-bar" :class="{ 'under-lights': !sidebar }" data-wf-drag>
         <div class="tb-title">
           <strong>{{ folderName }}</strong>
           <span>{{ folderInfo }}</span>
@@ -159,7 +182,17 @@ function listTime(iso: string) {
         <div class="tb-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></svg>{{ t.mail.search }}</div>
       </div>
       <div class="reader-body">
-        <template v-if="folder === 'drafts' && selectedDraft">
+        <div v-if="newMsg" class="composer new-msg">
+          <div class="composer-head">{{ t.mail.newMessage }}</div>
+          <label class="nm-field"><span>{{ t.mail.to }}:</span><input ref="newToField" v-model="newMsg.to" type="text" spellcheck="false"></label>
+          <label class="nm-field"><span>{{ t.mb.subject }}:</span><input v-model="newMsg.subject" type="text" spellcheck="false"></label>
+          <textarea v-model="newMsg.body" spellcheck="false" />
+          <div class="composer-foot">
+            <span>{{ t.mail.composerHint }}</span>
+            <button type="button" class="ghost" @click="newMsg = null">{{ t.mail.discard }}</button>
+          </div>
+        </div>
+        <template v-else-if="folder === 'drafts' && selectedDraft">
           <div class="draft-banner">{{ t.mail.draftBanner }}</div>
           <div class="head">
             <div class="head-main">
@@ -258,6 +291,10 @@ button.tb-icon:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
 .composer-head { background: #f5f5f7; padding: 8px 14px; font-size: 15px; color: #3a3a3c; font-weight: 600; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
 .composer textarea { flex: 1; border: none; outline: none; resize: none; padding: 12px 14px; font-family: inherit; font-size: 18px; line-height: 1.5; }
 .composer-foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: 1px solid rgba(0, 0, 0, 0.08); font-size: 14px; color: rgba(60, 60, 67, 0.6); }
+.list-bar.under-lights { padding-left: 96px; }
+.composer.new-msg { margin-top: 0; }
+.nm-field { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid rgba(0, 0, 0, 0.08); font-size: 15px; color: rgba(60, 60, 67, 0.75); }
+.nm-field input { flex: 1; border: none; outline: none; font-family: inherit; font-size: 16px; color: #1d1d1f; background: transparent; }
 .ghost { border: 1px solid rgba(0, 0, 0, 0.15); background: #fff; border-radius: 6px; padding: 3px 12px; font-size: 14px; cursor: pointer; font-family: inherit; }
 .draft-banner, .spam-banner { border-radius: 8px; padding: 9px 14px; font-size: 15px; margin-bottom: 14px; }
 .draft-banner { background: #fff6dc; color: #8a5a00; }

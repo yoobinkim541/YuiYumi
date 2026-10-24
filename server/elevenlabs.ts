@@ -1,17 +1,25 @@
 // ElevenLabs streaming TTS over plain REST. Returns the mp3 body stream as-is.
 
+import type { VoicePreset } from '../shared/contracts'
 import { LANG_INFO, type Lang } from '../shared/languages'
 import { env } from './http'
 import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from './voice-providers'
 
 /**
- * Multilingual model with a conversational delivery at about one second per line (covers
- * en/ja/ko/zh). Override with ELEVENLABS_MODEL after checking GET /v1/models.
+ * Voice style presets (model + voice settings). All cover en/ja/ko/zh; check GET /v1/models
+ * before changing model ids. ELEVENLABS_MODEL, when set, replaces the lively preset's model.
  */
-const DEFAULT_MODEL = 'eleven_v4_turbo'
-
-/** Livelier than the voice defaults (0.5 stability, no style), so lines sound spoken to the user. */
-const VOICE_SETTINGS = { stability: 0.3, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true, speed: 1.05 }
+const PRESETS: Record<VoicePreset, { model: () => string, settings?: Record<string, number | boolean> }> = {
+  // About 0.6 s per line; livelier than the voice defaults so lines sound spoken to the user.
+  lively: {
+    model: () => env('ELEVENLABS_MODEL') ?? 'eleven_v4_turbo',
+    settings: { stability: 0.3, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true, speed: 1.05 },
+  },
+  // Most natural delivery, about 3-4 s per line.
+  conversational: { model: () => 'eleven_v3_conversational' },
+  // Fastest (about 0.4 s) but flatter.
+  fast: { model: () => 'eleven_flash_v2_5' },
+}
 const OUTPUT_FORMAT = 'mp3_44100_128'
 const TIMEOUT_MS = 20_000
 
@@ -38,6 +46,7 @@ export const elevenLabsTts: TtsProvider = {
     const voiceId = voiceIdFor(req.lang, req.character)
     if (!voiceId) throw new ProviderUnconfiguredError(LANG_INFO[req.lang].elevenVoiceEnv)
 
+    const preset = PRESETS[req.preset ?? 'lively']
     const url = new URL(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream`)
     url.searchParams.set('output_format', OUTPUT_FORMAT)
 
@@ -47,9 +56,9 @@ export const elevenLabsTts: TtsProvider = {
       headers: { 'xi-api-key': key, 'content-type': 'application/json', 'accept': 'audio/mpeg' },
       body: JSON.stringify({
         text: req.text,
-        model_id: env('ELEVENLABS_MODEL') ?? DEFAULT_MODEL,
+        model_id: preset.model(),
         language_code: ISO639[req.lang],
-        voice_settings: VOICE_SETTINGS,
+        ...(preset.settings ? { voice_settings: preset.settings } : {}),
       }),
       signal: AbortSignal.any(signals),
     })

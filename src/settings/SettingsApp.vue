@@ -17,6 +17,13 @@ import { useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
 import Icon from './Icon.vue'
 import { captureShortcut, DEFAULT_PTT, isMacPlatform, shortcutCaps } from './shortcut'
+import type { VoicePreset } from '@shared/contracts'
+
+const VOICE_STYLES: { id: VoicePreset, title: string, desc: string }[] = [
+  { id: 'lively', title: 'Lively (default)', desc: 'Spoken and expressive, about 0.6 s' },
+  { id: 'conversational', title: 'Conversational', desc: 'Most natural, about 3–4 s' },
+  { id: 'fast', title: 'Fast', desc: 'Quickest, flatter delivery' },
+]
 import './theme.css'
 
 type PageId = 'index' | 'card' | 'general' | 'voice' | 'observation' | 'connectors' | 'about'
@@ -314,6 +321,18 @@ function toggleLive(id: ConnectorService) {
             </div>
           </div>
           <p v-if="recordError" class="error">{{ recordError }}</p>
+        </section>
+        <section class="section">
+          <h2>Voice style</h2>
+          <p class="hint">How the character's voice is generated. Lively is the default.</p>
+          <div class="radio-grid">
+            <button
+              v-for="v in VOICE_STYLES" :key="v.id" type="button" class="radio-card"
+              :class="{ active: settings.voicePreset === v.id }" @click="settings.voicePreset = v.id"
+            >
+              <b>{{ v.title }}</b><span>{{ v.desc }}</span>
+            </button>
+          </div>
         </section>
         <section class="section">
           <h2>VAD</h2>
