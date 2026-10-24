@@ -23,7 +23,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 | 기반 | [moeru-ai/airi](https://github.com/moeru-ai/airi)(MIT)의 `apps/stage-web`(Vue + Vite)을 포크 |
 | 화면 인식 | 웹 `getDisplayMedia` + **Haiku 비전** |
 | 배포 | **Vercel** (정적 앱 + `api/` 서버리스 함수) |
-| 캐릭터 | Live2D 2D 모델은 이미 보유 |
+| 캐릭터 | **유이(Yui, 자체 모델)와 유미(Yumi, 구매한 TT2.0)** 두 캐릭터. 데모는 한 번에 한 명, 전환 버튼 |
 | 브라우저 | **Chrome 권장**으로 안내 |
 | 크레딧 | **김유빈 계정의 API 크레딧($500) 중 $150는 시연·테스트용으로 예약** (이 PC에서 사용) |
 | 타깃 시장 | **첫 출시 한국·일본·대만**(일본·대만은 서브컬처·컴패니언 시장), 중국 본토는 확장 시장. 특정 직업이 아닌 **범용 AI 컴패니언 비서** |
@@ -170,7 +170,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 ## 감정과 캐릭터
 
-감정 6종: neutral, happy, thinking, surprised, sorry, focused. 모델의 표정·모션 이름은 매핑 파일에서 연결한다. 캐릭터는 **토끼 귀 소녀(TT2.0, 兔兔2.0)**로 확정한다(랜딩 아트와 같은 캐릭터, 자체 모델 Yui는 쓰지 않음). 이 모델은 판매되는 모델로 보이므로 **공개 배포 전에 라이선스(재배포·웹 임베드·상업 이용)를 반드시 확인**해야 한다. 표정 매핑과 라이선스 확인 사항은 `character.md` 참고.
+감정 6종: neutral, happy, thinking, surprised, sorry, focused. 모델의 표정·모션 이름은 매핑 파일에서 연결한다. 캐릭터는 두 명이다: **유이(Yui, 자체 모델)**와 **유미(Yumi, 구매한 TT2.0 모델, 토끼 귀 소녀)**. YuiYumi는 두 이름을 합친 것이다. 데모는 한 번에 한 캐릭터만 띄우고 전환 버튼으로 바꾼다(동시 등장은 로드맵). 기본은 랜딩 아트가 있는 유미다. 유미는 구매한 모델이며 비상업적 사용 조건으로 쓴다(확인 내용은 `character.md`). 표정 매핑은 두 모델이 같은 9종 라벨을 쓰므로 `character.md` 참고.
 
 ## 크레딧 예산
 
@@ -207,7 +207,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 | **14:00** | **기능 동결** |
 | 14:00–15:30 | 리허설 3회(Chrome), 덱 2장, **15:30 이전 제출** |
 
-컷 순서(먼저 자르는 것부터): Notion·Drive 실연동(목업으로 복귀) → 선택 문장 AI 수정·되돌리기 → Slack·Discord 프리셋 → VAD → TTS 입 모양. Gmail·Calendar 실연동, 눈치 장면, 초안 패널, 리서치, 마우스 시선은 유지한다. 음성 입력·TTS는 Schmidt 미션 근거라 가능한 한 유지한다.
+컷 순서(먼저 자르는 것부터): 두 번째 캐릭터(유이) 전환 → Notion·Drive 실연동(목업으로 복귀) → 선택 문장 AI 수정·되돌리기 → Slack·Discord 프리셋 → VAD → TTS 입 모양. Gmail·Calendar 실연동, 눈치 장면, 초안 패널, 리서치, 마우스 시선은 유지한다. 음성 입력·TTS는 Schmidt 미션 근거라 가능한 한 유지한다.
 
 ## 하지 않을 것
 
