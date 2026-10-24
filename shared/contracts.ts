@@ -11,6 +11,17 @@ export const EmotionSchema = z.enum(EMOTIONS)
 export type Emotion = z.infer<typeof EmotionSchema>
 
 // ---------------------------------------------------------------------------
+// Persona: user-editable character card appended to the system prompts. It can shape
+// tone and identity only; the server keeps its fixed rules above it.
+
+export const PersonaSchema = z.object({
+  name: z.string().max(40),
+  prompt: z.string().max(4000),
+  speakingStyle: z.string().max(400).optional(),
+})
+export type Persona = z.infer<typeof PersonaSchema>
+
+// ---------------------------------------------------------------------------
 // Observer (Haiku): screen frame + state -> react / delegate_task
 
 export const ObserveStateSchema = z.object({
@@ -42,6 +53,7 @@ export const ObserveRequestSchema = z.object({
   lang: LangSchema,
   recent: z.array(DialogueTurnSchema).max(20),
   sessionId: z.string(),
+  persona: PersonaSchema.optional(),
 })
 export type ObserveRequest = z.infer<typeof ObserveRequestSchema>
 
@@ -77,6 +89,7 @@ export const AgentStepRequestSchema = z.object({
   /** Anthropic-shaped message params, passed through as-is. */
   messages: z.array(z.unknown()).min(1),
   sessionId: z.string(),
+  persona: PersonaSchema.optional(),
 })
 export type AgentStepRequest = z.infer<typeof AgentStepRequestSchema>
 

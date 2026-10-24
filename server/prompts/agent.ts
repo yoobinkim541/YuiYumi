@@ -3,8 +3,9 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
-import { CONNECTOR_OPS, type DelegateOrigin } from '../../shared/contracts'
+import { CONNECTOR_OPS, type DelegateOrigin, type Persona } from '../../shared/contracts'
 import { LANG_INFO, type Lang } from '../../shared/languages'
+import { personaBlock } from './persona'
 
 export const AGENT_MAX_TOKENS = 4096
 /** 1 request + 8 steps x (assistant + tool results), with headroom. */
@@ -25,7 +26,7 @@ export function agentTools(): Anthropic.Messages.Tool[] {
   })
 }
 
-export function agentSystemPrompt(lang: Lang, origin: DelegateOrigin): string {
+export function agentSystemPrompt(lang: Lang, origin: DelegateOrigin, persona?: Persona): string {
   const language = LANG_INFO[lang].label
   return [
     'You are Yui, a capable and warm work assistant who lives on the user\'s screen as a small animated character.',
@@ -48,8 +49,9 @@ export function agentSystemPrompt(lang: Lang, origin: DelegateOrigin): string {
     origin === 'screen'
       ? '- You offered this task yourself after noticing something on the user\'s screen, and the user accepted.'
       : '- The user asked for this by voice.',
-  ].join('\n')
+  ].join('\n') + personaBlock(persona)
 }
+
 
 /** Keeps only user/assistant turns with string or block-array content. Returns null if malformed. */
 export function sanitizeMessages(messages: unknown[]): Anthropic.Messages.MessageParam[] | null {
@@ -73,11 +75,12 @@ export function buildAgentRequest(args: {
   lang: Lang
   origin: DelegateOrigin
   messages: Anthropic.Messages.MessageParam[]
+  persona?: Persona
 }): Anthropic.Messages.MessageCreateParamsNonStreaming {
   return {
     model: args.model,
     max_tokens: AGENT_MAX_TOKENS,
-    system: agentSystemPrompt(args.lang, args.origin),
+    system: agentSystemPrompt(args.lang, args.origin, args.persona),
     tools: agentTools(),
     // Sonnet 5.5: forced tool_choice and disabled thinking are rejected; keep auto + low effort.
     tool_choice: { type: 'auto' },

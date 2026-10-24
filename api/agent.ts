@@ -18,7 +18,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const model = MODELS.agent()
   try {
-    const msg = await anthropic().messages.create(buildAgentRequest({ model, lang: body.lang, origin: body.origin, messages }))
+    const msg = await anthropic().messages.create(buildAgentRequest({ model, lang: body.lang, origin: body.origin, messages, persona: body.persona }))
     record(model, msg.usage)
     return json({ content: msg.content, stopReason: msg.stop_reason } satisfies AgentStepResponse)
   } catch (e) {

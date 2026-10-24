@@ -1,6 +1,7 @@
 import { watch } from 'vue'
 import { bus } from '@/core/bus'
 import { getScreenSource } from '@/host'
+import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
 import { postObserve } from './observer-client'
 import { NunchiEngine } from './scheduler'
@@ -9,12 +10,19 @@ export { nunchiStatus } from './scheduler'
 
 let engine: NunchiEngine | null = null
 
+/** Recent dialogue turns (read-only copy) for the dashboard. */
+export function recentDialogue() {
+  return engine?.dialogue.recent() ?? []
+}
+
 export function initNunchi(): void {
   if (engine) return
   const settings = useSettings()
+  const persona = usePersona()
   engine = new NunchiEngine({
     source: getScreenSource,
-    post: postObserve,
+    // The active character card rides along with every observe request.
+    post: (req, signal) => postObserve({ ...req, persona: persona.activePersona }, signal),
     emit: (type, payload) => bus.emit(type, payload),
     settings: {
       get mode() { return settings.mode },

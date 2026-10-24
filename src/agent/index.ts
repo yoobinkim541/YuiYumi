@@ -4,6 +4,7 @@ import type { DelegateOrigin } from '@shared/contracts'
 import { bus } from '@/core/bus'
 import { runConnector } from '@/connectors/registry'
 import { useDemo } from '@/stores/demo'
+import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
 import { createStepClient, handleDelegate, type AgentDeps } from './agent-loop'
 import { useConfirmQueue } from './confirm-queue'
@@ -17,6 +18,7 @@ export function initAgent(): void {
   const settings = useSettings()
   const demo = useDemo()
   const confirmQueue = useConfirmQueue()
+  const persona = usePersona()
 
   const deps: AgentDeps = {
     step: createStepClient(),
@@ -25,6 +27,7 @@ export function initAgent(): void {
     emit: (type, payload) => bus.emit(type, payload),
     lang: () => settings.lang,
     sessionId: settings.sessionId,
+    persona: () => persona.activePersona,
     channelName: id => demo.slackChannels.find(c => c.id === id)?.name,
   }
 

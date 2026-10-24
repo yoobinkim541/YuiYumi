@@ -1,11 +1,10 @@
 // Deterministic rule gate for proactive (screen-only) observer actions.
 // Utterance responses never pass through here and are never counted.
 
-export const GATE = {
-  maxPerDay: 3,
-  cooldownMs: 10 * 60_000,
-  minDwellSec: 20,
-} as const
+import { nunchiConfig } from './config'
+
+/** Live gate limits (see config.ts); defaults 3 a day, 10 min apart, 20 s dwell. */
+export const GATE: Readonly<typeof nunchiConfig> = nunchiConfig
 
 export interface Ledger {
   /** Local calendar day, YYYY-MM-DD. */

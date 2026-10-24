@@ -53,3 +53,18 @@ describe('ledger', () => {
     expect(loadLedger(kv, NOW).count).toBe(0)
   })
 })
+
+describe('gate config', () => {
+  it('reads limits from the live config object', async () => {
+    const { nunchiConfig, resetNunchiConfig } = await import('./config')
+    try {
+      nunchiConfig.maxPerDay = 1
+      expect(gateProactive({ ...base, ledger: ledger(1, NOW - 60 * MIN) })).toEqual({ allow: false, reason: 'daily_limit' })
+      nunchiConfig.maxPerDay = 5
+      nunchiConfig.minDwellSec = 30
+      expect(gateProactive({ ...base, ledger: ledger(3, NOW - 60 * MIN) })).toEqual({ allow: false, reason: 'dwell' })
+    } finally {
+      resetNunchiConfig()
+    }
+  })
+})

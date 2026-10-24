@@ -156,3 +156,17 @@ describe('splitForSpeech', () => {
     expect(r.hasMore).toBe(true)
   })
 })
+
+describe('agent loop persona', () => {
+  it('sends the active persona with every step and omits it when absent', async () => {
+    const persona = { name: 'Yui', prompt: 'Playful.', speakingStyle: 'Bubbly.' }
+    const { fetch, bodies } = fakeFetch([{ body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Hi!' }] } }])
+    const { deps } = makeDeps(fetch)
+    await handleDelegate({ request: 'Say hi', origin: 'utterance' }, { ...deps, persona: () => persona })
+    expect(bodies[0]!.persona).toEqual(persona)
+
+    const second = fakeFetch([{ body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Hi' }] } }])
+    await handleDelegate({ request: 'Say hi', origin: 'utterance' }, makeDeps(second.fetch).deps)
+    expect('persona' in second.bodies[0]!).toBe(false)
+  })
+})

@@ -2,7 +2,7 @@
 // loop runs the tools, asks for confirmation before any write, and feeds results back.
 // Pure over its dependencies so it can be tested with a fake fetch.
 
-import { getOpSpec, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorOpName, type DelegateOrigin, type Emotion } from '@shared/contracts'
+import { getOpSpec, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorOpName, type DelegateOrigin, type Emotion, type Persona } from '@shared/contracts'
 import type { Lang } from '@shared/languages'
 import type { BusEvents } from '@/core/bus'
 import type { ToolOutcome } from '@/connectors/registry'
@@ -53,6 +53,8 @@ export interface AgentDeps {
   emit: Emit
   lang: () => Lang
   sessionId: string
+  /** Active character card, sent with every step. */
+  persona?: () => Persona | undefined
   channelName?: (channelId: string) => string | undefined
   now?: () => Date
   maxSteps?: number
@@ -152,7 +154,8 @@ export async function runAgentTask(request: string, origin: DelegateOrigin, deps
   const messages: unknown[] = [{ role: 'user', content: buildUserContent(request, origin, lang, now) }]
 
   for (let step = 1; step <= maxSteps; step++) {
-    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId })
+    const persona = deps.persona?.()
+    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId, ...(persona ? { persona } : {}) })
     // Assistant content goes back unchanged (thinking blocks included).
     messages.push({ role: 'assistant', content: res.content })
     const toolUses = res.content.filter(isToolUse)
