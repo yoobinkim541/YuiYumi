@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CharacterRuntime } from '@/core/types'
 import SpeechBubble from '@/ui/SpeechBubble.vue'
+import ControlPill from './ControlPill.vue'
 import { FALLBACK_ANIM } from './emotion-map'
 import { mountCharacter, unmountCharacter } from './index'
 import { CHARACTER_MODELS, type CharacterId } from './models'
@@ -58,6 +59,8 @@ const spriteClass = computed(() => [
           <img :key="characterView.pulse" :src="icon" alt="Character" class="sprite" :class="spriteClass" draggable="false">
         </div>
       </div>
+      <!-- The pill hides the waist cut and holds the quick controls. -->
+      <ControlPill />
     </div>
   </div>
 </template>
@@ -80,12 +83,10 @@ const spriteClass = computed(() => [
   background: transparent;
 }
 .viewport {
-  position: relative;
-  flex: 1;
+  /* Ends behind the middle of the control pill, so the waist cut is hidden by it. */
+  position: absolute;
+  inset: 0 0 36px 0;
   overflow: hidden;
-  /* The legs fade out at the bottom edge instead of a hard cut. */
-  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
 }
 .stage { position: absolute; inset: 0; }
 /* The avatar canvas takes presses on her head and body (see cubism-runtime.ts touch);
