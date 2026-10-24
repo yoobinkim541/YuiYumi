@@ -17,16 +17,24 @@ import Icon from './Icon.vue'
 import { useSettingsI18n, type SettingsPageId } from './i18n'
 import { captureShortcut, DEFAULT_PTT, isMacPlatform, shortcutCaps } from './shortcut'
 import './theme.css'
+import heroImg from './assets/hero.webp'
+import sdAbout from './assets/sd-about.webp'
+import sdCard from './assets/sd-card.webp'
+import sdConnectors from './assets/sd-connectors.webp'
+import sdGeneral from './assets/sd-general.webp'
+import sdPermissions from './assets/sd-permissions.webp'
+import sdVoice from './assets/sd-voice.webp'
 
 type PageId = 'index' | SettingsPageId
 
-const PAGES: { id: SettingsPageId, icon: string }[] = [
-  { id: 'card', icon: 'card' },
-  { id: 'general', icon: 'settings' },
-  { id: 'voice', icon: 'mic' },
-  { id: 'permissions', icon: 'shield' },
-  { id: 'connectors', icon: 'plug' },
-  { id: 'about', icon: 'info' },
+// Index menu: each entry gets the Yui or Yumi SD sticker from the landing page that fits it.
+const PAGES: { id: SettingsPageId, icon: string, sd: string }[] = [
+  { id: 'card', icon: 'card', sd: sdCard },
+  { id: 'general', icon: 'settings', sd: sdGeneral },
+  { id: 'voice', icon: 'mic', sd: sdVoice },
+  { id: 'permissions', icon: 'shield', sd: sdPermissions },
+  { id: 'connectors', icon: 'plug', sd: sdConnectors },
+  { id: 'about', icon: 'info', sd: sdAbout },
 ]
 
 const settings = useSettings()
@@ -143,30 +151,41 @@ const NOTICES: string[] = [
     <div ref="scroller" class="content scroll">
       <div class="inner">
         <!-- Page header (AIRI PageHeader): back arrow, small subtitle above a large title -->
-        <header class="page-header">
-          <button type="button" class="back" :class="{ hidden: !current }" :aria-label="t.back" @click="go('index')">
+        <header v-if="current" class="page-header">
+          <button type="button" class="back" :aria-label="t.back" @click="go('index')">
             <Icon name="chevron-left" :size="26" />
           </button>
           <h1>
-            <span v-if="current" class="subtitle">{{ t.settings }}</span>
-            <span class="title">{{ current ? current.title : t.settings }}</span>
+            <span class="subtitle">{{ t.settings }}</span>
+            <span class="title">{{ current.title }}</span>
           </h1>
         </header>
 
-        <!-- Index: AIRI menu icon items -->
-        <div v-if="page === 'index'" class="menu">
-          <button
-            v-for="(p, i) in PAGES" :key="p.id" type="button"
-            class="menu-icon-item" :style="{ animationDelay: `${i * 50}ms` }"
-            @click="go(p.id)"
-          >
-            <span class="mi-text">
-              <span class="mi-title">{{ t.pages[p.id].title }}</span>
-              <span class="mi-desc">{{ t.pages[p.id].desc }}</span>
-            </span>
-            <span class="mi-icon"><Icon :name="p.icon" :size="72" /></span>
-          </button>
-        </div>
+        <!-- Index: landing-style hero with Yui and Yumi, then SD menu cards -->
+        <template v-if="page === 'index'">
+          <section class="hero" :style="{ backgroundImage: `url(${heroImg})` }">
+            <div class="hero-text">
+              <span class="brand">YuiYumi</span>
+              <h1>{{ t.settings }}</h1>
+              <p>{{ t.about.tagline }}</p>
+            </div>
+          </section>
+
+          <div class="menu">
+            <button
+              v-for="(p, i) in PAGES" :key="p.id" type="button"
+              class="menu-sd-item" :style="{ animationDelay: `${i * 50}ms` }"
+              @click="go(p.id)"
+            >
+              <span class="mi-text">
+                <span class="mi-chip"><Icon :name="p.icon" :size="16" /></span>
+                <span class="mi-title">{{ t.pages[p.id].title }}</span>
+                <span class="mi-desc">{{ t.pages[p.id].desc }}</span>
+              </span>
+              <img class="mi-sd" :src="p.sd" alt="" draggable="false">
+            </button>
+          </div>
+        </template>
 
       <!-- Character card (AIRI airi-card) -->
       <template v-if="page === 'card'">
@@ -425,7 +444,12 @@ const NOTICES: string[] = [
 </template>
 
 <style scoped>
-.settings-app { display: block; background: #fff; }
+/* Landing page palette (sakura pink, plum text) in place of AIRI's cyan. */
+.settings-app {
+  --p50: #fdf0f4; --p100: #fce3ea; --p200: #fac8d7; --p300: #f8b7cb; --p400: #e78ca8; --p500: #e0567e; --p600: #c2416a;
+  --ink: #3e2f38; --ink-soft: #5a4652;
+  display: block; background: #fff; color: var(--ink);
+}
 .content { height: 100%; }
 .inner { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; display: flex; flex-direction: column; }
 
@@ -433,41 +457,71 @@ const NOTICES: string[] = [
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px;
   padding: 36px 0 24px; background: #fff;
 }
-.back { display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--n800); cursor: pointer; }
-.back.hidden { opacity: 0; pointer-events: none; }
+.back { display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--ink); cursor: pointer; }
 .page-header h1 { position: relative; margin: 0; font-weight: 400; }
-.page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--n300); white-space: nowrap; }
-.page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--n900); white-space: nowrap; }
+.page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--p400); white-space: nowrap; }
+.page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--ink); white-space: nowrap; }
 
-.menu { display: flex; flex-direction: column; gap: 10px; }
-.menu-icon-item {
-  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; width: 100%;
-  padding: 14px 20px; text-align: left; font: inherit; color: inherit; cursor: pointer;
-  background: var(--n50); border: 2px solid var(--n100); border-radius: 8px;
-  transition: all .4s ease-in-out; animation: mi-enter .25s ease-out both;
+/* Hero: the landing page's duo room art, faded to white on the left behind the text. */
+.hero {
+  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center;
+  min-height: 240px; margin: 24px 0 20px; padding: 28px 32px; border-radius: 20px;
+  background-color: #fff; background-repeat: no-repeat; background-size: max(78%, 420px) auto; background-position: right 28%;
+  box-shadow: 0 10px 30px rgb(224 86 126 / .12); animation: mi-enter .35s ease-out both;
 }
-.menu-icon-item::before {
-  content: ''; position: absolute; inset: 0; z-index: -1; width: 25%; height: 100%; opacity: 0;
-  background: linear-gradient(90deg, rgb(34 169 210 / .2), rgb(34 169 210 / .1), transparent);
-  mask-image: linear-gradient(120deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
+.hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(90deg, #fff 0%, #fff 25%, rgb(255 255 255 / .9) 34%, rgb(255 255 255 / .45) 46%, rgb(255 255 255 / 0) 58%);
 }
-.menu-icon-item::after {
-  content: ''; position: absolute; inset: 0; z-index: -2;
-  background-image: radial-gradient(circle, rgb(229 229 229 / .6) 1px, transparent 1px); background-size: 10px 10px;
-  mask-image: linear-gradient(165deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
+.hero-text { max-width: 46%; display: flex; flex-direction: column; gap: 6px; }
+.brand {
+  align-self: flex-start; padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  color: var(--p500); background: var(--p100);
 }
-.menu-icon-item:hover { border-color: rgb(34 169 210 / .3); filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
-.menu-icon-item:active { filter: none; }
-.menu-icon-item:hover::before { width: 85%; opacity: 1; }
-.menu-icon-item:hover::after { background-image: radial-gradient(circle, rgb(127 210 235 / .5) 1px, transparent 1px); }
-.mi-text { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.mi-title { font-size: 18px; font-weight: 400; transition: color .4s ease-in-out; }
-.mi-desc { font-size: 14px; color: var(--n500); transition: all .4s ease-in-out; }
-.menu-icon-item:hover .mi-title { color: var(--p600); }
-.menu-icon-item:hover .mi-desc { color: var(--p600); opacity: .8; }
-.mi-icon { position: absolute; right: 0; top: 50%; display: grid; transform: translateY(-34%); color: rgb(163 163 163 / .5); opacity: .5; transition: all .4s ease-in-out; }
-.menu-icon-item:hover .mi-icon { color: var(--p500); scale: 1.2; }
+.hero h1 { margin: 2px 0 0; font-size: 34px; line-height: 1.15; font-weight: 700; color: var(--ink); }
+.hero p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+
+/* Menu: two-column cards with an SD sticker peeking in from the right. */
+.menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.menu-sd-item {
+  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; width: 100%; min-height: 128px;
+  padding: 18px 20px; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: linear-gradient(135deg, #fff 40%, var(--p50)); border: 2px solid var(--p100); border-radius: 16px;
+  transition: border-color .3s, box-shadow .3s, transform .3s; animation: mi-enter .25s ease-out both;
+}
+.menu-sd-item::after {
+  content: ''; position: absolute; right: -24px; bottom: -40px; z-index: -1; width: 170px; height: 170px; border-radius: 50%;
+  background: radial-gradient(circle, var(--p100) 0%, rgb(252 227 234 / 0) 70%); transition: transform .3s;
+}
+.menu-sd-item:hover { border-color: var(--p300); box-shadow: 0 8px 22px rgb(224 86 126 / .15); transform: translateY(-2px); }
+.menu-sd-item:hover::after { transform: scale(1.15); }
+.menu-sd-item:active { transform: none; box-shadow: none; }
+.menu-sd-item:focus-visible { outline: 3px solid var(--p300); outline-offset: 2px; }
+.mi-text { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-right: 110px; }
+.mi-chip { display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 6px; border-radius: 9px; color: var(--p500); background: var(--p100); }
+.mi-title { font-size: 18px; font-weight: 700; color: var(--ink); transition: color .3s; }
+.mi-desc { font-size: 13.5px; color: var(--ink-soft); opacity: .85; }
+.menu-sd-item:hover .mi-title { color: var(--p600); }
+.mi-sd {
+  position: absolute; right: 8px; bottom: -6px; width: 118px; height: 118px; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgb(62 47 56 / .12)); transform-origin: 50% 100%; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1);
+}
+.menu-sd-item:hover .mi-sd { transform: translateY(-6px) rotate(-4deg) scale(1.06); }
 @keyframes mi-enter { from { opacity: 0; transform: translateY(10px); } }
+
+@media (max-width: 760px) {
+  .menu { grid-template-columns: 1fr; }
+  .hero { min-height: 200px; padding: 22px; background-size: 66% auto; background-position: right 30%; }
+  .hero::before { background: linear-gradient(90deg, #fff 0%, #fff 36%, rgb(255 255 255 / .8) 44%, rgb(255 255 255 / 0) 60%); }
+  .hero-text { max-width: 50%; }
+  .hero p { font-size: 13px; }
+  .hero h1 { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero, .menu-sd-item { animation: none; }
+  .menu-sd-item, .menu-sd-item::after, .mi-sd { transition: none; }
+  .menu-sd-item:hover, .menu-sd-item:hover .mi-sd { transform: none; }
+}
 
 .sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -483,7 +537,7 @@ const NOTICES: string[] = [
 }
 .char-card::before {
   content: ''; position: absolute; inset: 0; z-index: 0; width: 25%; opacity: 0; pointer-events: none;
-  background: linear-gradient(90deg, rgb(34 169 210 / .2), rgb(34 169 210 / .1), transparent); transition: all .4s ease-in-out;
+  background: linear-gradient(90deg, rgb(224 86 126 / .14), rgb(224 86 126 / .06), transparent); transition: all .4s ease-in-out;
 }
 .char-card:hover { filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
 .char-card:hover::before { opacity: 1; width: 100%; }
@@ -497,8 +551,8 @@ const NOTICES: string[] = [
   background-image: radial-gradient(circle, rgb(229 229 229 / .8) 1px, transparent 1px); background-size: 10px 10px;
   mask-image: linear-gradient(165deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
 }
-.char-card:hover .cc-body { color: rgb(23 137 173 / .8); }
-.char-card:hover .cc-body::after { background-image: radial-gradient(circle, rgb(127 210 235 / .5) 1px, transparent 1px); }
+.char-card:hover .cc-body { color: var(--p600); }
+.char-card:hover .cc-body::after { background-image: radial-gradient(circle, rgb(248 183 203 / .6) 1px, transparent 1px); }
 .cc-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cc-head b { flex: 1; min-width: 0; font-size: 18px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .avatar {
