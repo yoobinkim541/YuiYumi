@@ -2,7 +2,7 @@
 
 화면 위에 상주하며 사용자가 하는 일을 보고 먼저 말을 걸고, 메일·일정 같은 업무를 대신 처리하는 Live2D 캐릭터 AI 비서.
 
-**웹 데모: https://yuiyumi-seven.vercel.app**
+**웹 데모: https://yuiyumi.vercel.app**
 
 사용 설명서: [docs/user-guide.md](docs/user-guide.md)
 

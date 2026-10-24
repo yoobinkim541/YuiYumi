@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager};
 
 /// Proxy base for model calls in release builds: `DESKTOP_API_BASE` at build time.
 const API_BASE: Option<&str> = option_env!("DESKTOP_API_BASE");
-const API_BASE_PLACEHOLDER: &str = "https://yuiyumi-seven.vercel.app";
+const API_BASE_PLACEHOLDER: &str = "https://yuiyumi.vercel.app";
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(serde::Serialize, Clone)]

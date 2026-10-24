@@ -49,7 +49,7 @@ function apiDevServer(): Plugin {
 // Desktop app (Tauri, `--mode desktop`): desktop.html instead of index.html, plus stand-ins for
 // modules that assume the in-page virtual desktop. The settings/dashboard panels run in their
 // own windows, so their '@/voice' and '@/nunchi' imports go to mirrors of the overlay's state.
-const DESKTOP_API_PLACEHOLDER = 'https://yuiyumi-seven.vercel.app'
+const DESKTOP_API_PLACEHOLDER = 'https://yuiyumi.vercel.app'
 
 function desktopShims(): Plugin {
   const settingsDir = fileURLToPath(new URL('./src/settings/', import.meta.url))
