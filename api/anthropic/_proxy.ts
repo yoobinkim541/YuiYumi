@@ -130,7 +130,10 @@ export async function handleProxy(request: Request, fetchImpl: typeof fetch = fe
   if (request.method !== 'POST') return apiError(405, 'invalid_request_error', 'method not allowed')
   if (sub === '/install') return mintInstall(request)
   if (!PATHS.has(sub)) return apiError(404, 'not_found_error', 'only the Messages endpoints are available')
-  for (const k of url.searchParams.keys()) if (k !== 'beta') return apiError(400, 'invalid_request_error', 'unsupported query parameter')
+  // Only ?beta=... goes upstream. Other parameters are dropped: the platform's rewrite adds its
+  // own route parameters, so rejecting unknown ones would refuse every request.
+  const beta = url.searchParams.get('beta')
+  const search = beta === null ? '' : `?beta=${encodeURIComponent(beta)}`
 
   const key = env('ANTHROPIC_API_KEY')
   if (!key || !sealConfigured()) return apiError(503, 'api_error', 'agent proxy not configured')
@@ -158,7 +161,7 @@ export async function handleProxy(request: Request, fetchImpl: typeof fetch = fe
 
   let upstream: Response
   try {
-    upstream = await fetchImpl(`${UPSTREAM}${sub}${url.search}`, { method: 'POST', headers, body: outBody, signal: request.signal })
+    upstream = await fetchImpl(`${UPSTREAM}${sub}${search}`, { method: 'POST', headers, body: outBody, signal: request.signal })
   } catch (e) {
     console.error('[api/anthropic] upstream fetch failed', (e as Error).name)
     return apiError(502, 'api_error', 'upstream unavailable', true)
