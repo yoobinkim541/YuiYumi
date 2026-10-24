@@ -1,22 +1,37 @@
 <script setup lang="ts">
-// Frameless, always-on-top character window inside the virtual desktop, styled after the
-// AIRI desktop companion window (adapted from AIRI stage-tamagotchi, MIT): rounded,
-// translucent, controls appear on hover. Marked [data-no-capture]: never sent to the observer.
-import { computed } from 'vue'
+// Frameless, always-on-top, transparent character window inside the virtual desktop.
+// The hover controls follow the desktop companion's controls island, adapted from AIRI
+// stage-tamagotchi (MIT): a column of round translucent overlay buttons docked bottom-right
+// (expand, talk, sound, move) and an expandable glass menu with a 3-column grid of actions.
+// The island fades out when the cursor leaves the window unless the menu is open.
+// Marked [data-no-capture]: never sent to the observer.
+import { computed, ref } from 'vue'
+import { characterHitTest } from '@/character'
 import CharacterLayer from '@/character/CharacterLayer.vue'
 import { CHARACTER_MODELS } from '@/character/models'
 import { characterView } from '@/character/state'
 import { useCharacterStore } from '@/character/store'
+import Icon from '@/settings/Icon.vue'
+import { useSettings } from '@/stores/settings'
 import { pttDown, pttUp, unlockAudio, voiceState } from '@/voice'
-import { assistantWindow, CHARACTER_H, CHARACTER_W, desktopView, focusWindow, moveAssistantWindow } from './windows'
+import {
+  assistantWindow, CHARACTER_H, CHARACTER_W, DESKTOP_H, DESKTOP_W, desktopView, DOCK_H, focusWindow, MENUBAR_H, moveAssistantWindow,
+} from './windows'
 
 const store = useCharacterStore()
+const settings = useSettings()
 const label = computed(() => CHARACTER_MODELS[store.character].label)
+const expanded = ref(false)
 
 let drag: { px: number, py: number, x: number, y: number } | null = null
 
 function onPointerDown(e: PointerEvent) {
-  if ((e.target as HTMLElement).closest('button, select')) return
+  const target = e.target as HTMLElement
+  const onMove = !!target.closest('.cw-move')
+  if (!onMove && target.closest('button, select, .cw-menu')) return
+  // Touching the avatar itself (head pat, grab) is handled by the character layer; the
+  // window drags from transparent areas or the move button.
+  if (!onMove && characterHitTest(e.clientX, e.clientY) !== null) return
   drag = { px: e.clientX, py: e.clientY, x: assistantWindow.x, y: assistantWindow.y }
   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
@@ -31,10 +46,41 @@ function onPointerUp() {
   drag = null
 }
 
+function onLeave() {
+  if (!drag) expanded.value = false
+}
+
 function onTalkDown(e: PointerEvent) {
   unlockAudio()
   ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
   void pttDown()
+}
+
+function nextCharacter() {
+  const opts = store.options
+  const i = opts.findIndex(o => o.id === store.character)
+  const next = opts[(i + 1) % opts.length]
+  if (next) store.setCharacter(next.id)
+}
+
+function centerWindow() {
+  const usableH = DESKTOP_H - MENUBAR_H - DOCK_H
+  moveAssistantWindow((DESKTOP_W - CHARACTER_W) / 2, MENUBAR_H + (usableH - CHARACTER_H) / 2)
+}
+
+function toggleSound() {
+  unlockAudio()
+  settings.sound = !settings.sound
+}
+
+function open(id: 'settings' | 'dashboard') {
+  focusWindow(id)
+  expanded.value = false
+}
+
+function hide() {
+  expanded.value = false
+  assistantWindow.visible = false
 }
 </script>
 
@@ -42,54 +88,87 @@ function onTalkDown(e: PointerEvent) {
   <div
     v-show="assistantWindow.visible"
     class="cw"
-    :class="{ pinned: assistantWindow.pinned }"
+    :class="{ pinned: assistantWindow.pinned, expanded }"
     data-no-capture
     :style="{ left: `${assistantWindow.x}px`, top: `${assistantWindow.y}px`, width: `${CHARACTER_W}px`, height: `${CHARACTER_H}px` }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
+    @pointerleave="onLeave"
   >
     <CharacterLayer class="cw-layer" />
 
-    <div class="cw-controls">
-      <div class="cw-row">
-        <span class="cw-dot" :class="characterView.node" />
-        <span class="cw-name">{{ label }}</span>
-        <div class="cw-switcher" role="group" aria-label="Character">
-          <button
-            v-for="o in store.options"
-            :key="o.id"
-            type="button"
-            :class="{ active: store.character === o.id }"
-            :aria-pressed="store.character === o.id"
-            @click="store.setCharacter(o.id)"
-          >
-            {{ o.label }}
-          </button>
+    <!-- Status badge (name and live node) -->
+    <div class="cw-badge">
+      <span class="cw-dot" :class="characterView.node" />
+      <span>{{ label }}</span>
+    </div>
+
+    <!-- Controls island -->
+    <div class="cw-island">
+      <Transition name="cw-menu">
+        <div v-if="expanded" class="cw-menu" role="menu">
+          <div class="cw-grid">
+            <button type="button" class="ob" title="Open settings" aria-label="Open settings" @click="open('settings')">
+              <Icon name="settings" />
+            </button>
+            <button type="button" class="ob" :title="`Switch character (now ${label})`" aria-label="Switch character" @click="nextCharacter">
+              <Icon name="smile" />
+            </button>
+            <button type="button" class="ob" title="Open dashboard" aria-label="Open dashboard" @click="open('dashboard')">
+              <Icon name="dashboard" />
+            </button>
+            <button type="button" class="ob" title="Center window" aria-label="Center window" @click="centerWindow">
+              <Icon name="target" />
+            </button>
+            <button
+              type="button" class="ob" :class="{ dim: !assistantWindow.pinned }"
+              :title="assistantWindow.pinned ? 'Unpin from top' : 'Pin on top'"
+              :aria-pressed="assistantWindow.pinned"
+              @click="assistantWindow.pinned = !assistantWindow.pinned"
+            >
+              <Icon name="pin" />
+            </button>
+            <button type="button" class="ob danger" title="Hide character" aria-label="Hide character" @click="hide">
+              <Icon name="close-circle" />
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="cw-row cw-actions">
-        <button type="button" class="cw-btn" :class="{ on: assistantWindow.pinned }" title="Always on top" @click="assistantWindow.pinned = !assistantWindow.pinned">
-          <svg viewBox="0 0 24 24"><path d="M9 3h6l-1 6 4 4H6l4-4zM12 13v8" /></svg>
-        </button>
-        <button type="button" class="cw-btn" title="Settings" @click="focusWindow('settings')">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>
+      </Transition>
+
+      <div class="cw-main">
+        <button
+          type="button" class="ob" :aria-expanded="expanded"
+          :title="expanded ? 'Collapse' : 'Expand'"
+          @click="expanded = !expanded"
+        >
+          <Icon name="chevron-up" class="cw-arrow" :style="{ transform: `rotate(${expanded ? 180 : 0}deg)` }" />
         </button>
         <button
           type="button"
-          class="cw-btn talk"
+          class="ob talk"
           :class="{ on: voiceState.recording }"
           title="Hold to talk (or hold Space)"
+          aria-label="Hold to talk"
           @pointerdown.prevent="onTalkDown"
           @pointerup="pttUp()"
           @pointercancel="pttUp()"
           @contextmenu.prevent
         >
-          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+          <span v-if="voiceState.recording" class="cw-level"><i /><i /><i /></span>
+          <Icon v-else name="mic" />
         </button>
-        <button type="button" class="cw-btn" title="Hide" @click="assistantWindow.visible = false">
-          <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+        <button
+          type="button" class="ob"
+          :title="settings.sound ? 'Mute speech' : 'Unmute speech'"
+          :aria-pressed="!settings.sound"
+          @click="toggleSound"
+        >
+          <Icon :name="settings.sound ? 'volume' : 'volume-off'" />
+        </button>
+        <button type="button" class="ob cw-move" title="Drag to move window" aria-label="Drag to move window">
+          <Icon name="move" />
         </button>
       </div>
     </div>
@@ -106,65 +185,93 @@ function onTalkDown(e: PointerEvent) {
 .cw.pinned { z-index: 90000; }
 .cw:active { cursor: grabbing; }
 .cw-layer { position: absolute; inset: 0; }
-.cw-controls {
+
+.cw-badge {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 12px;
+  left: 8px;
+  top: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(250 250 250 / 0.8);
+  backdrop-filter: blur(12px);
+  color: #262626;
+  font: 500 13px/1.4 "DM Sans", system-ui, sans-serif;
   opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.2s, transform 0.2s;
+  transform: scale(0.95);
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
   pointer-events: none;
 }
-.cw:hover .cw-controls { opacity: 1; transform: none; pointer-events: auto; }
-.cw-row {
+.cw-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.cw-dot.working, .cw-dot.waiting { background: #f59e0b; }
+.cw-dot.speaking, .cw-dot.listening { background: #22a9d2; }
+.cw-dot.failed { background: #ef4444; }
+.cw-dot.sleeping { background: #a3a3a3; }
+
+.cw-island {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 4px 14px rgba(40, 24, 70, 0.14);
-  color: #4a3f5c;
-  font-size: 15px;
-  font-weight: 600;
+  align-items: flex-end;
+  gap: 12px;
+  opacity: 0;
+  transform: scale(0.95) translateX(12px);
+  transform-origin: bottom right;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  pointer-events: none;
 }
-.cw-actions { align-self: flex-end; padding: 5px; gap: 4px; }
-.cw-name { flex: 1; white-space: nowrap; }
-.cw-dot { width: 10px; height: 10px; border-radius: 50%; background: #9be38f; }
-.cw-dot.working, .cw-dot.waiting { background: #f5c451; }
-.cw-dot.speaking, .cw-dot.listening { background: #7aa7ff; }
-.cw-dot.failed { background: #ff8a8a; }
-.cw-dot.sleeping { background: #c9c3d6; }
-.cw-switcher { display: flex; gap: 2px; padding: 2px; border-radius: 999px; background: rgba(74, 63, 92, 0.1); }
-.cw-switcher button {
+.cw:hover .cw-island, .cw.expanded .cw-island { opacity: 1; transform: none; pointer-events: auto; }
+.cw:hover .cw-badge { opacity: 1; transform: none; }
+
+.cw-main { display: flex; flex-direction: column; gap: 4px; flex: none; }
+
+/* Overlay button (AIRI OverlayButton) */
+.ob {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
   border: 0;
-  border-radius: 999px;
-  padding: 4px 10px;
-  background: transparent;
-  color: #4a3f5c;
-  font-size: 13px;
+  border-radius: 12px;
+  background: rgb(250 250 250 / 0.8);
+  backdrop-filter: blur(12px);
+  color: #262626;
   cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
-.cw-switcher button.active { background: #fff; color: #2a2230; box-shadow: 0 1px 3px rgba(40, 24, 70, 0.15); }
-.cw-btn {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #4a3f5c;
-  cursor: pointer;
+.ob:hover { color: #1789ad; }
+.ob:active { background: rgb(179 229 244 / 0.8); color: #0e5c74; }
+.ob.dim :deep(svg) { opacity: 0.5; }
+.ob.danger:hover { background: #ef4444; color: #fff; }
+.ob.talk.on { background: rgb(239 68 68 / 0.85); color: #fff; }
+.ob.cw-move { cursor: move; }
+.cw-arrow { transition: transform 0.3s; scale: 1.1; }
+
+.cw-level { display: flex; align-items: center; gap: 2px; height: 20px; }
+.cw-level i { width: 3px; height: 8px; border-radius: 2px; background: currentColor; animation: cw-bar 0.8s ease-in-out infinite; }
+.cw-level i:nth-child(2) { animation-delay: 0.15s; }
+.cw-level i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes cw-bar { 50% { height: 18px; } }
+
+/* Glass menu (AIRI controls menu) */
+.cw-menu {
+  padding: 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  background: rgb(245 245 245 / 0.8);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.2);
+  transform-origin: bottom right;
 }
-.cw-btn:hover { background: rgba(74, 63, 92, 0.1); }
-.cw-btn.on { background: rgba(122, 167, 255, 0.25); color: #2f5fd0; }
-.cw-btn.talk.on { background: rgba(255, 80, 80, 0.25); color: #d02f2f; }
-.cw-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cw-grid { display: grid; grid-template-columns: repeat(3, 40px); gap: 8px; }
+.cw-menu-enter-active { animation: cw-menu-in 400ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.cw-menu-leave-active { animation: cw-menu-in 300ms ease-in reverse both; }
+@keyframes cw-menu-in {
+  from { opacity: 0; transform: translateX(12px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
 </style>

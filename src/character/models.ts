@@ -23,6 +23,19 @@ export interface CharacterModelDef {
    * `topCut`: fraction of the model's height above the head that is empty and skipped.
    */
   framing: { visible: number, topCut: number }
+  /** Touch interactions (see cubism-runtime.ts). */
+  touch: TouchDef
+}
+
+export interface TouchDef {
+  /**
+   * The head for petting and hit testing, in the model's own canvas: the eye center as
+   * shares of its width (x) and height (y), the head radius as a share of its width.
+   */
+  head: { x: number, y: number, radius: number }
+  /** Face while petted and after poking: profile emotion labels or expression names. */
+  pet: string[]
+  pout: string[]
 }
 
 const base = `${import.meta.env.BASE_URL}models/`
@@ -36,6 +49,7 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     emotions: TT2_EMOTIONS,
     nodes: node => NODE_MAP_TT2[node] ?? NODE_MAP_TT2.idle,
     framing: { visible: 0.5, topCut: 0.02 },
+    touch: { head: { x: 0.5, y: 0.222, radius: 0.135 }, pet: ['shy'], pout: ['playful'] },
   },
   yui: {
     id: 'yui',
@@ -47,6 +61,7 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
       ? graphNodeSettings(graph, node)
       : { blink: true, breath: true, lookAt: false, idleNoise: false, motion: null },
     framing: { visible: 0.5, topCut: 0.02 },
+    touch: { head: { x: 0.5, y: 0.163, radius: 0.09 }, pet: ['shy'], pout: ['볼빵빵'] },
   },
 }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Icon from '@/settings/Icon.vue'
 import { closeWindow, desktop, desktopView, focusWindow, moveWindow, type AppId } from './windows'
 
 const props = defineProps<{ id: AppId, accent?: string, noCapture?: boolean }>()
@@ -31,7 +32,7 @@ function onTitlePointerUp() {
   <section
     v-show="w.open"
     class="wf"
-    :class="{ focused }"
+    :class="{ focused, assistant: noCapture }"
     :data-no-capture="noCapture ? '' : undefined"
     :style="{ left: `${w.x}px`, top: `${w.y}px`, width: `${w.w}px`, height: `${w.h}px`, zIndex: w.z }"
     @pointerdown="focusWindow(id)"
@@ -49,7 +50,12 @@ function onTitlePointerUp() {
         <button class="wf-btn min" aria-label="Minimize" @click.stop="closeWindow(id)"><svg viewBox="0 0 10 10"><path d="M2.5 5h5" /></svg></button>
         <span class="wf-btn max"><svg viewBox="0 0 10 10"><path d="M3 7V3h4M7 3v4H3" /></svg></span>
       </div>
-      <div class="wf-text">{{ w.title }}</div>
+      <!-- Assistant windows use the companion's title bar (adapted from AIRI (MIT)): small icon and title, left-aligned. -->
+      <div v-if="noCapture" class="wf-chip">
+        <Icon :name="id === 'dashboard' ? 'dashboard' : 'settings'" :size="16" />
+        <span>{{ w.title }}</span>
+      </div>
+      <div v-else class="wf-text">{{ w.title }}</div>
     </header>
     <div class="wf-body">
       <slot />
@@ -105,5 +111,13 @@ function onTitlePointerUp() {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.wf.assistant .wf-title { height: 40px; flex-basis: 40px; background: #f5f5f5; border-bottom: 0; backdrop-filter: none; }
+.wf.assistant:not(.focused) .wf-title { background: #f5f5f5; }
+.wf-chip {
+  display: flex; align-items: center; gap: 8px; margin-left: 18px; padding: 2px 6px; border-radius: 6px;
+  font-size: 14px; color: #262626; white-space: nowrap; transition: background .2s ease-in-out;
+}
+.wf-chip:hover { background: #e5e5e5; }
+.wf-chip svg { color: #a3a3a3; }
 .wf-body { flex: 1; min-height: 0; position: relative; }
 </style>

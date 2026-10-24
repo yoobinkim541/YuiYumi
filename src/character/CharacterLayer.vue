@@ -88,6 +88,9 @@ const spriteClass = computed(() => [
   mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
 }
 .stage { position: absolute; inset: 0; }
+/* The avatar canvas takes presses on her head and body (see cubism-runtime.ts touch);
+   presses on transparent pixels bubble on to the window drag. */
+.stage :deep(canvas) { pointer-events: auto; }
 .bubble-anchor {
   position: absolute;
   left: 50%;

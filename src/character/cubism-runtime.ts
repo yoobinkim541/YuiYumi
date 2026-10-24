@@ -4,11 +4,14 @@
 // motion update and before physics (see `frameHook`).
 
 import type { Emotion } from '@shared/contracts'
+import { bus } from '@/core/bus'
 import type { CharacterNode, CharacterRuntime, MouthPose } from '@/core/types'
 import { ensureCubismCore, type CoreKind } from './core'
 import { applyAmbient, parseAmbientMotion, type AmbientMotion } from './live2d/ambient'
 import type { CoreModel } from './live2d/core-model'
 import { composeExpressions, ExpressionLayer, parseExpression } from './live2d/expressions'
+import { createHeadPat, headPatZoneContains, type HeadPatHead, type HeadPatPose } from './live2d/head-pat'
+import { pointInTriangle, TouchGestures, type TouchReaction, type TouchRegion } from './live2d/touch'
 import { applyBreath, applyIdleNoise, AutoBlink, LipSync, setMotionLoop } from './live2d/procedural'
 import { loadModelPack, type ModelPack } from './live2d/pack'
 import { EMPTY_PROFILE, type ModelProfile } from './model-data'
@@ -23,6 +26,13 @@ type AnyModel = any
 type PixiApp = any
 
 const FORCE = 3 // MotionPriority.FORCE
+/** Drawables fainter than this do not count as her body for hit testing. */
+const HIT_MIN_OPACITY = 0.2
+/** How long the pout face stays after poking, and the petted face after a release. */
+const POUT_MS = 2600
+const PET_AFTERGLOW_MS = 1200
+/** Taps emit a bus reaction at most this often, so a flurry does not restart motions. */
+const TAP_REACT_COOLDOWN_MS = 2500
 
 export function webgl2Available(): boolean {
   try {
@@ -57,6 +67,16 @@ export class CubismRuntime implements CharacterRuntime {
   /** A reaction motion is playing over the node motion. */
   private reacting = false
 
+  // Touch: a held head follows the hand (head-pat springs), petting and pokes change the face.
+  private PIXI: any = null
+  private headPat = createHeadPat({ onChange: s => this.onHeadPatChange(s.holding, s.petting) })
+  private gestures = new TouchGestures()
+  private touchPointer: number | null = null
+  private touchFace: string[] = []
+  private touchFaceTimer: ReturnType<typeof setTimeout> | null = null
+  private lastTapReactAt = -Infinity
+  private lastPat: HeadPatPose | null = null
+
   constructor(private readonly def: CharacterModelDef) {
     this.node = def.nodes('idle', null)
   }
@@ -74,6 +94,7 @@ export class CubismRuntime implements CharacterRuntime {
     this.core = await ensureCubismCore()
 
     const PIXI = await import('pixi.js')
+    this.PIXI = PIXI
     PIXI.settings.PREFER_ENV = PIXI.ENV.WEBGL2
     const [{ Live2DModel, Cubism4ModelSettings }, { installCubismBatchedRenderer }, pack] = await Promise.all([
       import('pixi-live2d-display/cubism4'),
@@ -99,7 +120,14 @@ export class CubismRuntime implements CharacterRuntime {
     const canvas = this.app.view as HTMLCanvasElement
     canvas.style.width = '100%'
     canvas.style.height = '100%'
+    canvas.style.touchAction = 'none'
     container.appendChild(canvas)
+    canvas.addEventListener('pointerdown', this.onTouchDown)
+    canvas.addEventListener('pointermove', this.onTouchMove)
+    canvas.addEventListener('pointerup', this.onTouchUp)
+    canvas.addEventListener('pointercancel', this.onTouchCancel)
+    canvas.addEventListener('lostpointercapture', this.onTouchCancel)
+    window.addEventListener('blur', this.onTouchCancel)
 
     Live2DModel.registerTicker(PIXI.Ticker as any)
     const settings = new Cubism4ModelSettings(pack.model3 as any)
@@ -184,6 +212,178 @@ export class CubismRuntime implements CharacterRuntime {
     if (this.node.idleNoise) applyIdleNoise(core, t)
     if (this.node.blink) this.blink.apply(core, dtMs)
     this.lipSync.apply(core, dtMs)
+    // A hand on her head pulls it, and her body after it, on top of everything else;
+    // physics runs after this hook, so hair and clothes swing with it.
+    const pat = this.headPat.step(dtMs / 1000)
+    this.lastPat = pat
+    if (pat) {
+      core.addParameterValueById('ParamAngleX', pat.x)
+      core.addParameterValueById('ParamAngleY', pat.y)
+      core.addParameterValueById('ParamAngleZ', pat.z)
+      core.addParameterValueById('ParamBodyAngleX', pat.bodyX)
+      core.addParameterValueById('ParamBodyAngleZ', pat.bodyZ)
+    }
+  }
+
+  // ---- touch -------------------------------------------------------------------------
+
+  /** Client pixels per stage pixel, and the canvas rect. */
+  private canvasRect(): { rect: DOMRect, k: number } | null {
+    if (!this.app) return null
+    const rect = (this.app.view as HTMLCanvasElement).getBoundingClientRect()
+    if (!(rect.width > 0)) return null
+    return { rect, k: rect.width / this.app.screen.width }
+  }
+
+  /** Her head in client coordinates, from the model's touch definition. */
+  private headClient(): HeadPatHead | null {
+    const c = this.canvasRect()
+    if (!this.model || !this.PIXI || !c) return null
+    const im = this.model.internalModel
+    const { x, y, radius } = this.def.touch.head
+    const toClient = (mx: number, my: number) => {
+      const local = im.localTransform.apply(new this.PIXI.Point(mx, my))
+      const g = this.model.transform.worldTransform.apply(local)
+      return { x: c.rect.left + g.x * c.k, y: c.rect.top + g.y * c.k }
+    }
+    const eye = toClient(x * im.originalWidth, y * im.originalHeight)
+    const edge = toClient((x + radius) * im.originalWidth, y * im.originalHeight)
+    return { x: eye.x, y: eye.y, radius: Math.hypot(edge.x - eye.x, edge.y - eye.y) }
+  }
+
+  /** Whether the client point lies on a visible drawable mesh of the model. */
+  private onBody(clientX: number, clientY: number): boolean {
+    const c = this.canvasRect()
+    if (!this.model || !this.PIXI || !c) return false
+    const p = this.model.toModelPosition(new this.PIXI.Point((clientX - c.rect.left) / c.k, (clientY - c.rect.top) / c.k))
+    const im = this.model.internalModel
+    const core = im.coreModel
+    const n: number = core.getDrawableCount()
+    for (let i = 0; i < n; i++) {
+      if (!core.getDrawableDynamicFlagIsVisible(i) || core.getDrawableOpacity(i) < HIT_MIN_OPACITY) continue
+      const v: Float32Array = im.getDrawableVertices(i)
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (let j = 0; j < v.length; j += 2) {
+        if (v[j] < minX) minX = v[j]
+        if (v[j] > maxX) maxX = v[j]
+        if (v[j + 1] < minY) minY = v[j + 1]
+        if (v[j + 1] > maxY) maxY = v[j + 1]
+      }
+      if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) continue
+      const idx: Uint16Array = core.getDrawableVertexIndices(i)
+      for (let t = 0; t + 2 < idx.length; t += 3) {
+        const a = idx[t] * 2, b = idx[t + 1] * 2, d = idx[t + 2] * 2
+        if (pointInTriangle(p.x, p.y, v[a], v[a + 1], v[b], v[b + 1], v[d], v[d + 1])) return true
+      }
+    }
+    return false
+  }
+
+  /** 'head' over the pettable head zone, 'body' over any other visible part, else null. */
+  hitTest(clientX: number, clientY: number): TouchRegion | null {
+    if (!this.model) return null
+    const head = this.headClient()
+    const pt = { x: clientX, y: clientY }
+    if (head && headPatZoneContains(head, pt) && (this.onBody(clientX, clientY) || this.inHeadCore(head, pt))) return 'head'
+    return this.onBody(clientX, clientY) ? 'body' : null
+  }
+
+  /** The inner part of the head zone counts even over gaps between meshes (hair strands). */
+  private inHeadCore(head: HeadPatHead, pt: { x: number, y: number }): boolean {
+    return Math.hypot(pt.x - head.x, pt.y - (head.y - head.radius * 0.5)) <= head.radius * 0.9
+  }
+
+  private onTouchDown = (e: PointerEvent) => {
+    if (e.button !== 0 || this.touchPointer !== null) return
+    const region = this.hitTest(e.clientX, e.clientY)
+    // Off the avatar the event bubbles on, so the window drag starts as before.
+    if (!region) return
+    e.stopPropagation()
+    e.preventDefault()
+    this.touchPointer = e.pointerId
+    const el = e.currentTarget as HTMLElement
+    el.setPointerCapture?.(e.pointerId)
+    if (region === 'head') el.style.cursor = 'grabbing'
+    this.gestures.down(region, e.clientX, e.clientY, e.timeStamp)
+    const head = region === 'head' ? this.headClient() : null
+    if (head) this.headPat.press({ x: e.clientX, y: e.clientY }, head, e.timeStamp)
+  }
+
+  private hoverAt = 0
+  private onTouchMove = (e: PointerEvent) => {
+    if (this.touchPointer === null) {
+      // Hover cursor only (she does not look at the cursor): checked at most every 60 ms.
+      if (e.timeStamp - this.hoverAt < 60) return
+      this.hoverAt = e.timeStamp
+      const region = this.hitTest(e.clientX, e.clientY)
+      ;(e.currentTarget as HTMLElement).style.cursor = region === 'head' ? 'grab' : region === 'body' ? 'pointer' : ''
+      return
+    }
+    if (e.pointerId !== this.touchPointer) return
+    e.stopPropagation()
+    for (const sample of e.getCoalescedEvents?.() ?? [e]) {
+      this.gestures.move(sample.clientX, sample.clientY)
+      this.headPat.move({ x: sample.clientX, y: sample.clientY }, sample.timeStamp)
+    }
+  }
+
+  private onTouchUp = (e: PointerEvent) => {
+    if (e.pointerId !== this.touchPointer) return
+    e.stopPropagation()
+    this.touchPointer = null
+    const reaction = this.gestures.up(e.timeStamp)
+    this.headPat.release()
+    if (reaction) this.react(reaction)
+  }
+
+  private onTouchCancel = () => {
+    if (this.touchPointer === null) return
+    this.touchPointer = null
+    this.gestures.cancel()
+    this.headPat.release()
+  }
+
+  private onHeadPatChange(holding: boolean, petting: boolean) {
+    this.gestures.petting(petting, performance.now())
+    if (petting) this.setTouchFace(this.def.touch.pet)
+    else if (!holding && this.touchFace.length) this.setTouchFace(this.def.touch.pet, PET_AFTERGLOW_MS)
+  }
+
+  /** Wears `faces` (labels or expression names) over the emotion, for `ms` or until replaced. */
+  private setTouchFace(faces: readonly string[], ms?: number) {
+    if (this.touchFaceTimer) clearTimeout(this.touchFaceTimer)
+    this.touchFaceTimer = null
+    const profile = this.profile ?? EMPTY_PROFILE
+    this.touchFace = faces.flatMap(f => profile.emotions[f] ?? [f])
+    if (ms !== undefined) {
+      this.touchFaceTimer = setTimeout(() => {
+        this.touchFaceTimer = null
+        this.touchFace = []
+        this.refreshExpressions()
+      }, ms)
+    }
+    this.refreshExpressions()
+  }
+
+  private react(r: TouchReaction) {
+    const now = performance.now()
+    if (r.kind === 'pet') {
+      // Pleased after being petted; the emotion's motion sways her after the springs settle.
+      bus.emit('character:react', { emotion: 'happy', source: 'fallback' })
+      return
+    }
+    if (r.kind === 'pout') {
+      // A mild pout on a calm base: the neutral react drops a tap's surprised face.
+      this.headPat.nudge({ x: 140, bodyX: -40 })
+      bus.emit('character:react', { emotion: 'neutral', source: 'fallback' })
+      this.setTouchFace(this.def.touch.pout, POUT_MS)
+      return
+    }
+    if (r.region === 'head') this.headPat.nudge({ y: -160, z: 40 })
+    else this.headPat.nudge({ z: 90, bodyX: 60, bodyZ: 70 })
+    if (now - this.lastTapReactAt < TAP_REACT_COOLDOWN_MS || this.touchFace.length) return
+    this.lastTapReactAt = now
+    bus.emit('character:react', { emotion: r.region === 'head' ? 'happy' : 'surprised', source: 'fallback' })
   }
 
   private fit() {
@@ -241,13 +441,19 @@ export class CubismRuntime implements CharacterRuntime {
     this.applyNode()
   }
 
+  private refreshExpressions() {
+    if (!this.profile) return
+    const label = this.def.emotions[this.emotion]?.label ?? null
+    const names = label ? this.profile.emotions[label] ?? [] : []
+    // The touch face is the last layer, so it wins any mutex group.
+    this.expressions.setActive(composeExpressions([...names, ...this.touchFace], this.profile, this.expressions.names()))
+  }
+
   setEmotion(emotion: Emotion): void {
     this.emotion = emotion
     characterView.emotion = emotion
     if (!this.profile) return
-    const label = this.def.emotions[emotion]?.label ?? null
-    const names = label ? this.profile.emotions[label] ?? [] : []
-    this.expressions.setActive(composeExpressions(names, this.profile, this.expressions.names()))
+    this.refreshExpressions()
     // The face returned to neutral: end a reaction motion and resume the node motion.
     if (emotion === 'neutral' && this.reacting) {
       this.reacting = false
@@ -275,6 +481,7 @@ export class CubismRuntime implements CharacterRuntime {
       node: this.nodeKey,
       emotion: this.emotion,
       expressions: this.expressions.snapshot(),
+      touch: { head: this.headClient(), holding: this.headPat.state.holding, petting: this.headPat.state.petting, face: this.touchFace, pose: this.lastPat },
       motion: this.model?.internalModel.motionManager.state.currentGroup ?? null,
       params: Object.fromEntries(ids.map(id => [id, core?.getParameterValueById(id)])),
     }
@@ -284,6 +491,8 @@ export class CubismRuntime implements CharacterRuntime {
     this.destroyed = true
     this.pack?.revoke()
     window.removeEventListener('pointermove', this.onPointerMove)
+    window.removeEventListener('blur', this.onTouchCancel)
+    if (this.touchFaceTimer) clearTimeout(this.touchFaceTimer)
     this.resizeObserver?.disconnect()
     try { this.app?.destroy(true, { children: true, texture: true, baseTexture: true }) }
     catch (e) { console.warn('[character] destroy', e) }

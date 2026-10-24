@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Dashboard window: read-only live view of the companion. Look adapted from AIRI (MIT)
-// settings surfaces (neutral cards, cyan primary, faded background icons).
+// settings surfaces (page header, console sections, menu-item tiles with faded icons).
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ConnectorService, DialogueTurn } from '@shared/contracts'
@@ -79,9 +79,13 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
 <template>
   <div class="yy-airi dash scroll">
     <div class="dash-inner">
-      <header class="page-head">
-        <h1>Dashboard</h1>
-        <p>{{ persona.activeCard.name }} · {{ CHARACTER_MODELS[character.character].label }} · {{ MODE_LABEL[settings.mode] }} mode · {{ LANG_INFO[settings.lang].label }}</p>
+      <!-- Page header (AIRI PageHeader): small subtitle above a large title -->
+      <header class="page-header">
+        <h1>
+          <span class="subtitle">YuiYumi</span>
+          <span class="title">Dashboard</span>
+        </h1>
+        <p class="meta">{{ persona.activeCard.name }} · {{ CHARACTER_MODELS[character.character].label }} · {{ MODE_LABEL[settings.mode] }} mode · {{ LANG_INFO[settings.lang].label }}</p>
       </header>
 
       <!-- Stat tiles -->
@@ -156,15 +160,28 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
 
 <style scoped>
 .dash { display: block; overflow-y: auto; background: #fff; }
-.dash-inner { padding: 20px 24px 24px; min-height: 100%; display: flex; flex-direction: column; }
-.page-head { padding-bottom: 14px; }
+.dash-inner { max-width: 1280px; margin: 0 auto; padding: 0 16px 24px; min-height: 100%; display: flex; flex-direction: column; }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 36px 0 24px; }
+.page-header h1 { position: relative; margin: 0; font-weight: 400; }
+.page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--n300); white-space: nowrap; }
+.page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--n900); }
+.page-header .meta { margin: 0 0 4px; font-size: 12px; color: var(--n500); text-align: right; }
 
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
 .tile {
   position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
-  background: var(--n50); border: 2px solid var(--n100); border-radius: 12px; min-width: 0;
+  background: var(--n50); border: 2px solid var(--n100); border-radius: 8px; min-width: 0; isolation: isolate;
+  transition: all .4s ease-in-out;
 }
-.tile:hover { border-color: rgb(34 169 210 / .3); }
+/* Dotted corner texture and hover glow of AIRI menu icon items. */
+.tile::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background-image: radial-gradient(circle, rgb(229 229 229 / .6) 1px, transparent 1px); background-size: 10px 10px;
+  mask-image: linear-gradient(165deg, white 30%, transparent 50%);
+}
+.tile:hover { border-color: rgb(34 169 210 / .3); filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
+.tile:hover .t-icon { color: rgb(34 169 210 / .35); scale: 1.1; }
+.t-icon { transition: all .4s ease-in-out; }
 .t-icon { position: absolute; right: -10px; bottom: -14px; color: rgb(163 163 163 / .22); pointer-events: none; }
 .t-label { font-size: 12.5px; color: var(--n500); position: relative; }
 .t-value { font-size: 28px; font-weight: 500; color: var(--n800); line-height: 1.15; position: relative; }

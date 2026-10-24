@@ -14,16 +14,10 @@
 }
 .yy-airi *, .yy-airi *::before, .yy-airi *::after { box-sizing: border-box; }
 
-/* Page header with large faded background icon (AIRI settings pages). */
-.yy-airi .page-head { position: relative; padding: 4px 0 18px; overflow: hidden; }
-.yy-airi .page-head h1 { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: -0.01em; color: var(--n800); }
-.yy-airi .page-head p { margin: 4px 0 0; color: var(--n500); font-size: 13px; }
-.yy-airi .page-bg-icon { position: absolute; right: -18px; bottom: -40px; color: rgb(229 229 229 / 0.6); pointer-events: none; z-index: 0; }
-
-/* Sections and fields (AIRI FieldInput / FieldCheckbox look). */
-.yy-airi .section { position: relative; z-index: 1; background: var(--n50); border: 2px solid var(--n100); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
-.yy-airi .section h2 { margin: 0 0 2px; font-size: 16px; font-weight: 500; }
-.yy-airi .section .hint { margin: 0 0 12px; color: var(--n500); font-size: 12.5px; }
+/* Console section (AIRI settings pages): flat neutral-50 panel, small medium-weight title. */
+.yy-airi .section { position: relative; z-index: 1; background: var(--n50); border: 0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.yy-airi .section h2 { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: var(--n900); }
+.yy-airi .section .hint { margin: 0 0 12px; color: var(--n500); font-size: 12px; line-height: 1.6; }
 .yy-airi .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .yy-airi .field:last-child { margin-bottom: 0; }
 .yy-airi .field > label, .yy-airi .field > .label { font-size: 13px; font-weight: 500; color: var(--n700); }

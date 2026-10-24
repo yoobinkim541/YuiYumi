@@ -28,6 +28,7 @@ export function initCharacter(): void {
       node: (node: CharacterNode) => bus.emit('character:node', { node }),
       mouth: (open: number | null) => bus.emit('character:mouth', open === null ? null : { open }),
       bubble: (text: string, ttlMs?: number) => bus.emit('bubble', { text, ttlMs }),
+      hit: (x: number, y: number) => characterHitTest(x, y),
       debug: (ids?: string[]) => (current as { debugState?: (ids?: string[]) => unknown } | null)?.debugState?.(ids),
     }
   }
@@ -54,6 +55,14 @@ export async function mountCharacter(container: HTMLElement, id: CharacterId): P
     current = fallback
     return fallback
   }
+}
+
+/**
+ * What lies under a client point on the avatar: 'head' (pettable), 'body' (any other
+ * visible part) or null (transparent; the window drag may start there).
+ */
+export function characterHitTest(clientX: number, clientY: number): 'head' | 'body' | null {
+  return (current as { hitTest?: (x: number, y: number) => 'head' | 'body' | null } | null)?.hitTest?.(clientX, clientY) ?? null
 }
 
 export function unmountCharacter(runtime: CharacterRuntime): void {

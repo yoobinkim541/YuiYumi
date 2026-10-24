@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// Settings window. Layout and look adapted from AIRI (MIT): settings menu of icon items
-// (title, description, faded icon), page header with a large background icon, character
-// card grid and editor (airi-card), radio cards and field rows. Re-created in plain CSS.
+// Settings window, adapted from AIRI (MIT): an index of menu icon items (title, description,
+// large faded icon, dotted/gradient hover), a sticky page header with back button and
+// "Settings" subtitle, console-style sections, a faded mascot icon in the corner, the
+// character card grid and editor, radio cards and field rows. Re-created in plain CSS.
 
 import { computed, ref } from 'vue'
 import type { ConnectorService } from '@shared/contracts'
@@ -18,7 +19,7 @@ import { setVadEnabled, voiceState } from '@/voice'
 import Icon from './Icon.vue'
 import './theme.css'
 
-type PageId = 'card' | 'general' | 'voice' | 'observation' | 'connectors' | 'about'
+type PageId = 'index' | 'card' | 'general' | 'voice' | 'observation' | 'connectors' | 'about'
 
 const PAGES: { id: PageId, title: string, description: string, icon: string }[] = [
   { id: 'card', title: 'Character card', description: 'Persona, personality and model', icon: 'card' },
@@ -29,8 +30,14 @@ const PAGES: { id: PageId, title: string, description: string, icon: string }[] 
   { id: 'about', title: 'About', description: 'Open source notices', icon: 'info' },
 ]
 
-const page = ref<PageId>('card')
-const current = computed(() => PAGES.find(p => p.id === page.value)!)
+const page = ref<PageId>('index')
+const current = computed(() => PAGES.find(p => p.id === page.value))
+const scroller = ref<HTMLElement | null>(null)
+
+function go(id: PageId) {
+  page.value = id
+  scroller.value?.scrollTo({ top: 0 })
+}
 
 const settings = useSettings()
 const character = useCharacterStore()
@@ -103,32 +110,33 @@ function toggleLive(id: ConnectorService) {
 
 <template>
   <div class="yy-airi settings-app">
-    <!-- Sidebar: AIRI settings menu (icon items) -->
-    <nav class="side scroll">
-      <div class="brand">
-        <Icon name="settings" :size="18" />
-        <span>Settings</span>
-      </div>
-      <button
-        v-for="p in PAGES" :key="p.id" type="button"
-        class="menu-item" :class="{ active: page === p.id }"
-        @click="page = p.id"
-      >
-        <span class="mi-text">
-          <span class="mi-title">{{ p.title }}</span>
-          <span class="mi-desc">{{ p.description }}</span>
-        </span>
-        <span class="mi-icon"><Icon :name="p.icon" :size="52" /></span>
-      </button>
-    </nav>
+    <div ref="scroller" class="content scroll">
+      <div class="inner">
+        <!-- Page header (AIRI PageHeader): back arrow, small subtitle above a large title -->
+        <header class="page-header">
+          <button type="button" class="back" :class="{ hidden: !current }" aria-label="Back" @click="go('index')">
+            <Icon name="chevron-left" :size="26" />
+          </button>
+          <h1>
+            <span v-if="current" class="subtitle">Settings</span>
+            <span class="title">{{ current ? current.title : 'Settings' }}</span>
+          </h1>
+        </header>
 
-    <main class="content-wrap">
-      <div class="page-bg-icon"><Icon :name="current.icon" :size="220" /></div>
-      <div class="content scroll">
-      <header class="page-head">
-        <h1>{{ current.title }}</h1>
-        <p>{{ current.description }}</p>
-      </header>
+        <!-- Index: AIRI menu icon items -->
+        <div v-if="page === 'index'" class="menu">
+          <button
+            v-for="(p, i) in PAGES" :key="p.id" type="button"
+            class="menu-icon-item" :style="{ animationDelay: `${i * 50}ms` }"
+            @click="go(p.id)"
+          >
+            <span class="mi-text">
+              <span class="mi-title">{{ p.title }}</span>
+              <span class="mi-desc">{{ p.description }}</span>
+            </span>
+            <span class="mi-icon"><Icon :name="p.icon" :size="96" /></span>
+          </button>
+        </div>
 
       <!-- Character card (AIRI airi-card) -->
       <template v-if="page === 'card'">
@@ -165,13 +173,24 @@ function toggleLive(id: ConnectorService) {
               class="char-card" :class="{ active: persona.activeCard.id === c.id }"
               @click="persona.select(c.id)"
             >
-              <span class="avatar">{{ cardInitial(c) }}</span>
-              <span class="cc-text">
-                <b>{{ c.name || 'Untitled' }}</b>
-                <span>{{ c.description || 'No description' }}</span>
+              <!-- Card content (AIRI card list item) -->
+              <span class="cc-body">
+                <span class="cc-head">
+                  <span class="avatar">{{ cardInitial(c) }}</span>
+                  <b>{{ c.name || 'Untitled' }}</b>
+                  <span v-if="persona.activeCard.id === c.id" class="cc-check"><Icon name="check" :size="14" /></span>
+                </span>
+                <span class="cc-desc">{{ c.description || 'No description' }}</span>
+                <span class="cc-stats">
+                  <span>{{ c.builtinFor ? `Default · ${CHARACTER_MODELS[c.builtinFor].label}` : 'Custom' }}</span>
+                  <span class="cc-model"><Icon name="ghost" :size="12" />{{ CHARACTER_MODELS[character.character].label }}</span>
+                </span>
               </span>
-              <span v-if="c.builtinFor" class="badge">Default · {{ CHARACTER_MODELS[c.builtinFor].label }}</span>
-              <span v-if="persona.activeCard.id === c.id" class="cc-check"><Icon name="check" :size="14" /></span>
+              <span class="cc-actions">
+                <span class="cc-act" :class="{ on: persona.activeCard.id === c.id }">
+                  <Icon :name="persona.activeCard.id === c.id ? 'check' : 'arrow-right'" :size="16" />
+                </span>
+              </span>
             </button>
           </div>
         </section>
@@ -316,7 +335,7 @@ function toggleLive(id: ConnectorService) {
       </template>
 
       <!-- About -->
-      <template v-else>
+      <template v-else-if="page === 'about'">
         <section class="section">
           <h2>YuiYumi</h2>
           <p class="hint">A desktop companion that watches with you, speaks up rarely, and drafts work for you to send.</p>
@@ -336,33 +355,58 @@ function toggleLive(id: ConnectorService) {
         </section>
       </template>
       </div>
-    </main>
+    </div>
+    <!-- Large faded mascot icon in the corner (AIRI settings index) -->
+    <div class="corner-icon" aria-hidden="true"><Icon :name="current ? current.icon : 'ghost'" :size="240" /></div>
   </div>
 </template>
 
 <style scoped>
-.side {
-  flex: none; width: 236px; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
-  background: var(--n50); border-right: 2px solid var(--n100);
-}
-.brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 8px; font-weight: 600; color: var(--n700); }
-.menu-item {
-  position: relative; overflow: hidden; display: flex; align-items: center; width: 100%; text-align: left;
-  font: inherit; color: inherit; cursor: pointer; padding: 12px 14px; border-radius: 10px;
-  background: #fff; border: 2px solid var(--n100); transition: all .35s ease-in-out;
-}
-.menu-item:hover { border-color: rgb(34 169 210 / .3); box-shadow: 0 4px 4px rgb(220 220 220 / .4); }
-.menu-item.active { border-color: var(--p300); background: var(--p50); }
-.mi-text { position: relative; z-index: 1; display: flex; flex-direction: column; min-width: 0; }
-.mi-title { font-size: 15px; transition: color .35s; }
-.mi-desc { font-size: 12px; color: var(--n500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.menu-item:hover .mi-title, .menu-item.active .mi-title { color: var(--p600); }
-.mi-icon { position: absolute; right: -10px; top: 50%; transform: translateY(-30%); color: rgb(163 163 163 / .16); transition: all .35s; }
-.menu-item:hover .mi-icon, .menu-item.active .mi-icon { color: rgb(34 169 210 / .22); transform: translateY(-36%) rotate(-6deg); }
+.settings-app { position: relative; display: block; background: #fff; }
+.content { position: relative; z-index: 1; height: 100%; }
+.inner { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; display: flex; flex-direction: column; }
 
-.content-wrap { position: relative; flex: 1; min-width: 0; overflow: hidden; }
-.content-wrap .page-bg-icon { position: absolute; right: -36px; bottom: -36px; z-index: 0; color: rgb(229 229 229 / .55); }
-.content { position: relative; z-index: 1; height: 100%; padding: 22px 26px 30px; }
+.page-header {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px;
+  padding: 36px 0 24px; background: #fff;
+}
+.back { display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--n800); cursor: pointer; }
+.back.hidden { opacity: 0; pointer-events: none; }
+.page-header h1 { position: relative; margin: 0; font-weight: 400; }
+.page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--n300); white-space: nowrap; }
+.page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--n900); white-space: nowrap; }
+
+.menu { display: flex; flex-direction: column; gap: 16px; }
+.menu-icon-item {
+  position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; width: 100%;
+  padding: 20px; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: var(--n50); border: 2px solid var(--n100); border-radius: 8px;
+  transition: all .4s ease-in-out; animation: mi-enter .25s ease-out both;
+}
+.menu-icon-item::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; width: 25%; height: 100%; opacity: 0;
+  background: linear-gradient(90deg, rgb(34 169 210 / .2), rgb(34 169 210 / .1), transparent);
+  mask-image: linear-gradient(120deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
+}
+.menu-icon-item::after {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  background-image: radial-gradient(circle, rgb(229 229 229 / .6) 1px, transparent 1px); background-size: 10px 10px;
+  mask-image: linear-gradient(165deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
+}
+.menu-icon-item:hover { border-color: rgb(34 169 210 / .3); filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
+.menu-icon-item:active { filter: none; }
+.menu-icon-item:hover::before { width: 85%; opacity: 1; }
+.menu-icon-item:hover::after { background-image: radial-gradient(circle, rgb(127 210 235 / .5) 1px, transparent 1px); }
+.mi-text { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.mi-title { font-size: 18px; font-weight: 400; transition: color .4s ease-in-out; }
+.mi-desc { font-size: 14px; color: var(--n500); transition: all .4s ease-in-out; }
+.menu-icon-item:hover .mi-title { color: var(--p600); }
+.menu-icon-item:hover .mi-desc { color: var(--p600); opacity: .8; }
+.mi-icon { position: absolute; right: 0; top: 50%; display: grid; transform: translateY(-34%); color: rgb(163 163 163 / .5); opacity: .5; transition: all .4s ease-in-out; }
+.menu-icon-item:hover .mi-icon { color: var(--p500); scale: 1.2; }
+@keyframes mi-enter { from { opacity: 0; transform: translateY(10px); } }
+
+.corner-icon { position: absolute; right: -40px; bottom: -24px; z-index: 0; color: rgb(229 229 229 / .5); pointer-events: none; }
 
 .sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -370,22 +414,44 @@ function toggleLive(id: ConnectorService) {
 .model-card { align-items: flex-start; }
 .model-card img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: var(--n100); margin-bottom: 4px; }
 
-.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
 .char-card {
-  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left;
-  font: inherit; color: inherit; cursor: pointer; padding: 12px; border-radius: 12px;
-  background: #fff; border: 2px solid var(--n100); transition: all .25s;
+  position: relative; isolation: isolate; display: flex; flex-direction: column; min-height: 120px; overflow: hidden;
+  padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  background: rgb(229 229 229 / .5); border: 2px solid var(--n100); border-radius: 12px; transition: all .4s ease-in-out;
 }
-.char-card:hover { border-color: var(--p200); }
-.char-card.active { border-color: var(--p400); background: var(--p50); }
+.char-card::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; width: 25%; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgb(34 169 210 / .2), rgb(34 169 210 / .1), transparent); transition: all .4s ease-in-out;
+}
+.char-card:hover { filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
+.char-card:hover::before { opacity: 1; width: 100%; }
+.char-card.active { border-color: var(--p400); }
+.cc-body {
+  position: relative; z-index: 1; isolation: isolate; flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;
+  padding: 16px 18px; border-radius: 8px; background: #fff; overflow: hidden; transition: color .4s ease-in-out;
+}
+.cc-body::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background-image: radial-gradient(circle, rgb(229 229 229 / .8) 1px, transparent 1px); background-size: 10px 10px;
+  mask-image: linear-gradient(165deg, white 30%, transparent 50%); transition: all .4s ease-in-out;
+}
+.char-card:hover .cc-body { color: rgb(23 137 173 / .8); }
+.char-card:hover .cc-body::after { background-image: radial-gradient(circle, rgb(127 210 235 / .5) 1px, transparent 1px); }
+.cc-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cc-head b { flex: 1; min-width: 0; font-size: 18px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .avatar {
-  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 600;
+  flex: none; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 500; font-size: 14px;
   background: linear-gradient(135deg, var(--p200), var(--p400)); color: #fff;
 }
-.cc-text { display: flex; flex-direction: column; min-width: 0; width: 100%; }
-.cc-text b { font-weight: 500; }
-.cc-text span { font-size: 12px; color: var(--n500); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cc-check { position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--p500); color: #fff; }
+.cc-check { flex: none; padding: 4px; border-radius: 6px; display: grid; place-items: center; background: var(--p100); color: var(--p600); }
+.cc-desc { min-height: 40px; font-size: 13px; color: var(--n500); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cc-stats { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--n500); }
+.cc-model { display: inline-flex; align-items: center; gap: 3px; }
+.cc-actions { position: relative; z-index: 1; display: flex; justify-content: flex-end; padding: 6px 8px; }
+.cc-act { display: grid; place-items: center; padding: 6px; border-radius: 8px; color: var(--n500); transition: background .2s; }
+.cc-act:hover { background: var(--n200); }
+.cc-act.on { color: var(--p500); }
 
 .conn { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .conn-icon { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #fff; border: 2px solid var(--n100); color: var(--n600); }
