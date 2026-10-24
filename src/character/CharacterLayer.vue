@@ -83,9 +83,9 @@ const spriteClass = computed(() => [
   background: transparent;
 }
 .viewport {
-  /* Ends behind the middle of the control pill, so the waist cut is hidden by it. */
+  /* Ends exactly at the top edge of the control pill: the avatar rises out of it. */
   position: absolute;
-  inset: 0 0 36px 0;
+  inset: 0 0 var(--pill-top, 64px) 0;
   overflow: hidden;
 }
 .stage { position: absolute; inset: 0; }

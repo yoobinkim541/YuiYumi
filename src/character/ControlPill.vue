@@ -103,7 +103,7 @@ function toggleSound() {
   height: 56px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 30px rgba(40, 24, 70, 0.22), 0 1px 3px rgba(40, 24, 70, 0.12);
   backdrop-filter: blur(16px) saturate(170%);
