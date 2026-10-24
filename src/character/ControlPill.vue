@@ -123,10 +123,10 @@ function toggleSound() {
   pointer-events: auto;
   cursor: default;
 }
-/* Per-character colors: Yumi (TT2.0) takes the red of her ear tips, Yui a soft pink. */
+/* Per-character colors: Yumi (TT2.0) a soft gray, Yui a soft pink. */
 .pill[data-character='tt2'] {
-  background: linear-gradient(180deg, #ffffff 0%, #ffe9ec 42%, #f2a3af 78%, #d9364f 100%);
-  border-color: rgba(255, 220, 226, 0.95);
+  background: linear-gradient(180deg, #ffffff 0%, #f6f6f8 45%, #e2e2e7 78%, #cbcbd2 100%);
+  border-color: rgba(236, 236, 240, 0.95);
 }
 .pill[data-character='yui'] {
   background: linear-gradient(180deg, #ffffff 0%, #fff3f6 45%, #fbd7e2 78%, #f6b8cb 100%);
