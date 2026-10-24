@@ -5,10 +5,13 @@ import { env } from './http'
 import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from './voice-providers'
 
 /**
- * Low-latency multilingual model (covers en/ja/ko/zh). Override with ELEVENLABS_MODEL
- * after checking the current model list (GET /v1/models).
+ * Multilingual model with a conversational delivery at about one second per line (covers
+ * en/ja/ko/zh). Override with ELEVENLABS_MODEL after checking GET /v1/models.
  */
-const DEFAULT_MODEL = 'eleven_flash_v2_5'
+const DEFAULT_MODEL = 'eleven_v4_turbo'
+
+/** Livelier than the voice defaults (0.5 stability, no style), so lines sound spoken to the user. */
+const VOICE_SETTINGS = { stability: 0.3, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true, speed: 1.05 }
 const OUTPUT_FORMAT = 'mp3_44100_128'
 const TIMEOUT_MS = 20_000
 
@@ -46,6 +49,7 @@ export const elevenLabsTts: TtsProvider = {
         text: req.text,
         model_id: env('ELEVENLABS_MODEL') ?? DEFAULT_MODEL,
         language_code: ISO639[req.lang],
+        voice_settings: VOICE_SETTINGS,
       }),
       signal: AbortSignal.any(signals),
     })
