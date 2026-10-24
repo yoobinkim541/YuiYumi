@@ -1,6 +1,7 @@
 // Window manager state for the virtual desktop (logical 1920x1080 coordinates).
 
 import { reactive } from 'vue'
+import { characterView } from '@/character/state'
 
 export type UserAppId = 'mail' | 'calendar' | 'slack' | 'discord' | 'drive'
 /** Assistant-owned windows. Excluded from captures and from the reported activity. */
@@ -74,9 +75,14 @@ export const assistantWindow = reactive({
   y: MENUBAR_H + (DESKTOP_H - MENUBAR_H - DOCK_H - CHARACTER_H) / 2,
 })
 
+/**
+ * Moves the avatar anywhere on the desktop. Soft limits only: half of her may leave a side
+ * edge, her head can reach the menu bar, and the pill stays above the bottom edge.
+ */
 export function moveAssistantWindow(x: number, y: number): void {
-  assistantWindow.x = Math.round(Math.min(Math.max(x, 0), DESKTOP_W - CHARACTER_W))
-  assistantWindow.y = Math.round(Math.min(Math.max(y, MENUBAR_H + 120), DESKTOP_H - 160))
+  const headTop = characterView.headTop ?? 120
+  assistantWindow.x = Math.round(Math.min(Math.max(x, -CHARACTER_W / 2), DESKTOP_W - CHARACTER_W / 2))
+  assistantWindow.y = Math.round(Math.min(Math.max(y, MENUBAR_H - headTop + 8), DESKTOP_H - PILL_ZONE - 8))
 }
 
 /** Current CSS scale of the desktop on the page (used to convert pointer deltas). */

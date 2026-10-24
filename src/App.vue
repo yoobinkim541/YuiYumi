@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import VirtualDesktop from './desktop/VirtualDesktop.vue'
 import ConfirmCard from './ui/ConfirmCard.vue'
+import LoadingScreen from './ui/LoadingScreen.vue'
 </script>
 
 <template>
@@ -12,6 +13,8 @@ import ConfirmCard from './ui/ConfirmCard.vue'
     <VirtualDesktop class="desktop" />
     <!-- Page overlay: not part of the capture. -->
     <ConfirmCard />
+    <!-- Covers the page until the avatar has loaded. -->
+    <LoadingScreen />
   </div>
 </template>
 
