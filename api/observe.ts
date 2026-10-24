@@ -3,10 +3,10 @@
 import { ObserveRequestSchema, type ObserveResponse } from '../shared/contracts'
 import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic'
 import { admit, record } from '../server/budget'
-import { fail, json, parseBody } from '../server/http'
+import { fail, json, parseBody, preflight, withCors } from '../server/http'
 import { buildObserveRequest, parseObserveActions } from '../server/prompts/observe'
 
-export async function POST(request: Request): Promise<Response> {
+async function post(request: Request): Promise<Response> {
   const body = await parseBody(request, ObserveRequestSchema)
   if (body instanceof Response) return body
 
@@ -25,3 +25,6 @@ export async function POST(request: Request): Promise<Response> {
     return fail(502, 'observer unavailable', 'provider')
   }
 }
+
+export const POST = withCors(post)
+export const OPTIONS = preflight

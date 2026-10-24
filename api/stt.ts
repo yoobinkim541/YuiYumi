@@ -4,14 +4,14 @@
 import { LangSchema, type Transcript } from '../shared/contracts'
 import { admit } from '../server/budget'
 import { deepgramStt } from '../server/deepgram'
-import { fail, json } from '../server/http'
+import { fail, json, preflight, withCors } from '../server/http'
 import { ProviderError, ProviderUnconfiguredError, type SttProvider } from '../server/voice-providers'
 
 const MAX_BYTES = 2 * 1024 * 1024
 const MIN_BYTES = 44 // WAV header only
 const provider: SttProvider = deepgramStt
 
-export async function POST(request: Request): Promise<Response> {
+async function post(request: Request): Promise<Response> {
   const url = new URL(request.url)
   const lang = LangSchema.safeParse(url.searchParams.get('lang'))
   if (!lang.success) return fail(400, 'invalid lang', 'bad_request')
@@ -35,3 +35,6 @@ export async function POST(request: Request): Promise<Response> {
     return fail(502, 'stt failed', 'provider')
   }
 }
+
+export const POST = withCors(post)
+export const OPTIONS = preflight

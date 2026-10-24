@@ -1,12 +1,12 @@
-// POST /api/agent: one Sonnet call per request. The browser runs the tools and loops.
+// POST /api/agent: one task-model call (Sonnet or Opus) per request. The browser runs the tools and loops.
 
 import { AgentStepRequestSchema, type AgentStepResponse } from '../shared/contracts'
 import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic'
 import { admit, record } from '../server/budget'
-import { fail, json, parseBody } from '../server/http'
+import { fail, json, parseBody, preflight, withCors } from '../server/http'
 import { buildAgentRequest, sanitizeMessages } from '../server/prompts/agent'
 
-export async function POST(request: Request): Promise<Response> {
+async function post(request: Request): Promise<Response> {
   const body = await parseBody(request, AgentStepRequestSchema)
   if (body instanceof Response) return body
 
@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!anthropicConfigured()) return fail(503, 'agent model not configured', 'unconfigured')
   if (!admit(body.sessionId)) return fail(429, 'budget reached', 'budget')
 
-  const model = MODELS.agent()
+  const model = MODELS.agent(body.model)
   try {
     const msg = await anthropic().messages.create(buildAgentRequest({ model, lang: body.lang, origin: body.origin, messages, persona: body.persona }))
     record(model, msg.usage)
@@ -27,3 +27,6 @@ export async function POST(request: Request): Promise<Response> {
     return fail(502, 'agent provider error', 'provider')
   }
 }
+
+export const POST = withCors(post)
+export const OPTIONS = preflight

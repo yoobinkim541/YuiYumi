@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { PERMISSION_LEVELS, type PermissionLevel, type VoicePreset } from '@shared/contracts'
+import { AGENT_MODELS, PERMISSION_LEVELS, type AgentModel, type PermissionLevel, type VoicePreset } from '@shared/contracts'
 import { DEFAULT_LANG, LANG_INFO, LANGS, type Lang } from '@shared/languages'
 import { DEFAULT_PTT, parseShortcut, type Shortcut } from '@/settings/shortcut'
 
@@ -20,7 +20,7 @@ function browserLang(): Lang {
 }
 
 export const useSettings = defineStore('settings', () => {
-  const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<{ lang: Lang, sound: boolean, mode: AssistantMode, pttKey: unknown, voicePreset: VoicePreset, permission: PermissionLevel, voiceLang: Lang | null, userName: string, welcomed: boolean }>
+  const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<{ lang: Lang, sound: boolean, mode: AssistantMode, pttKey: unknown, voicePreset: VoicePreset, permission: PermissionLevel, voiceLang: Lang | null, userName: string, welcomed: boolean, agentModel: AgentModel }>
   const lang = ref<Lang>(LANGS.includes(saved.lang as Lang) ? saved.lang! : browserLang())
   const sound = ref<boolean>(saved.sound ?? true)
   const mode = ref<AssistantMode>(saved.mode ?? 'active')
@@ -37,14 +37,16 @@ export const useSettings = defineStore('settings', () => {
   const userName = ref<string>(typeof saved.userName === 'string' ? saved.userName.slice(0, USER_NAME_MAX) : '')
   /** First-visit welcome done (name asked, audio unlocked by the start click). */
   const welcomed = ref<boolean>(saved.welcomed === true)
+  /** Model that runs tasks; screen watching always uses Haiku. */
+  const agentModel = ref<AgentModel>(AGENT_MODELS.includes(saved.agentModel as AgentModel) ? saved.agentModel! : 'sonnet')
   const sessionId = crypto.randomUUID()
 
   // CJK glyph selection follows <html lang>.
   watch(lang, l => { document.documentElement.lang = LANG_INFO[l].bcp47 }, { immediate: true })
 
-  watch([lang, sound, mode, pttKey, voicePreset, permission, voiceLang, userName, welcomed], () => {
-    localStorage.setItem(KEY, JSON.stringify({ lang: lang.value, sound: sound.value, mode: mode.value, pttKey: pttKey.value, voicePreset: voicePreset.value, permission: permission.value, voiceLang: voiceLang.value, userName: userName.value, welcomed: welcomed.value }))
+  watch([lang, sound, mode, pttKey, voicePreset, permission, voiceLang, userName, welcomed, agentModel], () => {
+    localStorage.setItem(KEY, JSON.stringify({ lang: lang.value, sound: sound.value, mode: mode.value, pttKey: pttKey.value, voicePreset: voicePreset.value, permission: permission.value, voiceLang: voiceLang.value, userName: userName.value, welcomed: welcomed.value, agentModel: agentModel.value }))
   }, { deep: true })
 
-  return { lang, sound, mode, pttKey, voicePreset, permission, voiceLang, speechLang, userName, welcomed, sessionId }
+  return { lang, sound, mode, pttKey, voicePreset, permission, voiceLang, speechLang, userName, welcomed, agentModel, sessionId }
 })

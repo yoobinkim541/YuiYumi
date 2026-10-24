@@ -1,5 +1,6 @@
 import { watch } from 'vue'
 import { bus } from '@/core/bus'
+import { startLiveConnectors } from '@/connectors/live'
 import { useDemo } from '@/stores/demo'
 import { useSettings } from '@/stores/settings'
 import { moveAssistantTo } from './actuator'
@@ -25,6 +26,8 @@ export function initDesktop(): void {
   watch(() => settings.lang, (lang) => {
     demo.seed(reseedDemoData(seedTime, lang, { mails: demo.mails, events: demo.events, slackMessages: demo.slackMessages, discordMessages: demo.discordMessages }))
   })
+  // Connected accounts (OAuth) replace the sample data of their services once loaded.
+  void startLiveConnectors()
   startScenario()
   startReminderClock()
   bus.on('assistant:move', ({ where }) => moveAssistantTo(where))

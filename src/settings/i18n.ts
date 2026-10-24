@@ -1,7 +1,7 @@
 // Localized labels for the Settings and Dashboard windows. Follows the UI language.
 
 import { computed } from 'vue'
-import type { PermissionLevel, VoicePreset } from '@shared/contracts'
+import type { AgentModel, PermissionLevel, VoicePreset } from '@shared/contracts'
 import { LANG_INFO, type Lang } from '@shared/languages'
 import type { AssistantMode } from '@/stores/settings'
 
@@ -26,6 +26,7 @@ export interface SettingsStrings {
     language: string, languageHint: string, mode: string, modeHint: string
     modes: Record<AssistantMode, { title: string, desc: string }>
     sound: string, soundDesc: string
+    agentModel: string, agentModelHint: string, agentModels: Record<AgentModel, { title: string, desc: string }>
   }
   voice: {
     voiceLang: string, voiceLangHint: string, followUi: (label: string) => string
@@ -94,6 +95,8 @@ const EN: SettingsStrings = {
       ornamental: { title: 'Ornamental', desc: 'Just stays on the desktop' },
     },
     sound: 'Sound', soundDesc: 'Speak lines aloud. Turning it off stops the current line.',
+    agentModel: 'Task model', agentModelHint: 'Model that does the work you ask for. Watching the screen always uses Haiku.',
+    agentModels: { sonnet: { title: 'Sonnet (default)', desc: 'Fast and capable for everyday tasks' }, opus: { title: 'Opus', desc: 'Most capable for hard tasks; slower and costs more' } },
   },
   voice: {
     voiceLang: 'Voice language', voiceLangHint: 'Speech recognition, replies and the character’s voice use this language.',
@@ -200,6 +203,8 @@ const KO: SettingsStrings = {
       ornamental: { title: '관상용', desc: '데스크톱에 머물기만 해요' },
     },
     sound: '소리', soundDesc: '대사를 소리 내어 말해요. 끄면 지금 대사도 멈춰요.',
+    agentModel: '작업 모델', agentModelHint: '부탁한 일을 처리하는 모델이에요. 화면 보기는 항상 Haiku가 맡아요.',
+    agentModels: { sonnet: { title: 'Sonnet (기본)', desc: '빠르고 일상 업무에 충분해요' }, opus: { title: 'Opus', desc: '어려운 일에 가장 똑똑하지만 느리고 비용이 더 들어요' } },
   },
   voice: {
     voiceLang: '음성 언어', voiceLangHint: '음성 인식, 답변, 캐릭터 목소리가 이 언어를 써요.',
@@ -306,6 +311,8 @@ const JA: SettingsStrings = {
       ornamental: { title: '観賞用', desc: 'デスクトップにいるだけ' },
     },
     sound: 'サウンド', soundDesc: 'セリフを声に出します。オフにすると今のセリフも止まります。',
+    agentModel: 'タスクのモデル', agentModelHint: '頼んだ仕事をこなすモデルです。画面の観察は常に Haiku が担当します。',
+    agentModels: { sonnet: { title: 'Sonnet（デフォルト）', desc: '速く、日常のタスクに十分' }, opus: { title: 'Opus', desc: '難しいタスクに最も賢いが、遅くコストも高め' } },
   },
   voice: {
     voiceLang: '音声言語', voiceLangHint: '音声認識、返答、キャラクターの声がこの言語になります。',
@@ -412,6 +419,8 @@ const ZH_HANS: SettingsStrings = {
       ornamental: { title: '观赏', desc: '只待在桌面上' },
     },
     sound: '声音', soundDesc: '把台词读出来。关闭后当前台词也会停止。',
+    agentModel: '任务模型', agentModelHint: '处理你交代的工作的模型。观察屏幕始终使用 Haiku。',
+    agentModels: { sonnet: { title: 'Sonnet（默认）', desc: '速度快，足以应付日常任务' }, opus: { title: 'Opus', desc: '处理难题最强，但更慢、费用更高' } },
   },
   voice: {
     voiceLang: '语音语言', voiceLangHint: '语音识别、回复和角色的声音都使用此语言。',
@@ -518,6 +527,8 @@ const ZH_HANT: SettingsStrings = {
       ornamental: { title: '觀賞', desc: '只待在桌面上' },
     },
     sound: '聲音', soundDesc: '把台詞念出來。關閉後目前的台詞也會停止。',
+    agentModel: '任務模型', agentModelHint: '處理你交辦工作的模型。觀察螢幕一律使用 Haiku。',
+    agentModels: { sonnet: { title: 'Sonnet（預設）', desc: '速度快，足以應付日常任務' }, opus: { title: 'Opus', desc: '處理難題最強，但較慢、費用較高' } },
   },
   voice: {
     voiceLang: '語音語言', voiceLangHint: '語音辨識、回覆與角色的聲音都使用此語言。',

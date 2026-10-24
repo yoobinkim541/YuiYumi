@@ -1,9 +1,11 @@
 // Session data behind the virtual desktop. The desktop apps render it and the mock
 // connectors read and write it, so what the observer sees on screen and what the agent
-// reads through tools are the same data.
+// reads through tools are the same data. When the user connected a service, its
+// collections hold the real account's data (mirrored from the live connector responses).
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { LiveService, LiveStorePatch } from '@shared/contracts'
 
 export interface Mail {
   id: string
@@ -95,18 +97,71 @@ export const useDemo = defineStore('demo', () => {
   /** Calendar events deleted in this session (reversible). */
   const deletedEvents = ref<CalendarEvent[]>([])
   const reminders = ref<Reminder[]>([])
+  /** Services whose collections hold the user's real account data (seed() leaves them alone). */
+  const live = ref<Partial<Record<LiveService, boolean>>>({})
 
   function seed(data: Partial<{
     mails: Mail[], events: CalendarEvent[], slackChannels: ChatChannel[], slackMessages: ChatMessage[],
     discordChannels: ChatChannel[], discordMessages: ChatMessage[], files: DriveFile[]
   }>) {
-    if (data.mails) mails.value = data.mails
-    if (data.events) events.value = data.events
-    if (data.slackChannels) slackChannels.value = data.slackChannels
-    if (data.slackMessages) slackMessages.value = data.slackMessages
-    if (data.discordChannels) discordChannels.value = data.discordChannels
-    if (data.discordMessages) discordMessages.value = data.discordMessages
+    const l = live.value
+    if (data.mails && !l.mail) mails.value = data.mails
+    if (data.events && !l.calendar) events.value = data.events
+    if (data.slackChannels && !l.slack) slackChannels.value = data.slackChannels
+    if (data.slackMessages && !l.slack) slackMessages.value = data.slackMessages
+    if (data.discordChannels && !l.discord) discordChannels.value = data.discordChannels
+    if (data.discordMessages && !l.discord) discordMessages.value = data.discordMessages
     if (data.files) files.value = data.files
+  }
+
+  function setLive(service: LiveService, on: boolean) {
+    live.value = { ...live.value, [service]: on }
+  }
+
+  /** Inserts or updates items by id, keeping object identity (and Vue reactivity) of existing ones. */
+  function upsert<T extends { id: string }>(list: T[], items: T[]) {
+    for (const item of items) {
+      const cur = list.find(x => x.id === item.id)
+      if (cur) Object.assign(cur, item)
+      else list.push(item)
+    }
+  }
+
+  /** Mirrors a live connector result. `created` items get the assistant marker when `viaAssistant`. */
+  function applyLivePatch(patch: LiveStorePatch, opts: { viaAssistant?: boolean } = {}) {
+    const replace = new Set(patch.replace ?? [])
+    const mark = new Set(opts.viaAssistant === false ? [] : patch.created ?? [])
+    if (replace.has('mail')) { mails.value = []; sent.value = []; drafts.value = [] }
+    if (replace.has('calendar')) { events.value = []; deletedEvents.value = [] }
+    if (replace.has('slack')) { slackChannels.value = []; slackMessages.value = []; slackDrafts.value = {} }
+    if (replace.has('discord')) { discordChannels.value = []; discordMessages.value = [] }
+
+    if (patch.mails) upsert(mails.value, patch.mails.map(m => ({ ...m })))
+    if (patch.removeDraftIds?.length) {
+      const gone = drafts.value.filter(d => patch.removeDraftIds!.includes(d.id))
+      drafts.value = drafts.value.filter(d => !patch.removeDraftIds!.includes(d.id))
+      // A sent draft keeps the reply link the store knew about.
+      for (const s of patch.sent ?? []) if (!s.replyToId && gone.length === 1 && gone[0]!.replyToId) s.replyToId = gone[0]!.replyToId
+    }
+    if (patch.sent) upsert(sent.value, patch.sent.map(s => ({ ...s, ...(mark.has(s.id) ? { viaAssistant: true } : {}) })))
+    if (patch.drafts) upsert(drafts.value, patch.drafts.map(d => ({ ...d })))
+
+    if (patch.eventRange && patch.events) {
+      const a = Date.parse(patch.eventRange.from)
+      const b = Date.parse(patch.eventRange.to)
+      const keep = new Set(patch.events.map(e => e.id))
+      events.value = events.value.filter(e => keep.has(e.id) || !(Date.parse(e.start) < b && Date.parse(e.end) > a))
+    }
+    if (patch.events) upsert(events.value, patch.events.map(e => ({ ...e })))
+    for (const id of patch.removeEventIds ?? []) {
+      const i = events.value.findIndex(e => e.id === id)
+      if (i >= 0) deletedEvents.value.push(...events.value.splice(i, 1))
+    }
+
+    if (patch.slackChannels) slackChannels.value = patch.slackChannels.map(c => ({ ...c }))
+    if (patch.slackMessages) upsert(slackMessages.value, patch.slackMessages.map(m => ({ ...m, ...(mark.has(m.id) ? { viaAssistant: true } : {}) })))
+    if (patch.discordChannels) discordChannels.value = patch.discordChannels.map(c => ({ ...c }))
+    if (patch.discordMessages) upsert(discordMessages.value, patch.discordMessages.map(m => ({ ...m, ...(mark.has(m.id) ? { viaAssistant: true } : {}) })))
   }
 
   function addDraft(d: Omit<MailDraft, 'id' | 'createdAt'>): MailDraft {
@@ -154,7 +209,7 @@ export const useDemo = defineStore('demo', () => {
 
   return {
     mails, drafts, events, slackChannels, slackMessages, slackDrafts, discordChannels, discordMessages, files,
-    sent, deletedEvents, reminders,
-    seed, addDraft, addEvent, setSlackDraft, addSent, addReminder, userName, postChat,
+    sent, deletedEvents, reminders, live,
+    seed, setLive, applyLivePatch, addDraft, addEvent, setSlackDraft, addSent, addReminder, userName, postChat,
   }
 })

@@ -92,6 +92,10 @@ export type ObserveResponse = z.infer<typeof ObserveResponseSchema>
 
 export type DelegateOrigin = 'utterance' | 'screen'
 
+/** Model that runs tasks (Settings > General). The observer (vision) is always Haiku. */
+export const AGENT_MODELS = ['sonnet', 'opus'] as const
+export type AgentModel = (typeof AGENT_MODELS)[number]
+
 export const AgentStepRequestSchema = z.object({
   lang: LangSchema,
   origin: z.enum(['utterance', 'screen']),
@@ -99,6 +103,7 @@ export const AgentStepRequestSchema = z.object({
   messages: z.array(z.unknown()).min(1),
   sessionId: z.string(),
   persona: PersonaSchema.optional(),
+  model: z.enum(AGENT_MODELS).optional(),
 })
 export type AgentStepRequest = z.infer<typeof AgentStepRequestSchema>
 

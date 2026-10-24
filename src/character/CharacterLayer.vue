@@ -4,6 +4,7 @@
 // The window is marked [data-no-capture], so the character is never part of a capture.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CharacterRuntime } from '@/core/types'
+import ConnectPrompt from '@/connectors/ConnectPrompt.vue'
 import { useSettings } from '@/stores/settings'
 import SpeechBubble from '@/ui/SpeechBubble.vue'
 import WelcomeName from '@/ui/WelcomeName.vue'
@@ -55,6 +56,8 @@ const spriteClass = computed(() => [
       <!-- First visit: she asks what to call the user, typed into her bubble. -->
       <WelcomeName v-if="!settings.welcomed" />
       <SpeechBubble v-else />
+      <!-- "Connect Gmail" style offer after the agent worked on sample data. -->
+      <div class="connect-slot"><ConnectPrompt /></div>
     </div>
     <!-- Upper body only: the legs fall below the window edge. -->
     <div class="window">
@@ -104,10 +107,14 @@ const spriteClass = computed(() => [
   transform: translate(-50%, -100%);
   z-index: 2;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   width: max-content;
   max-width: 120%;
 }
+.connect-slot { pointer-events: auto; }
+.connect-slot:empty { display: none; }
 .fallback {
   position: absolute;
   inset: 0;

@@ -5,12 +5,12 @@
 import { SpeechRequestSchema } from '../shared/contracts'
 import { admit } from '../server/budget'
 import { elevenLabsTts } from '../server/elevenlabs'
-import { fail, parseBody } from '../server/http'
+import { fail, parseBody, preflight, withCors } from '../server/http'
 import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from '../server/voice-providers'
 
 const provider: TtsProvider = elevenLabsTts
 
-export async function POST(request: Request): Promise<Response> {
+async function post(request: Request): Promise<Response> {
   const req = await parseBody(request, SpeechRequestSchema)
   if (req instanceof Response) return req
 
@@ -30,3 +30,6 @@ export async function POST(request: Request): Promise<Response> {
     return fail(502, 'tts failed', 'provider')
   }
 }
+
+export const POST = withCors(post)
+export const OPTIONS = preflight

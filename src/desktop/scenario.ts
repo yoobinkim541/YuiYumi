@@ -28,8 +28,10 @@ export function stopScenario(): void {
   started = false
 }
 
+// Scripted arrivals belong to the sample story; a connected service shows real data only.
 function arriveSlack(): void {
   const demo = useDemo()
+  if (demo.live.slack) return
   const t = scenarioTexts(useSettings().lang).slack
   demo.slackMessages.push({
     id: `slm-live-${Date.now()}`,
@@ -43,6 +45,7 @@ function arriveSlack(): void {
 
 function arriveMail(): void {
   const demo = useDemo()
+  if (demo.live.mail) return
   const lang = useSettings().lang
   const t = scenarioTexts(lang).mail
   demo.mails.push({

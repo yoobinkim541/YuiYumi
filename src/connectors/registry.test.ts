@@ -4,7 +4,7 @@ import { CONNECTOR_OPS } from '@shared/contracts'
 import { useDemo } from '@/stores/demo'
 import { MOCK_OPS } from './mock'
 import { replyToMail, sendMail } from './mock/mail'
-import { runConnector } from './registry'
+import { LIVE_SERVICES, runConnector } from './registry'
 
 function seedDemo() {
   const demo = useDemo()
@@ -119,23 +119,59 @@ describe('connector registry (mock)', () => {
     expect(await runConnector('drive_read', { id: 'f2' })).toMatchObject({ ok: true, data: { content: 'Price quote' } })
   })
 
-  it('uses the live endpoint for flagged services and falls back to the mock on failure', async () => {
-    seedDemo()
-    const liveData = { channels: [{ id: 'LIVE', name: 'live', workspace: 'Real' }] }
-    const ok = vi.fn(async () => new Response(JSON.stringify(liveData), { status: 200 }))
-    const r = await runConnector('slack_channels', {}, { live: { slack: true }, sessionId: 's', fetchImpl: ok as unknown as typeof fetch })
-    expect(r).toEqual({ ok: true, data: liveData })
-    expect(ok).toHaveBeenCalledWith('/api/connectors/slack', expect.objectContaining({ method: 'POST' }))
+  it('runs every op of a connected service live and mirrors the patch into the store', async () => {
+    const demo = seedDemo()
+    const live = { result: { sentId: 'g-sent', sent: true, inReplyTo: 'm2', to: 'b@example.com', subject: 'Re: New' }, patch: { sent: [{ id: 'g-sent', replyToId: 'm2', to: 'b@example.com', subject: 'Re: New', body: 'Hi', sentAt: '2026-10-24T01:00:00.000Z' }], created: ['g-sent'] } }
+    const ok = vi.fn(async () => Response.json(live))
+    const r = await runConnector('mail_reply', { id: 'm2', body: 'Hi' }, { live: { mail: true }, sessionId: 's', fetchImpl: ok as unknown as typeof fetch })
+    expect(r).toEqual({ ok: true, data: live.result })
+    expect(ok).toHaveBeenCalledWith('/api/connectors/mail', expect.objectContaining({ method: 'POST' }))
+    expect(JSON.parse((ok.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toMatchObject({ op: 'mail_reply', input: { id: 'm2', body: 'Hi' }, sessionId: 's' })
+    expect(demo.sent).toEqual([expect.objectContaining({ id: 'g-sent', replyToId: 'm2', viaAssistant: true })])
 
-    const bad = vi.fn(async () => new Response(JSON.stringify({ error: 'x', code: 'unconfigured' }), { status: 503 }))
+    // The user's own action: no assistant marker.
+    const own = vi.fn(async () => Response.json({ result: { sentId: 'g2' }, patch: { sent: [{ id: 'g2', to: 'x@example.com', subject: 's', body: 'b', sentAt: '2026-10-24T01:00:00.000Z' }], created: ['g2'] } }))
+    await runConnector('mail_send', { to: 'x@example.com', subject: 's', body: 'b' }, { live: { mail: true }, sessionId: 's', viaAssistant: false, fetchImpl: own as unknown as typeof fetch })
+    expect(demo.sent.find(m => m.id === 'g2')?.viaAssistant).toBeUndefined()
+  })
+
+  it('falls back to the mock on provider failures and marks write fallbacks', async () => {
+    const demo = seedDemo()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const f = await runConnector('slack_channels', {}, { live: { slack: true }, sessionId: 's', fetchImpl: bad as unknown as typeof fetch })
-    expect(f).toMatchObject({ ok: true, data: { channels: [{ id: 'C1' }] } })
+    const bad = vi.fn(async () => Response.json({ error: 'x', code: 'provider' }, { status: 502 }))
+    const read = await runConnector('slack_channels', {}, { live: { slack: true }, sessionId: 's', fetchImpl: bad as unknown as typeof fetch })
+    expect(read).toEqual({ ok: true, data: { channels: [{ id: 'C1', name: 'general', workspace: 'Demo' }] } })
+    const network = vi.fn(async () => { throw new TypeError('fetch failed') })
+    const write = await runConnector('slack_post', { channelId: 'C1', text: 'Hi' }, { live: { slack: true }, sessionId: 's', fetchImpl: network as unknown as typeof fetch })
+    expect(write).toMatchObject({ ok: true, data: { posted: true, note: expect.stringContaining('virtual PC only') } })
+    expect(demo.slackMessages.at(-1)).toMatchObject({ text: 'Hi' })
     warn.mockRestore()
+  })
 
-    // Write ops never go live.
+  it('returns refusals to the agent instead of falling back', async () => {
+    const demo = seedDemo()
+    const rejected = vi.fn(async () => Response.json({ error: 'Sending limit for this session reached (10). Nothing was sent.', code: 'rejected' }, { status: 429 }))
+    const r = await runConnector('mail_send', { to: 'c@example.com', subject: 'Hi', body: 'x' }, { live: { mail: true }, sessionId: 's', fetchImpl: rejected as unknown as typeof fetch })
+    expect(r).toEqual({ ok: false, error: 'Sending limit for this session reached (10). Nothing was sent.' })
+    expect(demo.sent).toHaveLength(0)
+  })
+
+  it('switches an expired service back to sample data and tells the agent', async () => {
+    const demo = seedDemo()
+    demo.setLive('calendar', true)
+    const LIVE = { calendar: true } as Record<string, boolean>
+    const expired = vi.fn(async () => Response.json({ error: 'Google access expired or was revoked. Connect Google again.', code: 'not_connected' }, { status: 401 }))
+    const r = await runConnector('calendar_list', { from: '2026-10-24', to: '2026-10-24' }, { live: LIVE, demo, sessionId: 's', fetchImpl: expired as unknown as typeof fetch })
+    expect(r).toMatchObject({ ok: false, error: expect.stringContaining('Connect Google again') })
+    expect(demo.live.calendar).toBe(false)
+    expect(LIVE_SERVICES.calendar).toBe(false)
+  })
+
+  it('never calls the live endpoint for services that are not connected', async () => {
+    seedDemo()
     const spy = vi.fn()
-    await runConnector('slack_draft_reply', { channelId: 'C1', text: 'x' }, { live: { slack: true }, sessionId: 's', fetchImpl: spy as unknown as typeof fetch })
+    expect(await runConnector('mail_list', {}, { live: {}, sessionId: 's', fetchImpl: spy as unknown as typeof fetch })).toMatchObject({ ok: true })
+    expect(await runConnector('drive_search', { query: 'x' }, { live: { drive: true }, sessionId: 's', fetchImpl: spy as unknown as typeof fetch })).toMatchObject({ ok: true })
     expect(spy).not.toHaveBeenCalled()
   })
 

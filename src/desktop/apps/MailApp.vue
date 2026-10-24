@@ -2,6 +2,10 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useDemo, type Mail, type MailDraft, type SentMail } from '@/stores/demo'
 import { replySubject, replyToMail, sendMail } from '@/connectors/mock/mail'
+import { useConnectorStrings } from '@/connectors/i18n'
+import { LIVE_SERVICES, liveState } from '@/connectors/live'
+import { runConnector } from '@/connectors/registry'
+import { useSettings } from '@/stores/settings'
 import { stage } from '../actuator'
 import { useAssistantMarks } from '../assistant-strings'
 import { colorFor, displayName, initials } from '../format'
@@ -23,6 +27,27 @@ const replyBody = ref('')
 const newMsg = ref<{ to: string, subject: string, body: string } | null>(null)
 const sidebar = ref(true)
 const newToField = ref<HTMLInputElement | null>(null)
+
+// Connected Gmail: the user's own actions run on the real mailbox too (no confirm card, no
+// assistant marker); failures show under the composer.
+const settings = useSettings()
+const cs = useConnectorStrings()
+const isLive = computed(() => !!LIVE_SERVICES.mail)
+const actionError = ref('')
+async function liveRun(op: string, input: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+  actionError.value = ''
+  const r = await runConnector(op, input, { demo, sessionId: settings.sessionId, viaAssistant: false })
+  if (r.ok) return (r.data ?? {}) as Record<string, unknown>
+  actionError.value = cs.value.app.failed(r.error)
+  return null
+}
+// Real mailbox loaded: show its newest message instead of the sample one. Post flush, so it
+// wins over the "new draft arrived" jump below when the load brings drafts.
+watch(() => demo.live.mail, (on) => {
+  if (!on) return
+  folder.value = 'inbox'
+  selectedId.value = inbox.value[0]?.id ?? null
+}, { flush: 'post' })
 
 const inbox = computed(() => demo.mails.filter(m => !m.spam && !m.trashed).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)))
 const spam = computed(() => demo.mails.filter(m => m.spam && !m.trashed))
@@ -82,21 +107,25 @@ watch(() => stage.reveal?.seq, () => {
   else if (r.op === 'mail_restore') { folder.value = 'inbox'; selectedId.value = id('id') }
 })
 
-function restore(m: Mail) {
+async function restore(m: Mail) {
+  if (isLive.value && !(await liveRun('mail_restore', { id: m.id }))) return
   m.trashed = false
   pickFolder('inbox')
   selectedId.value = m.id
 }
 
 function open(id: string) {
+  actionError.value = ''
   selectedId.value = id
   composing.value = false
   newMsg.value = null
   const m = demo.mails.find(x => x.id === id)
+  if (m && !m.read && isLive.value) void liveRun('mail_read', { id })
   if (m) m.read = true
 }
 
 function pickFolder(f: Folder) {
+  actionError.value = ''
   folder.value = f
   composing.value = false
   newMsg.value = null
@@ -125,39 +154,66 @@ function showSent(id: string) {
 }
 
 /** User-initiated sends need no confirm card; they use the same store path as the agent. */
-function sendNew() {
+async function sendNew() {
   const n = newMsg.value
   if (!n || !n.to.trim()) return
+  if (isLive.value) {
+    const r = await liveRun('mail_send', { to: n.to.trim(), subject: n.subject.trim(), body: n.body })
+    if (!r) return
+    newMsg.value = null
+    showSent(String(r.sentId))
+    return
+  }
   const s = sendMail(demo, { to: n.to.trim(), subject: n.subject.trim(), body: n.body }, false)
   newMsg.value = null
   showSent(s.id)
 }
 
-function saveNewDraft() {
+async function saveNewDraft() {
   const n = newMsg.value
   if (!n) return
+  if (isLive.value) {
+    if (await liveRun('mail_create_draft', { to: n.to.trim(), subject: n.subject.trim(), body: n.body })) newMsg.value = null
+    return
+  }
   demo.addDraft({ to: n.to.trim(), subject: n.subject.trim(), body: n.body })
   newMsg.value = null
 }
 
-function sendReply() {
+async function sendReply() {
   const m = selectedMail.value
   if (!m || !replyBody.value.trim()) return
+  if (isLive.value) {
+    const r = await liveRun('mail_reply', { id: m.id, body: replyBody.value })
+    if (!r) return
+    composing.value = false
+    showSent(String(r.sentId))
+    return
+  }
   const s = replyToMail(demo, { id: m.id, body: replyBody.value }, false)
   composing.value = false
   showSent(s.id)
 }
 
-function saveReplyDraft() {
+async function saveReplyDraft() {
   const m = selectedMail.value
   if (!m) return
+  if (isLive.value) {
+    if (await liveRun('mail_create_draft', { replyToId: m.id, to: m.from, subject: replySubject(m.subject), body: replyBody.value })) composing.value = false
+    return
+  }
   demo.addDraft({ replyToId: m.id, to: m.from, subject: replySubject(m.subject), body: replyBody.value })
   composing.value = false
 }
 
-function sendDraft(d: MailDraft) {
+async function sendDraft(d: MailDraft) {
   const i = demo.drafts.findIndex(x => x.id === d.id)
   if (i < 0 || !d.to.trim()) return
+  if (isLive.value) {
+    const r = await liveRun('mail_send_draft', { draftId: d.id })
+    if (r) showSent(String(r.sentId))
+    return
+  }
   demo.drafts.splice(i, 1)
   const s = sendMail(demo, { to: d.to, subject: d.subject, body: d.body, replyToId: d.replyToId }, false)
   showSent(s.id)
@@ -199,9 +255,12 @@ const title = computed(() => {
 watch(title, v => setWindowTitle('mail', `Mail — ${v}`), { immediate: true })
 
 const folderName = computed(() => ({ inbox: t.value.mail.inbox, drafts: t.value.mail.drafts, spam: t.value.mail.junk, sent: t.value.mail.sent, trash: t.value.trash })[folder.value])
-const folderInfo = computed(() => t.value.mail.messages(list.value.length, folder.value === 'inbox' ? unread.value : 0))
+const folderInfo = computed(() => (liveState.services.mail === 'loading'
+  ? cs.value.app.syncing
+  : t.value.mail.messages(list.value.length, folder.value === 'inbox' ? unread.value : 0)))
 /** The mailbox owner, taken from the seeded mails so it follows the demo language. */
 const account = computed(() => {
+  if (isLive.value && liveState.status?.providers.google.account) return liveState.status.providers.google.account
   const to = demo.mails[0]?.to ?? ''
   return to.match(/<([^>]+)>/)?.[1] ?? to
 })
@@ -310,6 +369,7 @@ function listTime(iso: string) {
           <label class="nm-field"><span>{{ t.mail.to }}:</span><input ref="newToField" v-model="newMsg.to" type="text" spellcheck="false"></label>
           <label class="nm-field"><span>{{ t.mb.subject }}:</span><input v-model="newMsg.subject" type="text" spellcheck="false"></label>
           <textarea v-model="newMsg.body" class="new-body" spellcheck="false" />
+          <p v-if="actionError" class="action-error">{{ actionError }}</p>
           <div class="composer-foot">
             <span>{{ t.mail.composerHint }}</span>
             <div class="foot-actions">
@@ -349,6 +409,7 @@ function listTime(iso: string) {
             </div>
           </div>
           <pre class="body">{{ selectedDraft.body }}</pre>
+          <p v-if="actionError" class="action-error">{{ actionError }}</p>
           <div class="draft-actions">
             <button type="button" class="send" :disabled="!selectedDraft.to.trim()" @click="sendDraft(selectedDraft)">{{ t.mail.send }}</button>
           </div>
@@ -362,6 +423,7 @@ function listTime(iso: string) {
               <div class="meta"><span class="label">{{ t.mail.to }}:</span> {{ selectedMail.to }}</div>
             </div>
           </div>
+          <p v-if="actionError && selectedMail.trashed" class="action-error">{{ actionError }}</p>
           <div v-if="selectedMail.trashed" class="trash-banner">
             <span>{{ marks.trashBanner }}</span>
             <button type="button" class="ghost" @click="restore(selectedMail)">{{ marks.restore }}</button>
@@ -376,6 +438,7 @@ function listTime(iso: string) {
           <div v-else-if="composing" class="composer">
             <div class="composer-head">{{ t.mail.replyTo(displayName(selectedMail.from)) }} — Re: {{ selectedMail.subject }}</div>
             <textarea ref="replyField" v-model="replyBody" class="reply-body" :placeholder="t.mail.placeholder" spellcheck="false" />
+            <p v-if="actionError" class="action-error">{{ actionError }}</p>
             <div class="composer-foot">
               <span>{{ t.mail.composerHint }}</span>
               <div class="foot-actions">
@@ -393,6 +456,7 @@ function listTime(iso: string) {
 </template>
 
 <style scoped>
+.action-error { margin: 0; padding: 6px 14px; font-size: 14px; color: #c62828; background: #fdecea; }
 .mail { display: flex; height: 100%; font-size: 18px; color: #1d1d1f; }
 /* Vibrancy sidebar: translucent over the wallpaper. */
 .side {

@@ -4,14 +4,14 @@
 // card grid and editor, radio cards and field rows. Re-created in plain CSS.
 
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { PERMISSION_LEVELS, VOICE_PRESETS, type ConnectorService } from '@shared/contracts'
+import { AGENT_MODELS, PERMISSION_LEVELS, VOICE_PRESETS } from '@shared/contracts'
 import { LANG_INFO, LANGS } from '@shared/languages'
 import { CHARACTER_MODELS, type CharacterId } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
-import { LIVE_SERVICES } from '@/connectors/registry'
 import { usePersona, type PersonaCard } from '@/stores/persona'
 import { USER_NAME_MAX, useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
+import ConnectorsPanel from './ConnectorsPanel.vue'
 import Icon from './Icon.vue'
 import { useSettingsI18n, type SettingsPageId } from './i18n'
 import { captureShortcut, DEFAULT_PTT, isMacPlatform, shortcutCaps } from './shortcut'
@@ -114,23 +114,6 @@ function resetPtt() {
 }
 
 onBeforeUnmount(stopRecording)
-
-// --- Connectors
-
-const CONNECTORS: { id: Exclude<ConnectorService, 'reminders'>, title: string, icon: string, liveCapable: boolean }[] = [
-  { id: 'mail', title: 'Gmail', icon: 'mail', liveCapable: false },
-  { id: 'calendar', title: 'Calendar', icon: 'calendar', liveCapable: false },
-  { id: 'drive', title: 'Drive', icon: 'drive', liveCapable: false },
-  { id: 'slack', title: 'Slack', icon: 'slack', liveCapable: true },
-  { id: 'discord', title: 'Discord', icon: 'discord', liveCapable: true },
-]
-// Mirror of the registry flags; the registry reads LIVE_SERVICES on every call.
-const live = ref<Partial<Record<ConnectorService, boolean>>>({ ...LIVE_SERVICES })
-function toggleLive(id: ConnectorService) {
-  const on = !live.value[id]
-  live.value = { ...live.value, [id]: on }
-  LIVE_SERVICES[id] = on
-}
 
 // --- About: open source notices (names and licenses stay as published)
 
@@ -283,6 +266,19 @@ const NOTICES: string[] = [
           </div>
         </section>
         <section class="section">
+          <h2>{{ t.general.agentModel }}</h2>
+          <p class="hint">{{ t.general.agentModelHint }}</p>
+          <div class="radio-grid">
+            <button
+              v-for="m in AGENT_MODELS" :key="m" type="button"
+              class="radio-card" :class="{ active: settings.agentModel === m }"
+              @click="settings.agentModel = m"
+            >
+              <b>{{ t.general.agentModels[m].title }}</b><span>{{ t.general.agentModels[m].desc }}</span>
+            </button>
+          </div>
+        </section>
+        <section class="section">
           <div class="row">
             <div class="txt"><b>{{ t.general.sound }}</b><span>{{ t.general.soundDesc }}</span></div>
             <button type="button" class="switch" :class="{ on: settings.sound }" :aria-pressed="settings.sound" :aria-label="t.general.sound" @click="settings.sound = !settings.sound" />
@@ -382,19 +378,7 @@ const NOTICES: string[] = [
 
       <!-- Connectors -->
       <template v-else-if="page === 'connectors'">
-        <section class="section">
-          <p class="hint">{{ t.connectors.hint }}</p>
-          <div v-for="c in CONNECTORS" :key="c.id" class="row">
-            <div class="conn">
-              <span class="conn-icon"><Icon :name="c.icon" :size="20" /></span>
-              <div class="txt"><b>{{ c.title }}</b><span>{{ t.connectors.desc[c.id] }}</span></div>
-            </div>
-            <div class="conn-right">
-              <span class="badge" :class="live[c.id] ? 'live' : 'mock'"><span class="dot" />{{ live[c.id] ? t.connectors.live : t.connectors.mock }}</span>
-              <button v-if="c.liveCapable" type="button" class="switch" :class="{ on: live[c.id] }" :aria-label="`${t.connectors.live} ${c.title}`" @click="toggleLive(c.id)" />
-            </div>
-          </div>
-        </section>
+        <ConnectorsPanel />
       </template>
 
       <!-- About -->

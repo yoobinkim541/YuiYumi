@@ -3,7 +3,7 @@
 // results back.
 // Pure over its dependencies so it can be tested with a fake fetch.
 
-import { getOpSpec, requiresConfirmation, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorGrade, type ConnectorOpName, type DelegateOrigin, type Emotion, type PermissionLevel, type Persona } from '@shared/contracts'
+import { getOpSpec, requiresConfirmation, type AgentModel, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorGrade, type ConnectorOpName, type DelegateOrigin, type Emotion, type PermissionLevel, type Persona } from '@shared/contracts'
 import type { Lang } from '@shared/languages'
 import type { BusEvents } from '@/core/bus'
 import type { ToolOutcome } from '@/connectors/registry'
@@ -65,6 +65,8 @@ export interface AgentDeps {
   sessionId: string
   /** Active character card, sent with every step. */
   persona?: () => Persona | undefined
+  /** Task model chosen in the settings (Sonnet by default). */
+  model?: () => AgentModel
   channelName?: (channelId: string) => string | undefined
   /** Id lookups for the confirm card preview (mail subject, draft, event). */
   preview?: Omit<PreviewLookup, 'channelName'>
@@ -190,7 +192,8 @@ export async function runAgentTask(request: string, origin: DelegateOrigin, deps
 
   for (let step = 1; step <= maxSteps; step++) {
     const persona = deps.persona?.()
-    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId, ...(persona ? { persona } : {}) })
+    const model = deps.model?.()
+    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId, ...(persona ? { persona } : {}), ...(model ? { model } : {}) })
     // Assistant content goes back unchanged (thinking blocks included).
     messages.push({ role: 'assistant', content: res.content })
     const toolUses = res.content.filter(isToolUse)

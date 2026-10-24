@@ -42,6 +42,7 @@ export function initAgent(): void {
     lang: () => settings.speechLang,
     sessionId: settings.sessionId,
     persona: () => persona.activePersona,
+    model: () => settings.agentModel,
     channelName: id => (demo.slackChannels.find(c => c.id === id) ?? demo.discordChannels.find(c => c.id === id))?.name,
     preview: {
       mail: id => demo.mails.find(m => m.id === id),
