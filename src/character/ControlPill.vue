@@ -4,7 +4,7 @@
 // settings, and a keyboard button that opens a small text chat input above the pill.
 import { computed, nextTick, ref } from 'vue'
 import { bus } from '@/core/bus'
-import { focusWindow } from '@/desktop/windows'
+import { closeWindow, desktop, focusWindow } from '@/desktop/windows'
 import { formatShortcut, isMacPlatform } from '@/settings/shortcut'
 import { useSettings } from '@/stores/settings'
 import { useCharacterStore } from './store'
@@ -41,6 +41,12 @@ function toggleVad() {
 }
 function toggleWatching() {
   settings.mode = watching.value ? 'quiet' : 'active'
+}
+/** Settings button toggles the window: a second press closes it. */
+const settingsOpen = computed(() => desktop.windows.settings.open)
+function toggleSettings() {
+  if (settingsOpen.value) closeWindow('settings')
+  else focusWindow('settings')
 }
 function toggleSound() {
   unlockAudio()
@@ -124,8 +130,8 @@ function onChatKey(e: KeyboardEvent) {
     <button type="button" class="pb chat-btn" :class="{ on: chatOpen }" :data-tip="L.chat" :aria-label="L.chat" :aria-pressed="chatOpen" @click="toggleChat">
       <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M7.5 14h9" /></svg>
     </button>
-    <button type="button" class="pb" :data-tip="L.settings" :aria-label="L.settings" @click="focusWindow('settings')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>
+    <button type="button" class="pb" :class="{ on: settingsOpen }" :data-tip="L.settings" :aria-label="L.settings" :aria-pressed="settingsOpen" @click="toggleSettings">
+      <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
     </button>
     <span class="status" :data-status="status" />
     <form v-if="chatOpen" class="chat" @submit.prevent="sendChat">

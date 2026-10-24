@@ -30,6 +30,7 @@
 | [modern-screenshot](https://github.com/qq15725/modern-screenshot) | MIT | 가상 데스크톱 요소의 3초 주기 JPEG 캡처 |
 | [jszip](https://github.com/Stuk/jszip) | MIT OR GPL-3.0-or-later (MIT 선택) | 암호화된 모델 팩의 압축과 해제 |
 | [@vercel/node](https://github.com/vercel/vercel) | Apache-2.0 | Vercel 서버 함수 타입과 런타임 |
+| [tsx](https://github.com/privatenumber/tsx) | MIT | 로컬 에이전트 런타임(`agent-runtime/`)과 스모크 테스트를 TypeScript 그대로 실행하는 개발용 실행기 |
 
 ## 4. 음성
 
@@ -45,6 +46,7 @@
 | 프로젝트 | 라이선스 | 사용 방식 |
 |---|---|---|
 | [@anthropic-ai/sdk](https://github.com/anthropics/anthropic-sdk-typescript) | Apache-2.0 | 서버에서 Claude(Haiku, Sonnet) API 호출 |
+| [@anthropic-ai/claude-agent-sdk](https://github.com/anthropics/claude-agent-sdk-typescript) | 독점 소프트웨어. Anthropic 상용 약관(Legal Agreements) 적용, 패키지의 `LICENSE.md` 참조 | 데스크톱 앱의 로컬 에이전트 런타임(`agent-runtime/`)이 Claude Code 에이전트 루프로 사용한다. 플랫폼별 Claude Code 실행 파일(`@anthropic-ai/claude-agent-sdk-<platform>`)을 함께 설치한다. 오픈소스가 아니며, 데스크톱 앱에 실행 파일을 포함해 재배포하는 조건은 약관 확인이 필요하다 |
 | [@deepgram/sdk](https://github.com/deepgram/deepgram-js-sdk) | MIT | 서버에서 Deepgram STT 호출 |
 | [@elevenlabs/elevenlabs-js](https://github.com/elevenlabs/elevenlabs-js) | MIT | 서버에서 ElevenLabs TTS 호출 |
 
@@ -59,4 +61,4 @@
 
 ## 7. 자체 구현 범위
 
-눈치 엔진(스케줄러·모드·체류·게이트), 가상 데스크톱, 커넥터 레지스트리와 목업 데이터, 에이전트 도구 루프와 확인 카드, 화면 인식 흐름, 음성 경계 설계, 서버 함수와 예산 가드, Live2D 연동 중 AIRI에서 가져오지 않은 부분은 이 프로젝트에서 자체 구현했다.
+눈치 엔진(스케줄러·모드·체류·게이트), 가상 데스크톱, 커넥터 레지스트리와 목업 데이터, 에이전트 도구 루프와 확인 카드, 로컬 에이전트 런타임의 세션·권한 정책·이벤트 스트림과 Messages API 프록시, 화면 인식 흐름, 음성 경계 설계, 서버 함수와 예산 가드, Live2D 연동 중 AIRI에서 가져오지 않은 부분은 이 프로젝트에서 자체 구현했다.

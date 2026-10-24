@@ -46,10 +46,41 @@ function apiDevServer(): Plugin {
   }
 }
 
-export default defineConfig(({ mode }) => {
-  Object.assign(process.env, loadEnv(mode, process.cwd(), ''))
+// Desktop app (Tauri, `--mode desktop`): desktop.html instead of index.html, plus stand-ins for
+// modules that assume the in-page virtual desktop. The settings/dashboard panels run in their
+// own windows, so their '@/voice' and '@/nunchi' imports go to mirrors of the overlay's state.
+const DESKTOP_API_PLACEHOLDER = 'https://yuiyumi.vercel.app'
+
+function desktopShims(): Plugin {
+  const settingsDir = fileURLToPath(new URL('./src/settings/', import.meta.url))
+  const shim = (p: string) => fileURLToPath(new URL(`./src/desktop-app/${p}`, import.meta.url))
   return {
-    plugins: [vue(), apiDevServer()],
+    name: 'desktop-shims',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source === '@/desktop/actuator') return shim('shims/actuator.ts')
+      if (!importer?.split('?')[0]!.startsWith(settingsDir)) return null
+      if (source === '@/voice') return shim('panel/voice.ts')
+      if (source === '@/nunchi') return shim('panel/nunchi.ts')
+      return null
+    },
+  }
+}
+
+export default defineConfig(({ mode, command }) => {
+  Object.assign(process.env, loadEnv(mode, process.cwd(), ''))
+  const desktop = mode === 'desktop'
+  // Desktop builds call the deployed API (DESKTOP_API_BASE); desktop dev uses its own dev server.
+  const desktopApiBase = process.env.DESKTOP_API_BASE ?? (command === 'build' ? DESKTOP_API_PLACEHOLDER : '')
+  return {
+    plugins: [vue(), apiDevServer(), ...(desktop ? [desktopShims()] : [])],
+    define: desktop ? { 'import.meta.env.VITE_API_BASE': JSON.stringify(desktopApiBase) } : {},
+    // Multi-page: index.html is the web app, desktop.html the desktop app; each mode builds its own.
+    build: {
+      outDir: desktop ? 'dist-desktop' : 'dist',
+      emptyOutDir: true,
+      rollupOptions: { input: fileURLToPath(new URL(desktop ? './desktop.html' : './index.html', import.meta.url)) },
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -60,6 +91,7 @@ export default defineConfig(({ mode }) => {
       exclude: ['onnxruntime-web', '@ricky0123/vad-web'],
       include: ['pixi.js', 'pixi-live2d-display/cubism4', 'cubism-web-batched-renderer', 'jszip'],
     },
-    server: { port: 5173 },
+    // cors: false lets api/* answer the desktop app's preflight itself (server/http.ts).
+    server: { port: 5173, cors: false },
   }
 })

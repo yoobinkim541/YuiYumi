@@ -1,5 +1,6 @@
 packages:
   - "."
+  - "agent-runtime"
 onlyBuiltDependencies:
   - cubism-web-batched-renderer
   - sharp

@@ -20,6 +20,7 @@ Thumbs.db
 # Build / deps
 node_modules/
 dist/
+dist-desktop/
 .vercel/
 crates/**/target/
 *.tsbuildinfo

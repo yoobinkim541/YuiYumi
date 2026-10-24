@@ -44,6 +44,10 @@ onBeforeUnmount(() => {
 })
 
 const icon = computed(() => CHARACTER_MODELS[store.character].icon)
+// The tail hangs 9 px below the bubble box; let it overlap the hair by 3 px.
+const anchorStyle = computed(() => characterView.mode === 'live2d' && characterView.headTop !== null
+  ? { top: `${characterView.headTop + 6}px` }
+  : undefined)
 const spriteClass = computed(() => [
   `anim-${FALLBACK_ANIM[characterView.emotion] ?? 'none'}`,
   { sleeping: characterView.node === 'sleeping', speaking: characterView.speaking },
@@ -52,12 +56,13 @@ const spriteClass = computed(() => [
 
 <template>
   <div class="character-layer" :data-mode="characterView.mode" :data-node="characterView.node" :data-character="store.character">
-    <div class="bubble-anchor">
+    <!-- "Connect Gmail" style offer after the agent worked on sample data. -->
+    <div class="connect-slot" :style="anchorStyle"><ConnectPrompt /></div>
+    <!-- The bubble's tail rests on the top of her head. -->
+    <div class="bubble-anchor" :style="anchorStyle">
       <!-- First visit: she asks what to call the user, typed into her bubble. -->
       <WelcomeName v-if="!settings.welcomed" />
       <SpeechBubble v-else />
-      <!-- "Connect Gmail" style offer after the agent worked on sample data. -->
-      <div class="connect-slot"><ConnectPrompt /></div>
     </div>
     <!-- Upper body only: the legs fall below the window edge. -->
     <div class="window">
@@ -113,7 +118,15 @@ const spriteClass = computed(() => [
   width: max-content;
   max-width: 120%;
 }
-.connect-slot { pointer-events: auto; }
+.connect-slot {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translate(-50%, -100%);
+  z-index: 2;
+  margin-top: -96px;
+  pointer-events: auto;
+}
 .connect-slot:empty { display: none; }
 .fallback {
   position: absolute;

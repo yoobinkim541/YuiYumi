@@ -11,4 +11,6 @@ export const characterView = reactive({
   /** Bumped on each react so the fallback sprite restarts its animation. */
   pulse: 0,
   speaking: false,
+  /** Top of the head (hair) in CSS px from the top of the character layer; the speech bubble's tail rests on it. */
+  headTop: null as number | null,
 })

@@ -12,13 +12,19 @@
     "voices": "node scripts/build-voice-lines.mjs",
     "predev": "node scripts/copy-vad-assets.mjs",
     "prebuild": "node scripts/copy-vad-assets.mjs",
-    "assets": "node scripts/build-ayagami.mjs && node scripts/build-web-model.mjs && node scripts/copy-vad-assets.mjs"
+    "assets": "node scripts/build-ayagami.mjs && node scripts/build-web-model.mjs && node scripts/copy-vad-assets.mjs",
+    "desktop:dev": "node scripts/copy-vad-assets.mjs && tauri dev",
+    "desktop:build": "node scripts/copy-vad-assets.mjs && node src-tauri/scripts/build.mjs",
+    "agent:runtime": "pnpm --filter @yuiyumi/agent-runtime start",
+    "agent:smoke": "pnpm --filter @yuiyumi/agent-runtime smoke"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
     "@deepgram/sdk": "^5.16.0",
     "@elevenlabs/elevenlabs-js": "^2.74.0",
     "@ricky0123/vad-web": "^0.0.31",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-global-shortcut": "^2.4.1",
     "cubism-web-batched-renderer": "github:FMsongX2/cubism-web-batched-renderer",
     "jszip": "^3.10.2",
     "modern-screenshot": "^4.7.0",
@@ -31,6 +37,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
     "@types/node": "^22.0.0",
     "@vercel/node": "^5.0.0",
     "@vitejs/plugin-vue": "^6.0.0",

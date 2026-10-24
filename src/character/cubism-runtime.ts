@@ -445,6 +445,20 @@ export class CubismRuntime implements CharacterRuntime {
     const s = height / (this.baseSize.h * (visible - topCut))
     this.model.scale.set(s)
     this.model.position.set(width / 2, -this.baseSize.h * s * topCut)
+    // World transforms refresh on the next render.
+    requestAnimationFrame(() => this.updateHeadTop())
+  }
+
+  /** Publishes the top of the head (stage px = CSS px of the layer) for the speech bubble. */
+  private updateHeadTop() {
+    if (!this.model || !this.PIXI) return
+    const im = this.model.internalModel
+    const { x, y, radius } = this.def.touch.head
+    const toStage = (mx: number, my: number) => this.model.transform.worldTransform.apply(im.localTransform.apply(new this.PIXI.Point(mx, my)))
+    const eye = toStage(x * im.originalWidth, y * im.originalHeight)
+    const edge = toStage((x + radius) * im.originalWidth, y * im.originalHeight)
+    const top = Math.round(eye.y - Math.hypot(edge.x - eye.x, edge.y - eye.y) * 1.05)
+    characterView.headTop = Math.max(0, top)
   }
 
   private resize() {

@@ -1,0 +1,5 @@
+/target/
+/gen/schemas/
+# Icons generated from the web app icon by scripts/icons.mjs (not committed).
+/icons/app/
+/tauri.icons.conf.json
