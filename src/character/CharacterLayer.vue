@@ -20,6 +20,9 @@ const settings = useSettings()
 const stage = ref<HTMLDivElement | null>(null)
 let runtime: CharacterRuntime | null = null
 let generation = 0
+/** Puff of cloud while a switched-to character loads (the first load has the loading screen). */
+const switching = ref(false)
+let prefetched = false
 
 /** Destroys the current runtime and mounts the chosen character. Later calls win. */
 async function remount(id: CharacterId) {
@@ -29,9 +32,26 @@ async function remount(id: CharacterId) {
   if (!stage.value) return
   stage.value.replaceChildren()
   characterView.mode = 'loading'
+  if (gen > 1) switching.value = true
   const rt = await mountCharacter(stage.value, id)
   if (gen !== generation) { unmountCharacter(rt); return }
   runtime = rt
+  switching.value = false
+  prefetchOthers(id)
+}
+
+/** Warms the HTTP cache with the other characters' packs once the first one is up. */
+function prefetchOthers(current: CharacterId) {
+  if (prefetched) return
+  prefetched = true
+  const run = () => {
+    for (const def of Object.values(CHARACTER_MODELS)) {
+      if (def.id !== current) void fetch(def.pack).then(r => r.arrayBuffer()).catch(() => {})
+    }
+  }
+  const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback
+  if (idle) idle(run, { timeout: 8000 })
+  else setTimeout(run, 3000)
 }
 
 onMounted(() => void remount(store.character))
@@ -68,6 +88,12 @@ const spriteClass = computed(() => [
     <div class="window">
       <div class="viewport">
         <div ref="stage" class="stage" />
+        <Transition name="puff">
+          <div v-if="switching" class="puff" aria-hidden="true">
+            <i v-for="n in 7" :key="n" :style="{ '--i': n }" />
+            <b v-for="n in 4" :key="`s${n}`" class="spark" :style="{ '--i': n }" />
+          </div>
+        </Transition>
         <div v-if="characterView.mode === 'fallback'" class="fallback">
           <img :key="characterView.pulse" :src="icon" alt="Character" class="sprite" :class="spriteClass" draggable="false">
         </div>
@@ -130,6 +156,47 @@ const spriteClass = computed(() => [
   pointer-events: auto;
 }
 .connect-slot:empty { display: none; }
+.puff {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 260px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* Seven soft cloud balls breathing in and out around the middle. */
+.puff i {
+  position: absolute;
+  left: calc(50% + (var(--i) - 4) * 28px);
+  top: calc(50% + sin(var(--i) * 1.9rad) * 34px);
+  width: calc(70px + var(--i) * 6px);
+  height: calc(70px + var(--i) * 6px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #fff4f7 55%, #ffd9e4 100%);
+  box-shadow: 0 6px 18px rgba(214, 120, 150, 0.25);
+  transform: translate(-50%, -50%) scale(0.9);
+  animation: puff-breathe 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.23s);
+}
+.puff .spark {
+  position: absolute;
+  left: calc(20% + var(--i) * 15%);
+  top: calc(15% + (var(--i) % 2) * 60%);
+  width: 10px;
+  height: 10px;
+  background: #ff8fb0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: puff-spark 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.3s);
+}
+.puff-enter-active { transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+.puff-leave-active { transition: opacity 0.45s ease, transform 0.45s ease; }
+.puff-enter-from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+.puff-leave-to { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+@keyframes puff-breathe { 0%, 100% { transform: translate(-50%, -50%) scale(0.85); } 50% { transform: translate(-50%, -55%) scale(1.05); } }
+@keyframes puff-spark { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 50% { opacity: 1; transform: scale(1.2) rotate(45deg); } }
+@media (prefers-reduced-motion: reduce) { .puff i, .puff .spark { animation: none; } }
 .fallback {
   position: absolute;
   inset: 0;

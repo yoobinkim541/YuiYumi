@@ -4,6 +4,8 @@
 
 **웹 데모: https://yuiyumi-seven.vercel.app**
 
+사용 설명서: [docs/user-guide.md](docs/user-guide.md)
+
 데스크톱 Chrome에서 여는 것을 권장한다. 첫 화면에서 캐릭터의 말풍선으로 언어와 부를 이름을 정하면 데모가 시작된다. 계정을 연결하지 않은 서비스의 메일·일정·메시지는 모두 가공 데이터다.
 
 ## 주요 기능
@@ -37,7 +39,7 @@
 pnpm install
 pnpm assets      # Ayagami 코어 빌드, 캐릭터 모델 팩 생성, VAD 자산 복사
 pnpm voices      # 캐릭터별 내장 음성 생성(선택)
-pnpm dev         # http://localhost:5173
+pnpm dev         # http://localhost:5180
 pnpm desktop:dev # macOS 데스크톱 앱 개발 실행(선택, docs/desktop-app.md)
 ```
 
