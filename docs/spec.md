@@ -170,7 +170,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 ## 감정과 캐릭터
 
-감정 6종: neutral, happy, thinking, surprised, sorry, focused. 모델의 표정·모션 이름은 매핑 파일에서 연결한다. Live2D 모델은 이미 보유하고 있으며, 공개 배포 시 사용 조건은 하정님과 확인한다.
+감정 6종: neutral, happy, thinking, surprised, sorry, focused. 모델의 표정·모션 이름은 매핑 파일에서 연결한다. 캐릭터는 **토끼 귀 소녀(TT2.0, 兔兔2.0)**로 확정한다(랜딩 아트와 같은 캐릭터, 자체 모델 Yui는 쓰지 않음). 이 모델은 판매되는 모델로 보이므로 **공개 배포 전에 라이선스(재배포·웹 임베드·상업 이용)를 반드시 확인**해야 한다. 표정 매핑과 라이선스 확인 사항은 `character.md` 참고.
 
 ## 크레딧 예산
 
