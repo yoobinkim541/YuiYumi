@@ -1,5 +1,7 @@
 <script setup lang="ts">
-// Track A: Live2D character + speech bubble. Overlay only; never part of the capture.
+// Track A: Live2D character + speech bubble. Rendered inside the desktop's character window
+// (src/desktop/CharacterWindow.vue), which owns placement, chrome and hover controls.
+// The window is marked [data-no-capture], so the character is never part of a capture.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CharacterRuntime } from '@/core/types'
 import SpeechBubble from '@/ui/SpeechBubble.vue'
@@ -48,24 +50,8 @@ const spriteClass = computed(() => [
     <div class="bubble-anchor">
       <SpeechBubble />
     </div>
-    <!-- The character lives in its own window; the legs fall below the window edge. -->
+    <!-- Upper body only: the legs fall below the window edge. -->
     <div class="window">
-      <div class="titlebar">
-        <span class="dot" :class="characterView.node" />
-        <span class="name">{{ CHARACTER_MODELS[store.character].label }}</span>
-        <div class="switcher" role="group" aria-label="Character">
-          <button
-            v-for="o in store.options"
-            :key="o.id"
-            type="button"
-            :class="{ active: store.character === o.id }"
-            :aria-pressed="store.character === o.id"
-            @click="store.setCharacter(o.id)"
-          >
-            {{ o.label }}
-          </button>
-        </div>
-      </div>
       <div class="viewport">
         <div ref="stage" class="stage" />
         <div v-if="characterView.mode === 'fallback'" class="fallback">
@@ -78,8 +64,9 @@ const spriteClass = computed(() => [
 
 <style scoped>
 .character-layer {
-  width: min(380px, 30vw);
-  height: min(520px, 62vh);
+  position: relative;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   user-select: none;
 }
@@ -89,30 +76,12 @@ const spriteClass = computed(() => [
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(180deg, rgba(255, 246, 251, 0.92) 0%, rgba(238, 236, 255, 0.92) 100%);
-  box-shadow: 0 18px 40px rgba(40, 24, 70, 0.28), 0 2px 6px rgba(40, 24, 70, 0.12);
-  backdrop-filter: blur(10px);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: linear-gradient(180deg, rgba(255, 246, 251, 0.62) 0%, rgba(238, 236, 255, 0.72) 100%);
+  box-shadow: 0 24px 60px rgba(40, 24, 70, 0.26), 0 2px 8px rgba(40, 24, 70, 0.12);
+  backdrop-filter: blur(18px) saturate(160%);
 }
-.titlebar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 10px 0 14px;
-  flex: none;
-  color: #4a3f5c;
-  font-size: 13px;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(120, 100, 160, 0.12);
-}
-.titlebar .name { flex: 1; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #9be38f; }
-.dot.working, .dot.waiting { background: #f5c451; }
-.dot.speaking, .dot.listening { background: #7aa7ff; }
-.dot.failed { background: #ff8a8a; }
-.dot.sleeping { background: #c9c3d6; }
 .viewport { position: relative; flex: 1; overflow: hidden; }
 .stage { position: absolute; inset: 0; }
 .bubble-anchor {
@@ -149,25 +118,6 @@ const spriteClass = computed(() => [
 .anim-tilt { animation: tilt 1.6s ease-in-out 2; }
 .anim-droop { animation: droop 1.2s ease-in-out 1 forwards; }
 .anim-pulse { animation: pulse 1.4s ease-in-out 2; }
-.switcher {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: rgba(74, 63, 92, 0.1);
-  pointer-events: auto;
-}
-.switcher:hover { opacity: 1; }
-.switcher button {
-  border: 0;
-  border-radius: 999px;
-  padding: 3px 9px;
-  background: transparent;
-  color: #4a3f5c;
-  font-size: 11px;
-  cursor: pointer;
-}
-.switcher button.active { background: #fff; color: #2a2230; box-shadow: 0 1px 3px rgba(40, 24, 70, 0.15); }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px) scale(1.02, 0.98); } }
 @keyframes jump { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-28px) scale(0.96, 1.06); } 100% { transform: translateY(0) scale(1); } }
 @keyframes tilt { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-6deg); } 70% { transform: rotate(4deg); } }

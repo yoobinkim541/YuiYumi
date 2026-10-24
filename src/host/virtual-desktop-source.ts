@@ -1,5 +1,7 @@
 // ScreenSource backed by the in-page virtual desktop ([data-capture-root]).
-// Only that element is rendered; character and overlay layers are siblings outside it.
+// Only that element is rendered. Assistant UI inside it (character window, tray menu,
+// YuiYumi settings/dashboard windows) is marked [data-no-capture] and skipped, so the
+// observer never sees the assistant itself.
 
 import { domToCanvas } from 'modern-screenshot'
 import type { ActivitySnapshot, Frame, ScreenSource } from '@/core/types'
@@ -9,6 +11,11 @@ import { averageHash, HASH_H, HASH_W } from './ahash'
 export const CAPTURE_W = 1920
 export const CAPTURE_H = 1080
 const JPEG_QUALITY = 0.7
+
+/** modern-screenshot node filter: drops [data-no-capture] subtrees. */
+export function captureFilter(node: Node): boolean {
+  return !(node instanceof Element && node.hasAttribute('data-no-capture'))
+}
 
 export class VirtualDesktopSource implements ScreenSource {
   private hashCanvas: HTMLCanvasElement | null = null
@@ -23,6 +30,7 @@ export class VirtualDesktopSource implements ScreenSource {
       backgroundColor: '#ffffff',
       // System fonts only; skip web font embedding for speed.
       font: false,
+      filter: captureFilter,
     })
     const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY)
     const jpegBase64 = dataUrl.slice(dataUrl.indexOf(',') + 1)

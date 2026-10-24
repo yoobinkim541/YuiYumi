@@ -1,7 +1,7 @@
 // User activity inside the virtual desktop: focused app, its window title, typing.
 
 import type { ActivitySnapshot } from '@/core/types'
-import { desktop } from './windows'
+import { topUserWindow } from './windows'
 
 export const TYPING_WINDOW_MS = 1500
 
@@ -17,11 +17,11 @@ export function isTyping(now: number = Date.now()): boolean {
 }
 
 export function getActivity(): ActivitySnapshot {
-  const id = desktop.focused
-  const w = id ? desktop.windows[id] : null
+  // Assistant windows (settings, dashboard) are never reported to the observer.
+  const w = topUserWindow()
   return {
-    activeApp: w && w.open ? w.appName : null,
-    windowTitle: w && w.open ? w.title : null,
+    activeApp: w ? w.appName : null,
+    windowTitle: w ? w.title : null,
     typing: isTyping(),
   }
 }

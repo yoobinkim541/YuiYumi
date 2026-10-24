@@ -4,8 +4,13 @@
 // rendered at 1920x1080 regardless of the page size.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { markKeystroke } from './activity'
-import { APP_ORDER, desktop, desktopView, DESKTOP_H, DESKTOP_W, focusWindow, type AppId } from './windows'
+import { APP_ORDER, assistantWindow, desktop, desktopView, DESKTOP_H, DESKTOP_W, focusWindow, isAssistantApp, type UserAppId } from './windows'
+import CharacterWindow from './CharacterWindow.vue'
+import NotificationCenter from './NotificationCenter.vue'
+import TrayMenu from './TrayMenu.vue'
 import WindowFrame from './WindowFrame.vue'
+import DashboardApp from '@/settings/DashboardApp.vue'
+import SettingsApp from '@/settings/SettingsApp.vue'
 import CalendarApp from './apps/CalendarApp.vue'
 import DiscordApp from './apps/DiscordApp.vue'
 import DriveApp from './apps/DriveApp.vue'
@@ -43,9 +48,24 @@ onBeforeUnmount(() => {
 
 const clock = computed(() => now.value.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
 const dateLabel = computed(() => now.value.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
-const activeName = computed(() => (desktop.focused ? desktop.windows[desktop.focused].appName : 'Finder'))
+const activeName = computed(() => {
+  const f = desktop.focused
+  return f && desktop.windows[f].open && !isAssistantApp(f) ? desktop.windows[f].appName : 'Finder'
+})
+// When an assistant window is focused the menu bar shows its name, but that label is
+// excluded from captures so the observer never reads it.
+const assistantFocused = computed(() => {
+  const f = desktop.focused
+  return !!f && desktop.windows[f].open && isAssistantApp(f)
+})
+const MENUS = ['File', 'Edit', 'View', 'Go', 'Window', 'Help']
 
-const APPS: Record<AppId, { label: string, bg: string, accent: string }> = {
+function onAssistantDock() {
+  assistantWindow.visible = true
+  focusWindow('dashboard')
+}
+
+const APPS: Record<UserAppId, { label: string, bg: string, accent: string }> = {
   mail: { label: 'Mail', bg: 'linear-gradient(160deg,#5aa9ff,#1e6bff)', accent: '#1e6bff' },
   calendar: { label: 'Calendar', bg: 'linear-gradient(160deg,#ffffff,#eef0f4)', accent: '#ef4444' },
   slack: { label: 'Slack', bg: 'linear-gradient(160deg,#7c3a8f,#4a154b)', accent: '#4a154b' },
@@ -72,11 +92,18 @@ function onKeydown(e: KeyboardEvent) {
         <!-- Menu bar -->
         <div class="vd-menubar">
           <div class="vd-menu-left">
-            <span class="vd-logo" />
-            <strong>{{ activeName }}</strong>
-            <span>File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span>
+            <span class="vd-logo" aria-label="System menu">
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" /><path d="M10 2a8 8 0 0 0 0 16M2 10h16" /></svg>
+            </span>
+            <strong v-if="assistantFocused" data-no-capture>YuiYumi</strong>
+            <strong v-else>{{ activeName }}</strong>
+            <span v-for="m in MENUS" :key="m">{{ m }}</span>
           </div>
           <div class="vd-menu-right">
+            <TrayMenu />
+            <svg class="vd-status" viewBox="0 0 26 20" aria-label="Wi-Fi"><path d="M2 7.5a16 16 0 0 1 22 0M5.5 11a11 11 0 0 1 15 0M9 14.5a6 6 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /><circle cx="13" cy="17.5" r="1.6" fill="currentColor" /></svg>
+            <span class="vd-battery" aria-label="Battery 82%"><span class="vd-battery-pct">82%</span><svg viewBox="0 0 34 18"><rect x="1" y="2" width="28" height="14" rx="4" fill="none" stroke="currentColor" stroke-opacity="0.5" stroke-width="1.6" /><rect x="3.5" y="4.5" width="19" height="9" rx="2" fill="currentColor" /><path d="M31 7v4" stroke="currentColor" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round" /></svg></span>
+            <svg class="vd-status" viewBox="0 0 22 20" aria-label="Control Center"><rect x="2" y="3" width="18" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" /><circle cx="6" cy="6" r="1.8" fill="currentColor" /><rect x="2" y="11" width="18" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" /><circle cx="16" cy="14" r="1.8" fill="currentColor" /></svg>
             <span>{{ dateLabel }}</span>
             <strong>{{ clock }}</strong>
           </div>
@@ -88,6 +115,15 @@ function onKeydown(e: KeyboardEvent) {
         <WindowFrame id="slack" :accent="APPS.slack.accent"><SlackApp /></WindowFrame>
         <WindowFrame id="discord" :accent="APPS.discord.accent"><DiscordApp /></WindowFrame>
         <WindowFrame id="drive" :accent="APPS.drive.accent"><DriveApp /></WindowFrame>
+        <!-- Assistant windows: excluded from captures. -->
+        <WindowFrame id="settings" no-capture><SettingsApp /></WindowFrame>
+        <WindowFrame id="dashboard" no-capture><DashboardApp /></WindowFrame>
+
+        <!-- Always-on-top character window (excluded from captures). -->
+        <CharacterWindow />
+
+        <!-- Notification banners (captured: they are part of the user's screen). -->
+        <NotificationCenter />
 
         <!-- Dock -->
         <nav class="vd-dock">
@@ -107,6 +143,11 @@ function onKeydown(e: KeyboardEvent) {
               <svg v-else viewBox="0 0 48 48"><path d="M17 9h14l12 21-7 11H12L5 30z" fill="#fff" /><path d="M17 9l12 21H5z" fill="#fde68a" /><path d="M29 30h14l-7 11H12z" fill="#bfdbfe" /></svg>
             </span>
             <span class="vd-dot" :class="{ on: desktop.windows[id].open }" />
+          </button>
+          <span class="vd-dock-sep" />
+          <button class="vd-dock-item" title="YuiYumi" @click="onAssistantDock">
+            <span class="vd-icon vd-icon-yy"><img src="/models/tt2-icon.png" alt="YuiYumi" draggable="false"></span>
+            <span class="vd-dot" :class="{ on: assistantWindow.visible || desktop.windows.settings.open || desktop.windows.dashboard.open }" />
           </button>
         </nav>
       </div>
@@ -156,14 +197,24 @@ function onKeydown(e: KeyboardEvent) {
   align-items: center;
   justify-content: space-between;
   padding: 0 22px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
   font-size: 17px;
   color: #1f2937;
   z-index: 100000;
 }
 .vd-menu-left, .vd-menu-right { display: flex; align-items: center; gap: 22px; }
-.vd-logo { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, #f472b6, #60a5fa); }
+.vd-menu-right { gap: 18px; }
+.vd-logo { display: flex; width: 22px; height: 22px; }
+.vd-logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.vd-menu-left span { font-weight: 450; }
+.vd-status { width: 26px; height: 20px; color: #1f2937; }
+.vd-battery { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.vd-battery svg { width: 34px; height: 18px; color: #1f2937; }
+.vd-dock-sep { width: 1px; margin: 6px 2px 14px; background: rgba(15, 23, 42, 0.2); }
+.vd-icon-yy { overflow: hidden; background: linear-gradient(160deg, #ffe4ef, #e0e7ff); }
+.vd-icon-yy img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .vd-dock {
   position: absolute;
   left: 50%;
