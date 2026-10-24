@@ -4,6 +4,7 @@
 // settings.
 import { computed } from 'vue'
 import { focusWindow } from '@/desktop/windows'
+import { formatShortcut, isMacPlatform } from '@/settings/shortcut'
 import { useSettings } from '@/stores/settings'
 import { useCharacterStore } from './store'
 import { currentStatus, pttDown, pttUp, setVadEnabled, unlockAudio, voiceState } from '@/voice'
@@ -21,6 +22,8 @@ const LABELS = {
 } as const
 const L = computed(() => LABELS[settings.lang] ?? LABELS.en)
 const onOff = (on: boolean) => (on ? ' · ON' : ' · OFF')
+/** Talk tooltip with the push-to-talk shortcut, e.g. "누르고 말하기 (Space)". */
+const talkTip = computed(() => `${L.value.talk} (${formatShortcut(settings.pttKey, isMacPlatform())})`)
 const status = computed(() => currentStatus())
 
 function talkDown(e: PointerEvent) {
@@ -50,8 +53,8 @@ function toggleSound() {
       type="button"
       class="pb"
       :class="{ on: voiceState.recording }"
-      :data-tip="L.talk"
-      :aria-label="L.talk"
+      :data-tip="talkTip"
+      :aria-label="talkTip"
       @pointerdown="talkDown"
       @pointerup="talkUp"
       @pointercancel="talkUp"

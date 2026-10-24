@@ -1,10 +1,9 @@
 <script setup lang="ts">
-// Settings window, adapted from AIRI (MIT): an index of menu icon items (title, description,
-// large faded icon, dotted/gradient hover), a sticky page header with back button and
-// "Settings" subtitle, console-style sections, a faded mascot icon in the corner, the
-// character card grid and editor, radio cards and field rows. Re-created in plain CSS.
+// Settings window. Look adapted from AIRI (MIT): index of menu items with large faded
+// icons, sticky page header with a back button, console-style sections, the character
+// card grid and editor, radio cards and field rows. Re-created in plain CSS.
 
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import type { ConnectorService } from '@shared/contracts'
 import { LANG_INFO, LANGS } from '@shared/languages'
 import { CHARACTER_MODELS, type CharacterId } from '@/character/models'
@@ -17,16 +16,17 @@ import { usePersona, type PersonaCard } from '@/stores/persona'
 import { useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
 import Icon from './Icon.vue'
+import { captureShortcut, DEFAULT_PTT, isMacPlatform, shortcutCaps } from './shortcut'
 import './theme.css'
 
 type PageId = 'index' | 'card' | 'general' | 'voice' | 'observation' | 'connectors' | 'about'
 
 const PAGES: { id: PageId, title: string, description: string, icon: string }[] = [
-  { id: 'card', title: 'Character card', description: 'Persona, personality and model', icon: 'card' },
-  { id: 'general', title: 'General', description: 'Language, sound and mode', icon: 'settings' },
-  { id: 'voice', title: 'Voice', description: 'Microphone and speech output', icon: 'mic' },
-  { id: 'observation', title: 'Observation', description: 'Screen checks and interjection limits', icon: 'eye' },
-  { id: 'connectors', title: 'Connectors', description: 'Mail, calendar, drive and chats', icon: 'plug' },
+  { id: 'card', title: 'Character', description: 'Model and character card', icon: 'card' },
+  { id: 'general', title: 'General', description: 'Language, mode and sound', icon: 'settings' },
+  { id: 'voice', title: 'Voice input', description: 'Push-to-talk shortcut and VAD', icon: 'mic' },
+  { id: 'observation', title: 'Observation', description: 'Limits for unprompted remarks', icon: 'eye' },
+  { id: 'connectors', title: 'Connectors', description: 'Mock or live data per service', icon: 'plug' },
   { id: 'about', title: 'About', description: 'Open source notices', icon: 'info' },
 ]
 
@@ -35,6 +35,7 @@ const current = computed(() => PAGES.find(p => p.id === page.value))
 const scroller = ref<HTMLElement | null>(null)
 
 function go(id: PageId) {
+  stopRecording()
   page.value = id
   scroller.value?.scrollTo({ top: 0 })
 }
@@ -71,6 +72,51 @@ const MODES: { id: AssistantMode, title: string, description: string }[] = [
   { id: 'quiet', title: 'Quiet', description: 'Answers only when spoken to' },
   { id: 'ornamental', title: 'Ornamental', description: 'Just stays on the desktop' },
 ]
+
+// --- Voice input: push-to-talk shortcut recorder
+
+const mac = isMacPlatform()
+const pttCaps = computed(() => shortcutCaps(settings.pttKey, mac))
+const recording = ref(false)
+const recordError = ref('')
+
+/** Capture-phase window listener so the next key goes here, not to push-to-talk. */
+function onRecordKey(e: KeyboardEvent) {
+  e.preventDefault()
+  e.stopImmediatePropagation()
+  if (e.type !== 'keydown' || e.repeat) return
+  const res = captureShortcut(e)
+  if (res.kind === 'wait') return
+  if (res.kind === 'reject') { recordError.value = res.reason; return }
+  if (res.kind === 'ok') settings.pttKey = res.shortcut
+  recordError.value = ''
+  stopRecording()
+}
+
+function startRecording() {
+  if (recording.value) { recordError.value = ''; stopRecording(); return }
+  recording.value = true
+  recordError.value = ''
+  window.addEventListener('keydown', onRecordKey, true)
+  window.addEventListener('keyup', onRecordKey, true)
+  window.addEventListener('blur', stopRecording)
+}
+
+function stopRecording() {
+  if (!recording.value) return
+  recording.value = false
+  window.removeEventListener('keydown', onRecordKey, true)
+  window.removeEventListener('keyup', onRecordKey, true)
+  window.removeEventListener('blur', stopRecording)
+}
+
+function resetPtt() {
+  stopRecording()
+  recordError.value = ''
+  settings.pttKey = { ...DEFAULT_PTT }
+}
+
+onBeforeUnmount(stopRecording)
 
 // --- Observation
 
@@ -134,7 +180,7 @@ function toggleLive(id: ConnectorService) {
               <span class="mi-title">{{ p.title }}</span>
               <span class="mi-desc">{{ p.description }}</span>
             </span>
-            <span class="mi-icon"><Icon :name="p.icon" :size="96" /></span>
+            <span class="mi-icon"><Icon :name="p.icon" :size="72" /></span>
           </button>
         </div>
 
@@ -173,7 +219,6 @@ function toggleLive(id: ConnectorService) {
               class="char-card" :class="{ active: persona.activeCard.id === c.id }"
               @click="persona.select(c.id)"
             >
-              <!-- Card content (AIRI card list item) -->
               <span class="cc-body">
                 <span class="cc-head">
                   <span class="avatar">{{ cardInitial(c) }}</span>
@@ -181,15 +226,7 @@ function toggleLive(id: ConnectorService) {
                   <span v-if="persona.activeCard.id === c.id" class="cc-check"><Icon name="check" :size="14" /></span>
                 </span>
                 <span class="cc-desc">{{ c.description || 'No description' }}</span>
-                <span class="cc-stats">
-                  <span>{{ c.builtinFor ? `Default · ${CHARACTER_MODELS[c.builtinFor].label}` : 'Custom' }}</span>
-                  <span class="cc-model"><Icon name="ghost" :size="12" />{{ CHARACTER_MODELS[character.character].label }}</span>
-                </span>
-              </span>
-              <span class="cc-actions">
-                <span class="cc-act" :class="{ on: persona.activeCard.id === c.id }">
-                  <Icon :name="persona.activeCard.id === c.id ? 'check' : 'arrow-right'" :size="16" />
-                </span>
+                <span class="cc-stats">{{ c.builtinFor ? `Default · ${CHARACTER_MODELS[c.builtinFor].label}` : 'Custom' }}</span>
               </span>
             </button>
           </div>
@@ -253,14 +290,14 @@ function toggleLive(id: ConnectorService) {
         </section>
       </template>
 
-      <!-- Voice -->
+      <!-- Voice input -->
       <template v-else-if="page === 'voice'">
         <section class="section">
           <h2>Input</h2>
-          <p class="hint">Push-to-talk is the default. Voice activity detection listens hands-free.</p>
+          <p class="hint">Push-to-talk records while the shortcut or the talk button is held. Voice activity detection listens hands-free.</p>
           <div class="radio-grid">
             <button type="button" class="radio-card" :class="{ active: !voiceState.vadEnabled }" @click="setVadEnabled(false)">
-              <b>Push-to-talk</b><span>Hold the talk button or key</span>
+              <b>Push-to-talk</b><span>Hold the talk button or the shortcut</span>
             </button>
             <button type="button" class="radio-card" :class="{ active: voiceState.vadEnabled }" :disabled="voiceState.vadLoading" @click="setVadEnabled(true)">
               <b>Voice activity (VAD)</b><span>{{ voiceState.vadLoading ? 'Loading model…' : 'Listens when you speak' }}</span>
@@ -269,36 +306,37 @@ function toggleLive(id: ConnectorService) {
           <p v-if="voiceState.error" class="error">{{ voiceState.error }}</p>
         </section>
         <section class="section">
-          <h2>Output</h2>
+          <h2>Push-to-talk shortcut</h2>
+          <p class="hint">Letters and digits need Ctrl, Alt or {{ mac ? 'Cmd' : 'Win' }} so typing on the desktop is not taken over. A shortcut without those keys is ignored while you type in a text field.</p>
           <div class="row">
-            <div class="txt"><b>Text to speech</b><span>Voice for {{ LANG_INFO[settings.lang].label }}. Same switch as Sound in General.</span></div>
-            <button type="button" class="switch" :class="{ on: settings.sound }" :aria-pressed="settings.sound" @click="settings.sound = !settings.sound" />
+            <div class="txt">
+              <b>Hold to talk</b>
+              <span>{{ recording ? 'Press the new key combination. Esc cancels.' : 'Works anywhere on the desktop.' }}</span>
+            </div>
+            <div class="ptt-right">
+              <span class="caps" :class="{ armed: recording }" aria-live="polite">
+                <template v-if="recording"><kbd class="cap wait">…</kbd></template>
+                <kbd v-for="(k, i) in pttCaps" v-else :key="i" class="cap">{{ k }}</kbd>
+              </span>
+              <button type="button" class="btn" :class="{ primary: recording }" @click="startRecording">
+                <Icon name="keyboard" :size="15" />{{ recording ? 'Cancel' : 'Record shortcut' }}
+              </button>
+              <button type="button" class="btn" :disabled="!recording && settings.pttKey.code === 'Space' && pttCaps.length === 1" @click="resetPtt">
+                <Icon name="reset" :size="15" />Space
+              </button>
+            </div>
           </div>
-          <div class="row">
-            <div class="txt"><b>Status</b><span>{{ voiceState.speaking ? 'Speaking now' : voiceState.transcribing ? 'Transcribing' : 'Idle' }}</span></div>
-            <span class="badge" :class="voiceState.speaking ? 'primary' : 'mock'"><span class="dot" />{{ voiceState.speaking ? 'speaking' : 'idle' }}</span>
-          </div>
+          <p v-if="recordError" class="error">{{ recordError }}</p>
         </section>
       </template>
 
       <!-- Observation -->
       <template v-else-if="page === 'observation'">
         <section class="section">
-          <h2>Screen checks</h2>
-          <div class="row">
-            <div class="txt"><b>Interval</b><span>A screenshot is checked every {{ POLL_MS / 1000 }} seconds in active mode.</span></div>
-            <span class="badge primary">{{ POLL_MS / 1000 }} s</span>
-          </div>
-          <div class="row">
-            <div class="txt"><b>Today</b><span>Proactive interjections shown today.</span></div>
-            <span class="badge">{{ nunchiStatus.interjectionsToday }} / {{ nunchiConfig.maxPerDay }}</span>
-          </div>
-        </section>
-        <section class="section">
           <div class="sec-head">
             <div>
               <h2>Proactive limits</h2>
-              <p class="hint">Only unprompted remarks are limited. Answers to your voice are never counted.</p>
+              <p class="hint">In active mode the screen is checked every {{ POLL_MS / 1000 }} s. Only unprompted remarks are limited; answers to your voice never count. Today: {{ nunchiStatus.interjectionsToday }} of {{ nunchiConfig.maxPerDay }}.</p>
             </div>
             <button type="button" class="btn" @click="resetNunchiConfig()"><Icon name="reset" :size="15" />Defaults</button>
           </div>
@@ -346,7 +384,7 @@ function toggleLive(id: ConnectorService) {
           <ul class="notices">
             <li><b>AIRI</b> (moeru-ai/airi) — MIT. Live2D wiring, audio pipeline, lip sync structure, and the look of these settings and dashboard windows.</li>
             <li><b>Ayagami</b> — MIT OR Apache-2.0. Character core built to WASM.</li>
-            <li><b>pixi.js</b>, <b>pixi-live2d-display</b> — MIT. Character rendering.</li>
+            <li><b>cubism-web-batched-renderer</b> — Live2D Open Software License. <b>pixi.js</b>, <b>pixi-live2d-display</b> — MIT. Character rendering.</li>
             <li><b>Vue</b>, <b>Vite</b>, <b>Pinia</b>, <b>zod</b>, <b>modern-screenshot</b>, <b>jszip</b> — MIT.</li>
             <li><b>@ricky0123/vad-web</b> (ISC), <b>Silero VAD</b>, <b>onnxruntime-web</b>, <b>wLipSync</b> — MIT.</li>
             <li><b>Anthropic SDK</b> (Apache-2.0), <b>Deepgram SDK</b>, <b>ElevenLabs SDK</b> (MIT).</li>
@@ -356,14 +394,12 @@ function toggleLive(id: ConnectorService) {
       </template>
       </div>
     </div>
-    <!-- Large faded mascot icon in the corner (AIRI settings index) -->
-    <div class="corner-icon" aria-hidden="true"><Icon :name="current ? current.icon : 'ghost'" :size="240" /></div>
   </div>
 </template>
 
 <style scoped>
-.settings-app { position: relative; display: block; background: #fff; }
-.content { position: relative; z-index: 1; height: 100%; }
+.settings-app { display: block; background: #fff; }
+.content { height: 100%; }
 .inner { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; display: flex; flex-direction: column; }
 
 .page-header {
@@ -376,10 +412,10 @@ function toggleLive(id: ConnectorService) {
 .page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--n300); white-space: nowrap; }
 .page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--n900); white-space: nowrap; }
 
-.menu { display: flex; flex-direction: column; gap: 16px; }
+.menu { display: flex; flex-direction: column; gap: 10px; }
 .menu-icon-item {
   position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; width: 100%;
-  padding: 20px; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  padding: 14px 20px; text-align: left; font: inherit; color: inherit; cursor: pointer;
   background: var(--n50); border: 2px solid var(--n100); border-radius: 8px;
   transition: all .4s ease-in-out; animation: mi-enter .25s ease-out both;
 }
@@ -405,8 +441,6 @@ function toggleLive(id: ConnectorService) {
 .mi-icon { position: absolute; right: 0; top: 50%; display: grid; transform: translateY(-34%); color: rgb(163 163 163 / .5); opacity: .5; transition: all .4s ease-in-out; }
 .menu-icon-item:hover .mi-icon { color: var(--p500); scale: 1.2; }
 @keyframes mi-enter { from { opacity: 0; transform: translateY(10px); } }
-
-.corner-icon { position: absolute; right: -40px; bottom: -24px; z-index: 0; color: rgb(229 229 229 / .5); pointer-events: none; }
 
 .sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -446,12 +480,18 @@ function toggleLive(id: ConnectorService) {
 }
 .cc-check { flex: none; padding: 4px; border-radius: 6px; display: grid; place-items: center; background: var(--p100); color: var(--p600); }
 .cc-desc { min-height: 40px; font-size: 13px; color: var(--n500); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.cc-stats { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--n500); }
-.cc-model { display: inline-flex; align-items: center; gap: 3px; }
-.cc-actions { position: relative; z-index: 1; display: flex; justify-content: flex-end; padding: 6px 8px; }
-.cc-act { display: grid; place-items: center; padding: 6px; border-radius: 8px; color: var(--n500); transition: background .2s; }
-.cc-act:hover { background: var(--n200); }
-.cc-act.on { color: var(--p500); }
+.cc-stats { font-size: 12px; color: var(--n500); }
+
+.ptt-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.caps { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; transition: box-shadow .2s; }
+.caps.armed { box-shadow: 0 0 0 2px var(--p300); }
+.cap {
+  min-width: 30px; height: 30px; padding: 0 9px; display: inline-grid; place-items: center;
+  font: 500 13px/1 inherit; font-family: inherit; color: var(--n800);
+  background: #fff; border: 2px solid var(--n200); border-bottom-width: 3px; border-radius: 7px;
+}
+.cap.wait { color: var(--p500); animation: cap-blink 1s ease-in-out infinite; }
+@keyframes cap-blink { 50% { opacity: .35; } }
 
 .conn { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .conn-icon { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #fff; border: 2px solid var(--n100); color: var(--n600); }

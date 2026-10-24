@@ -1,10 +1,9 @@
 <script setup lang="ts">
-// Dashboard window: read-only live view of the companion. Look adapted from AIRI (MIT)
-// settings surfaces (page header, console sections, menu-item tiles with faded icons).
+// Dashboard window: read-only live view of the companion. Every tile reads real session
+// state (nunchi status, bus activity, demo store, voice state). Look adapted from AIRI (MIT).
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { ConnectorService, DialogueTurn } from '@shared/contracts'
-import { LANG_INFO } from '@shared/languages'
 import { CHARACTER_MODELS } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
 import { LIVE_SERVICES } from '@/connectors/registry'
@@ -16,6 +15,7 @@ import { useSettings } from '@/stores/settings'
 import { voiceState } from '@/voice'
 import { activity } from './activity'
 import Icon from './Icon.vue'
+import { formatShortcut, isMacPlatform } from './shortcut'
 import './theme.css'
 
 const settings = useSettings()
@@ -64,6 +64,7 @@ const quotaPct = computed(() => nunchiConfig.maxPerDay > 0
   : 100)
 
 const MODE_LABEL = { active: 'Active', quiet: 'Quiet', ornamental: 'Ornamental' } as const
+const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 
 const SERVICES: { id: ConnectorService, title: string, icon: string, count: () => string }[] = [
   { id: 'mail', title: 'Gmail', icon: 'mail', count: () => `${demo.mails.length} mails` },
@@ -85,7 +86,6 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
           <span class="subtitle">YuiYumi</span>
           <span class="title">Dashboard</span>
         </h1>
-        <p class="meta">{{ persona.activeCard.name }} · {{ CHARACTER_MODELS[character.character].label }} · {{ MODE_LABEL[settings.mode] }} mode · {{ LANG_INFO[settings.lang].label }}</p>
       </header>
 
       <!-- Stat tiles -->
@@ -121,7 +121,7 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
         <section class="section dialogue">
           <h2><Icon name="chat" :size="16" /> Recent dialogue</h2>
           <div class="msgs scroll">
-            <p v-if="!dialogue.length" class="empty">No conversation yet. Hold the talk button and say hello.</p>
+            <p v-if="!dialogue.length" class="empty">No conversation yet. Hold {{ pttLabel }} or the talk button and say hello.</p>
             <div v-for="(t, i) in dialogue" :key="i" class="msg" :class="t.role">
               <span class="who">{{ t.role === 'user' ? 'You' : persona.activeCard.name }}</span>
               <span class="bubble">{{ t.text }}</span>
@@ -136,7 +136,7 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
             <div class="kv"><span>Mode</span><span class="badge" :class="settings.mode === 'active' ? 'primary' : 'mock'">{{ MODE_LABEL[settings.mode] }}</span></div>
             <div class="kv"><span>Model</span><b>{{ CHARACTER_MODELS[character.character].label }}</b></div>
             <div class="kv"><span>Character</span><b>{{ persona.activeCard.name }}</b></div>
-            <div class="kv"><span>Voice</span><b>{{ voiceState.speaking ? 'Speaking' : voiceState.vadEnabled ? 'Listening (VAD)' : 'Push-to-talk' }}</b></div>
+            <div class="kv"><span>Voice</span><b>{{ voiceState.speaking ? 'Speaking' : voiceState.vadEnabled ? 'Listening (VAD)' : `Push-to-talk (${pttLabel})` }}</b></div>
             <div class="kv"><span>Sound</span><b>{{ settings.sound ? 'On' : 'Off' }}</b></div>
           </section>
 
@@ -165,7 +165,6 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
 .page-header h1 { position: relative; margin: 0; font-weight: 400; }
 .page-header .subtitle { position: absolute; left: 0; top: 0; transform: translateY(-80%); font-size: 15px; color: var(--n300); white-space: nowrap; }
 .page-header .title { display: block; font-size: 30px; line-height: 1.2; color: var(--n900); }
-.page-header .meta { margin: 0 0 4px; font-size: 12px; color: var(--n500); text-align: right; }
 
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
 .tile {
@@ -181,8 +180,7 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
 }
 .tile:hover { border-color: rgb(34 169 210 / .3); filter: drop-shadow(0 4px 4px rgb(220 220 220 / .4)); }
 .tile:hover .t-icon { color: rgb(34 169 210 / .35); scale: 1.1; }
-.t-icon { transition: all .4s ease-in-out; }
-.t-icon { position: absolute; right: -10px; bottom: -14px; color: rgb(163 163 163 / .22); pointer-events: none; }
+.t-icon { transition: all .4s ease-in-out; position: absolute; right: -10px; bottom: -14px; color: rgb(163 163 163 / .22); pointer-events: none; }
 .t-label { font-size: 12.5px; color: var(--n500); position: relative; }
 .t-value { font-size: 28px; font-weight: 500; color: var(--n800); line-height: 1.15; position: relative; }
 .t-value small { font-size: 15px; color: var(--n400); font-weight: 400; }

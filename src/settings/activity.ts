@@ -10,9 +10,8 @@ export interface ObserverDecision { at: number, decision: string }
 export const activity = reactive({
   tasksRun: 0,
   tasksFromScreen: 0,
-  interjections: 0,
   lastDecision: null as ObserverDecision | null,
-  lastLine: null as { at: number, text: string } | null,
+  /** Bumped when the dialogue may have changed, so the dashboard re-reads it. */
   dialogueTick: 0,
 })
 
@@ -20,11 +19,7 @@ bus.on('agent:delegate', ({ origin }) => {
   activity.tasksRun++
   if (origin === 'screen') activity.tasksFromScreen++
 })
-bus.on('nunchi:interjected', () => { activity.interjections++ })
-bus.on('character:react', ({ line }) => {
-  if (line) activity.lastLine = { at: Date.now(), text: line }
-  activity.dialogueTick++
-})
+bus.on('character:react', ({ line }) => { if (line) activity.dialogueTick++ })
 bus.on('voice:transcript', () => { activity.dialogueTick++ })
 
 // A decision lands when a request finishes (inFlight -> false) or the gate drops a check.

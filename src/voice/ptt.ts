@@ -1,6 +1,8 @@
-// Push-to-talk: hold Space (outside text inputs) or the ControlBar button.
+// Push-to-talk: hold the configured shortcut (default Space) or the talk button.
 
 import { bus } from '@/core/bus'
+import { endsShortcut, hasCommandModifier, matchesShortcut, type Shortcut } from '@/settings/shortcut'
+import { useSettings } from '@/stores/settings'
 import { Recorder } from './recorder'
 import { voiceState } from './state'
 import { transcribeAndEmit, type SttContext } from './stt-client'
@@ -56,21 +58,34 @@ export function pttUp(): void {
   void transcribeAndEmit(usable ? samples : null, 'ptt', getCtx())
 }
 
-/** Installs the Space key handlers. Returns an uninstall function. */
-export function installPtt(ctx: () => SttContext): () => void {
+/**
+ * Installs the shortcut key handlers. The shortcut is read on every event, so a change in
+ * settings applies at once. Without Ctrl, Alt or Meta the shortcut is ignored while typing
+ * in an input, textarea or contenteditable. Returns an uninstall function.
+ */
+export function installPtt(ctx: () => SttContext, getShortcut: () => Shortcut = () => useSettings().pttKey): () => void {
   getCtx = ctx
-  const isSpace = (e: KeyboardEvent) => e.code === 'Space' || e.key === ' '
+  /** True while a recording was started by the keyboard, so only its key release ends it. */
+  let byKey = false
   const onDown = (e: KeyboardEvent) => {
-    if (!isSpace(e) || e.ctrlKey || e.metaKey || e.altKey || isEditableTarget(e.target)) return
+    const s = getShortcut()
+    if (!matchesShortcut(e, s)) return
+    if (!hasCommandModifier(s) && isEditableTarget(e.target)) return
     e.preventDefault()
-    if (!e.repeat) void pttDown()
+    if (e.repeat || voiceState.recording) return
+    byKey = true
+    void pttDown()
   }
   const onUp = (e: KeyboardEvent) => {
-    if (!isSpace(e) || !voiceState.recording) return
+    if (!byKey || !endsShortcut(e, getShortcut())) return
+    byKey = false
     e.preventDefault()
     pttUp()
   }
-  const onBlur = () => pttUp()
+  const onBlur = () => {
+    byKey = false
+    pttUp()
+  }
   window.addEventListener('keydown', onDown)
   window.addEventListener('keyup', onUp)
   window.addEventListener('blur', onBlur)

@@ -12,6 +12,7 @@ import { CHARACTER_MODELS } from '@/character/models'
 import { characterView } from '@/character/state'
 import { useCharacterStore } from '@/character/store'
 import Icon from '@/settings/Icon.vue'
+import { formatShortcut, isMacPlatform } from '@/settings/shortcut'
 import { useSettings } from '@/stores/settings'
 import { pttDown, pttUp, unlockAudio, voiceState } from '@/voice'
 import {
@@ -27,6 +28,7 @@ const dockV = computed(() => (assistantWindow.y + CHARACTER_H / 2 > DESKTOP_H / 
 const store = useCharacterStore()
 const settings = useSettings()
 const label = computed(() => CHARACTER_MODELS[store.character].label)
+const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 const expanded = ref(false)
 
 let drag: { px: number, py: number, x: number, y: number } | null = null
@@ -157,7 +159,7 @@ function hide() {
           type="button"
           class="ob talk"
           :class="{ on: voiceState.recording }"
-          data-tip="Hold to talk (or hold Space)"
+          :data-tip="`Hold to talk (or hold ${pttLabel})`"
           aria-label="Hold to talk"
           @pointerdown.prevent="onTalkDown"
           @pointerup="pttUp()"
