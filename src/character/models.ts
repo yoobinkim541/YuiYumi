@@ -2,6 +2,7 @@
 // public/models/<id>.bin (AES-GCM encrypted zip) and <id>-icon.png.
 
 import type { CharacterNode } from '@/core/types'
+import type { HeadPatPetting } from './live2d/head-pat'
 import { TT2_EMOTIONS, YUI_EMOTIONS, type EmotionMap } from './emotion-map'
 import { graphNodeSettings, NODE_MAP_TT2, type AnimGraph, type NodeSettings } from './node-map'
 
@@ -33,8 +34,11 @@ export interface TouchDef {
    * shares of its width (x) and height (y), the head radius as a share of its width.
    */
   head: { x: number, y: number, radius: number }
-  /** Face while petted and after poking: profile emotion labels or expression names. */
-  pet: string[]
+  /**
+   * Face while a hand is on her head, by how it pets her (just holding or pulling, slow
+   * strokes, a fast rub), and after poking: profile emotion labels or expression names.
+   */
+  pet: Record<HeadPatPetting, string[]>
   pout: string[]
 }
 
@@ -49,7 +53,13 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     emotions: TT2_EMOTIONS,
     nodes: node => NODE_MAP_TT2[node] ?? NODE_MAP_TT2.idle,
     framing: { visible: 0.5, topCut: 0.02 },
-    touch: { head: { x: 0.5, y: 0.222, radius: 0.135 }, pet: ['震惊'], pout: ['playful'] },
+    touch: {
+      head: { x: 0.5, y: 0.222, radius: 0.135 },
+      // Held: the tight wavy "uh-oh" mouth, a flinch. Slow strokes: blush over her own
+      // resting smile. Fast rub: the round comic eyes (owner's choice).
+      pet: { none: ['无语嘴'], slow: ['脸红'], fast: ['震惊'] },
+      pout: ['playful'],
+    },
   },
   yui: {
     id: 'yui',
@@ -61,7 +71,13 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
       ? graphNodeSettings(graph, node)
       : { blink: true, breath: true, lookAt: false, idleNoise: false, motion: null },
     framing: { visible: 0.5, topCut: 0.02 },
-    touch: { head: { x: 0.5, y: 0.163, radius: 0.09 }, pet: ['shy'], pout: ['볼빵빵'] },
+    touch: {
+      head: { x: 0.5, y: 0.163, radius: 0.09 },
+      // Held: frown, shrug and knit brows (a flinch). Slow strokes: squeezed >< eyes over
+      // her own mouth. Fast rub: the >< eyes plus a blushing smile and a sweat drop.
+      pet: { none: ['쓰다듬기-움찔'], slow: ['뀨잉'], fast: ['뀨잉', '쓰다듬기-헤헤'] },
+      pout: ['볼빵빵'],
+    },
   },
 }
 

@@ -10,7 +10,7 @@ import { ensureCubismCore, type CoreKind } from './core'
 import { applyAmbient, parseAmbientMotion, type AmbientMotion } from './live2d/ambient'
 import type { CoreModel } from './live2d/core-model'
 import { composeExpressions, ExpressionLayer, parseExpression } from './live2d/expressions'
-import { createHeadPat, headPatZoneContains, type HeadPatHead, type HeadPatPose } from './live2d/head-pat'
+import { createHeadPat, headPatZoneContains, softAdd, type HeadPatHead, type HeadPatPetting, type HeadPatPose } from './live2d/head-pat'
 import { pointInTriangle, TouchGestures, type TouchReaction, type TouchRegion } from './live2d/touch'
 import { applyBreath, applyIdleNoise, AutoBlink, LipSync, setMotionLoop } from './live2d/procedural'
 import { loadModelPack, type ModelPack } from './live2d/pack'
@@ -28,9 +28,8 @@ type PixiApp = any
 const FORCE = 3 // MotionPriority.FORCE
 /** Drawables fainter than this do not count as her body for hit testing. */
 const HIT_MIN_OPACITY = 0.2
-/** How long the pout face stays after poking, and the petted face after a release. */
+/** How long the pout face stays after poking. */
 const POUT_MS = 2600
-const PET_AFTERGLOW_MS = 1200
 /** Taps emit a bus reaction at most this often, so a flurry does not restart motions. */
 const TAP_REACT_COOLDOWN_MS = 2500
 
@@ -78,6 +77,8 @@ export class CubismRuntime implements CharacterRuntime {
   private touchFaceTimer: ReturnType<typeof setTimeout> | null = null
   private lastTapReactAt = -Infinity
   private lastPat: HeadPatPose | null = null
+  /** Parameter ranges for easing the head-pat pose into the angle limits; null when absent. */
+  private paramRanges = new Map<string, readonly [number, number] | null>()
 
   constructor(private readonly def: CharacterModelDef) {
     this.node = def.nodes('idle', null)
@@ -219,15 +220,29 @@ export class CubismRuntime implements CharacterRuntime {
     for (const [id, v] of this.devParams) core.setParameterValueById(id, v)
     // A hand on her head pulls it, and her body after it, on top of everything else;
     // physics runs after this hook, so hair and clothes swing with it.
+    // Each offset eases into the parameter's limit instead of being clamped at it.
     const pat = this.headPat.step(dtMs / 1000)
     this.lastPat = pat
     if (pat) {
-      core.addParameterValueById('ParamAngleX', pat.x)
-      core.addParameterValueById('ParamAngleY', pat.y)
-      core.addParameterValueById('ParamAngleZ', pat.z)
-      core.addParameterValueById('ParamBodyAngleX', pat.bodyX)
-      core.addParameterValueById('ParamBodyAngleZ', pat.bodyZ)
+      this.addEased(core, 'ParamAngleX', pat.x)
+      this.addEased(core, 'ParamAngleY', pat.y)
+      this.addEased(core, 'ParamAngleZ', pat.z)
+      this.addEased(core, 'ParamBodyAngleX', pat.bodyX)
+      this.addEased(core, 'ParamBodyAngleZ', pat.bodyZ)
     }
+  }
+
+  /** Adds `offset` to a parameter, slowing down into its range limit (see softAdd). */
+  private addEased(core: CoreModel, id: string, offset: number) {
+    if (!this.paramRanges.has(id)) {
+      const index = core.getParameterIndex(id)
+      this.paramRanges.set(id, index >= 0 && index < core.getParameterCount()
+        ? [core.getParameterMinimumValue(index), core.getParameterMaximumValue(index)] as const
+        : null)
+    }
+    const range = this.paramRanges.get(id)
+    if (!range) return
+    core.setParameterValueById(id, softAdd(core.getParameterValueById(id), offset, range[0], range[1]))
   }
 
   // ---- touch -------------------------------------------------------------------------
@@ -348,10 +363,10 @@ export class CubismRuntime implements CharacterRuntime {
     this.headPat.release()
   }
 
-  private onHeadPatChange(holding: boolean, petting: boolean) {
-    this.gestures.petting(petting, performance.now())
-    if (petting) this.setTouchFace(this.def.touch.pet)
-    else if (!holding && this.touchFace.length) this.setTouchFace(this.def.touch.pet, PET_AFTERGLOW_MS)
+  /** A hand grabbed or let go of her head, or changed how fast it pets her: her face follows. */
+  private onHeadPatChange(holding: boolean, petting: HeadPatPetting) {
+    this.gestures.petting(petting !== 'none', performance.now())
+    this.setTouchFace(holding ? this.def.touch.pet[petting] : [])
   }
 
   /** Wears `faces` (labels or expression names) over the emotion, for `ms` or until replaced. */

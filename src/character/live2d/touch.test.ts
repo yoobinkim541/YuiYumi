@@ -36,7 +36,7 @@ describe('stepSpring', () => {
 })
 
 describe('createHeadPat', () => {
-  it('follows a held drag, detects fast petting and returns to rest after release', () => {
+  it('follows a held drag, detects a fast rub and returns to rest after release', () => {
     const changes: HeadPatState[] = []
     const pat = createHeadPat({ onChange: s => changes.push(s) })
     expect(pat.press({ x: 100, y: 200 }, head, 0)).toBe(false)
@@ -48,9 +48,9 @@ describe('createHeadPat', () => {
       pat.move({ x: 100 + (i % 2 ? -30 : 30), y: 60 }, t)
       pat.step(0.05)
     }
-    expect(pat.state.petting).toBe(true)
+    expect(pat.state.petting).toBe('fast')
     pat.release()
-    expect(changes.at(-1)).toEqual({ holding: false, petting: false })
+    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none' })
     let pose = pat.step(0.016)
     expect(pose).not.toBeNull()
     for (let i = 0; i < 600 && pose; i++) pose = pat.step(0.016)
@@ -65,7 +65,7 @@ describe('createHeadPat', () => {
       pat.move({ x: 100 + i * 0.5, y: 60 }, i * 16)
       pose = pat.step(0.016)
     }
-    expect(pat.state.petting).toBe(false)
+    expect(pat.state.petting).toBe('none')
     expect(pose!.x).toBeGreaterThan(5)
     expect(pose!.bodyX).toBeGreaterThan(0)
     expect(pose!.bodyX).toBeLessThan(pose!.x)
