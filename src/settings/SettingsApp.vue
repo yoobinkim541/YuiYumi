@@ -24,7 +24,7 @@ type PageId = 'index' | 'card' | 'general' | 'voice' | 'observation' | 'connecto
 const PAGES: { id: PageId, title: string, description: string, icon: string }[] = [
   { id: 'card', title: 'Character', description: 'Model and character card', icon: 'card' },
   { id: 'general', title: 'General', description: 'Language, mode and sound', icon: 'settings' },
-  { id: 'voice', title: 'Voice input', description: 'Push-to-talk shortcut and VAD', icon: 'mic' },
+  { id: 'voice', title: 'Voice input', description: 'Push-to-talk shortcut, VAD', icon: 'mic' },
   { id: 'observation', title: 'Observation', description: 'Limits for unprompted remarks', icon: 'eye' },
   { id: 'connectors', title: 'Connectors', description: 'Mock or live data per service', icon: 'plug' },
   { id: 'about', title: 'About', description: 'Open source notices', icon: 'info' },
@@ -293,25 +293,12 @@ function toggleLive(id: ConnectorService) {
       <!-- Voice input -->
       <template v-else-if="page === 'voice'">
         <section class="section">
-          <h2>Input</h2>
-          <p class="hint">Push-to-talk records while the shortcut or the talk button is held. Voice activity detection listens hands-free.</p>
-          <div class="radio-grid">
-            <button type="button" class="radio-card" :class="{ active: !voiceState.vadEnabled }" @click="setVadEnabled(false)">
-              <b>Push-to-talk</b><span>Hold the talk button or the shortcut</span>
-            </button>
-            <button type="button" class="radio-card" :class="{ active: voiceState.vadEnabled }" :disabled="voiceState.vadLoading" @click="setVadEnabled(true)">
-              <b>Voice activity (VAD)</b><span>{{ voiceState.vadLoading ? 'Loading model…' : 'Listens when you speak' }}</span>
-            </button>
-          </div>
-          <p v-if="voiceState.error" class="error">{{ voiceState.error }}</p>
-        </section>
-        <section class="section">
           <h2>Push-to-talk shortcut</h2>
           <p class="hint">Letters and digits need Ctrl, Alt or {{ mac ? 'Cmd' : 'Win' }} so typing on the desktop is not taken over. A shortcut without those keys is ignored while you type in a text field.</p>
           <div class="row">
             <div class="txt">
-              <b>Hold to talk</b>
-              <span>{{ recording ? 'Press the new key combination. Esc cancels.' : 'Works anywhere on the desktop.' }}</span>
+              <b>Push-to-talk (default)</b>
+              <span>{{ recording ? 'Press the new key combination. Esc cancels.' : 'Hold to talk. Works anywhere on the desktop.' }}</span>
             </div>
             <div class="ptt-right">
               <span class="caps" :class="{ armed: recording }" aria-live="polite">
@@ -327,6 +314,22 @@ function toggleLive(id: ConnectorService) {
             </div>
           </div>
           <p v-if="recordError" class="error">{{ recordError }}</p>
+        </section>
+        <section class="section">
+          <h2>VAD</h2>
+          <p class="hint">Voice activity detection listens hands-free and sends what you say when you stop. Push-to-talk keeps working while it is on.</p>
+          <div class="row">
+            <div class="txt">
+              <b>Voice activity detection</b>
+              <span>{{ voiceState.vadLoading ? 'Loading model…' : voiceState.vadEnabled ? 'Listening for speech' : 'Off' }}</span>
+            </div>
+            <button
+              type="button" class="switch" :class="{ on: voiceState.vadEnabled }" :aria-pressed="voiceState.vadEnabled"
+              aria-label="Voice activity detection" :disabled="voiceState.vadLoading"
+              @click="setVadEnabled(!voiceState.vadEnabled)"
+            />
+          </div>
+          <p v-if="voiceState.error" class="error">{{ voiceState.error }}</p>
         </section>
       </template>
 
