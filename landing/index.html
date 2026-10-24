@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YUIYUMI — いつも、そばに。</title>
+  <meta name="description" content="画面を見守って、先に声をかけてくれるLive2Dコンパニオン。返信やスケジュールの下書きまで手伝います。">
+  <meta name="app-url" content="">
+  <meta property="og:title" content="YUIYUMI — いつも、そばに。">
+  <meta property="og:description" content="A little magic, in every moment.">
+  <meta property="og:image" content="assets/og.webp">
+  <link rel="icon" href="assets/thumb-eyes.webp" type="image/webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Klee+One:wght@600&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="skip">本文へ移動</a>
+
+  <div class="backdrop" aria-hidden="true">
+    <img src="assets/bg-studio.webp" alt="" width="1920" height="1081" fetchpriority="high">
+    <div class="backdrop-tint"></div>
+    <div class="petals"></div>
+  </div>
+
+  <header class="bar">
+    <a class="brand" href="#home" aria-label="YUIYUMI">
+      <img src="assets/thumb-eyes.webp" alt="" width="40" height="40">
+      <span class="brand-name">YUIYUMI</span>
+      <span class="brand-tag" data-i18n="tagline">いつも、そばに。</span>
+    </a>
+    <nav class="nav" aria-label="main">
+      <a href="#home" data-i18n="nav.home">ホーム</a>
+      <a href="#about" data-i18n="nav.about">YUIYUMIとは</a>
+      <a href="#features" data-i18n="nav.features">機能</a>
+      <a href="#gallery" data-i18n="nav.gallery">ギャラリー</a>
+      <a href="#safety" data-i18n="nav.safety">安心設計</a>
+      <a href="#faq" data-i18n="nav.faq">よくある質問</a>
+    </nav>
+    <div class="bar-end">
+      <label class="lang">
+        <span class="sr" data-i18n="langLabel">言語</span>
+        <select id="lang">
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="zh">繁體中文</option>
+          <option value="zh-cn">简体中文</option>
+        </select>
+      </label>
+      <a class="btn btn-sm btn-primary js-app" href="#try" data-i18n="cta.try">今すぐ体験する</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="home">
+      <div class="hero-copy">
+        <p class="script" data-i18n-html="hero.script">がんばる、<br>でも、ひとりじゃないよ。</p>
+        <h1 class="display">A little magic,<br>in every moment.</h1>
+        <p class="lead" data-i18n-html="hero.lead">デスクの片隅で、やさしく見守る。<br>YUIYUMIは、あなたの毎日に寄り添う<br>Live2Dコンパニオンです。</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg js-app" href="#try" data-i18n="cta.try">今すぐ体験する</a>
+          <a class="btn btn-ghost btn-lg" href="#features" data-i18n="cta.features">機能を見る</a>
+        </div>
+        <ul class="chips">
+          <li><strong data-i18n="chip.watch.t">画面を見守る</strong><span data-i18n="chip.watch.d">共有したタブだけ</span></li>
+          <li><strong data-i18n="chip.speak.t">先に声をかける</strong><span data-i18n="chip.speak.d">困ってそうな時だけ</span></li>
+          <li><strong data-i18n="chip.draft.t">下書きまで</strong><span data-i18n="chip.draft.d">返信・予定の整理</span></li>
+          <li><strong data-i18n="chip.safe.t">安心設計</strong><span data-i18n="chip.safe.d">送信・削除はしない</span></li>
+        </ul>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="bubble bubble-hero" id="bubble" role="status" aria-live="polite"></div>
+        <img class="character" id="character" src="assets/hero-bunny.webp" alt="" width="900" height="1200" fetchpriority="high">
+      </div>
+
+      <aside class="rail" aria-label="highlights">
+        <ul class="feature-cards">
+          <li><img src="assets/thumb-eyes.webp" alt="" width="360" height="220" loading="lazy"><div><strong data-i18n="fc.gaze.t">視線で追いかける</strong><span data-i18n="fc.gaze.d">カーソルを見つめます</span></div></li>
+          <li><img src="assets/thumb-tilt.webp" alt="" width="360" height="220" loading="lazy"><div><strong data-i18n="fc.speak.t">先に声をかける</strong><span data-i18n="fc.speak.d">必要な時だけ一言</span></div></li>
+          <li><img src="assets/thumb-face.webp" alt="" width="360" height="220" loading="lazy"><div><strong data-i18n="fc.emote.t">まばたき・表情</strong><span data-i18n="fc.emote.d">豊かな表情で気持ちを表現</span></div></li>
+          <li><img src="assets/thumb-rest.webp" alt="" width="360" height="220" loading="lazy"><div><strong data-i18n="fc.quiet.t">入力中は静かに</strong><span data-i18n="fc.quiet.d">タイピング中はそっと待ちます</span></div></li>
+        </ul>
+
+        <section class="panel panel-schedule" aria-labelledby="sch-title">
+          <header><h2 id="sch-title" data-i18n="sch.title">スケジュールの確認</h2><span class="sample" data-i18n="sample">サンプル</span></header>
+          <p class="panel-date" data-i18n="sch.date">今日 4月12日 (金)</p>
+          <ol class="timeline">
+            <li class="is-next"><time>10:00</time><div><strong data-i18n="sch.e1">企画会議</strong><span data-i18n="sch.e1d">あと15分で開始します</span></div></li>
+            <li><time>13:00</time><div><strong data-i18n="sch.e2">デザインレビュー</strong></div></li>
+            <li><time>15:30</time><div><strong data-i18n="sch.e3">定例ミーティング</strong></div></li>
+          </ol>
+          <p class="bubble bubble-inline" data-i18n-html="sch.say">10時から会議だよ。<br>そろそろ準備しない？</p>
+        </section>
+
+        <section class="panel panel-draft" aria-labelledby="dr-title">
+          <header><h2 id="dr-title" data-i18n="dr.title">メッセージの下書き提案</h2><span class="sample" data-i18n="sample">サンプル</span></header>
+          <p class="draft-body" id="draftText" data-i18n-html="dr.body">お疲れさまです。<br>明日の件、問題ございません。<br>よろしくお願いいたします。</p>
+          <button class="btn btn-soft" id="useDraft" type="button" data-i18n="dr.use">この文章を使う</button>
+          <p class="note" data-i18n="dr.note">送信はしません。コピーして、あなたが送ります。</p>
+        </section>
+      </aside>
+
+      <section class="strip" aria-labelledby="strip-title">
+        <h2 id="strip-title" data-i18n="strip.title">YUIYUMIと一緒に、こんな時間を。</h2>
+        <ul>
+          <li><img src="assets/thumb-eyes.webp" alt="" width="360" height="220" loading="lazy"><strong data-i18n="strip.a.t">カーソルを追いかける</strong><span data-i18n="strip.a.d">視線で反応</span></li>
+          <li><img src="assets/thumb-tilt.webp" alt="" width="360" height="220" loading="lazy"><strong data-i18n="strip.b.t">そっと見守る</strong><span data-i18n="strip.b.d">作業のじゃまをしません</span></li>
+          <li><img src="assets/thumb-face.webp" alt="" width="360" height="220" loading="lazy"><strong data-i18n="strip.c.t">表情が変わる</strong><span data-i18n="strip.c.d">うれしい・びっくり…</span></li>
+          <li><img src="assets/thumb-rest.webp" alt="" width="360" height="220" loading="lazy"><strong data-i18n="strip.d.t">入力中はそっと待つ</strong><span data-i18n="strip.d.d">集中のじゃまをしません</span></li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="block" id="about">
+      <div class="block-media"><img src="assets/scene-cat.webp" alt="" width="1600" height="900" loading="lazy"></div>
+      <div class="block-copy">
+        <h2 class="h2" data-i18n="about.h">仕事も、おしゃべりも、ひとりで抱えない。</h2>
+        <p data-i18n="about.p1">コンパニオンは話し相手になってくれるけれど、仕事は手伝ってくれません。アシスタントは仕事をしてくれるけれど、どこか他人行儀です。</p>
+        <p data-i18n="about.p2">YUIYUMIは、あなたが何をしているかを見て、声をかけるタイミングを選びます。話しかけないこと、待つことも、気配りのうち。そんな「察する力」で、毎日にそっと寄り添います。</p>
+      </div>
+    </section>
+
+    <section class="block block-flip" id="features">
+      <div class="block-copy">
+        <h2 class="h2" data-i18n="feat.h">できること</h2>
+        <ul class="feature-list">
+          <li><h3 data-i18n="feat.1.t">見る</h3><p data-i18n="feat.1.d">共有したタブの内容を読み取り、メールや予定の状況を把握します。外国語のメールは要約と翻訳つき。</p></li>
+          <li><h3 data-i18n="feat.2.t">先に声をかける</h3><p data-i18n="feat.2.d">同じ画面でしばらく手が止まっている時だけ一言。回数にも間隔にも上限があります。</p></li>
+          <li><h3 data-i18n="feat.3.t">下書きまで</h3><p data-i18n="feat.3.d">返信の下書きを作り、あなたと一緒に直せます。予定の重なりも先に教えます。</p></li>
+          <li><h3 data-i18n="feat.4.t">しずかに待つ</h3><p data-i18n="feat.4.d">入力中や話している間は声をかけません。「静かに」ボタンでいつでも静かになります。</p></li>
+        </ul>
+      </div>
+      <div class="block-media"><img src="assets/bg-studio.webp" alt="" width="1920" height="1081" loading="lazy"></div>
+    </section>
+
+    <section class="gallery" id="gallery">
+      <h2 class="h2" data-i18n="gal.h">ギャラリー</h2>
+      <p class="gallery-note" data-i18n="gal.n">コンセプトアートです。実際の画面は体験版でご覧ください。</p>
+      <div class="gallery-grid">
+        <figure><img src="assets/scene-cat.webp" alt="" width="1600" height="900" loading="lazy"><figcaption data-i18n="gal.1">窓辺のひととき</figcaption></figure>
+        <figure><img src="assets/hero-bunny.webp" alt="" width="900" height="1200" loading="lazy"><figcaption data-i18n="gal.2">そばで見守る</figcaption></figure>
+        <figure><img src="assets/bg-studio.webp" alt="" width="1920" height="1081" loading="lazy"><figcaption data-i18n="gal.3">空にひらけた部屋</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="safety" id="safety">
+      <h2 class="h2" data-i18n="safe.h">安心して任せられるように</h2>
+      <ul class="safety-list">
+        <li><h3 data-i18n="safe.1.t">送信・削除・決済はしません</h3><p data-i18n="safe.1.d">メールやメッセージを勝手に送ったり、消したり、支払ったりする機能は、そもそも作っていません。</p></li>
+        <li><h3 data-i18n="safe.2.t">書き込みは必ず確認カード</h3><p data-i18n="safe.2.d">下書きの保存など、何かを残す前には確認を出します。断れば、何も起きません。</p></li>
+        <li><h3 data-i18n="safe.3.t">見るのは選んだタブだけ</h3><p data-i18n="safe.3.d">画面共有はあなたが選んだタブ（またはウィンドウ）ひとつだけ。いつでもワンクリックで止められます。</p></li>
+        <li><h3 data-i18n="safe.4.t">画面の画像は保存しません</h3><p data-i18n="safe.4.d">共有された画面は、その場の判断に使うだけで保存しない設計です。</p></li>
+      </ul>
+    </section>
+
+    <section class="try" id="try">
+      <h2 class="h2" data-i18n="try.h">体験してみる</h2>
+      <ol class="steps">
+        <li><strong data-i18n="try.1.t">Chromeで開く</strong><span data-i18n="try.1.d">画面共有をいちばん安定して使えるのはChromeです。</span></li>
+        <li><strong data-i18n="try.2.t">共有するタブを選ぶ</strong><span data-i18n="try.2.d">デモ用のメール画面のタブを選びます。</span></li>
+        <li><strong data-i18n="try.3.t">YUIYUMIに任せる</strong><span data-i18n="try.3.d">しばらく読んでいると、声をかけてくれます。</span></li>
+      </ol>
+      <a class="btn btn-primary btn-lg js-app" id="appLink" href="#try" data-i18n="cta.try">今すぐ体験する</a>
+      <p class="note" id="appNote" data-i18n="try.note">体験版のリンクは準備中です。</p>
+    </section>
+
+    <section class="faq" id="faq">
+      <h2 class="h2" data-i18n="faq.h">よくある質問</h2>
+      <div class="faq-list">
+        <details><summary data-i18n="faq.1.q">インストールは必要ですか？</summary><p data-i18n="faq.1.a">いいえ。ブラウザだけで使えます。ダウンロードやインストールは不要です。</p></details>
+        <details><summary data-i18n="faq.2.q">メールを勝手に送ってしまうことはありますか？</summary><p data-i18n="faq.2.a">ありません。送信・削除・決済の機能はありません。下書きを作り、確認カードを承認した時だけ保存します。</p></details>
+        <details><summary data-i18n="faq.3.q">どの画面を見ているのですか？</summary><p data-i18n="faq.3.a">あなたが共有したタブ（またはウィンドウ）ひとつだけです。共有はいつでも止められ、画面の画像は保存しない設計です。</p></details>
+        <details><summary data-i18n="faq.4.q">対応言語は？</summary><p data-i18n="faq.4.a">日本語・韓国語・中国語（繁体字）に対応しています。外国語のメールは翻訳と要約もできます。</p></details>
+        <details><summary data-i18n="faq.5.q">どのブラウザで使えますか？</summary><p data-i18n="faq.5.a">Chromeでの利用をおすすめします。他のブラウザでは画面共有が使えない場合があり、その時はデモ用の場面で体験できます。</p></details>
+        <details><summary data-i18n="faq.6.q">表示されている予定やメールは本物ですか？</summary><p data-i18n="faq.6.a">いいえ。体験版の内容はすべてダミーデータです。</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p data-i18n="foot.a">ハッカソン向けのプロトタイプです。画面内のスケジュールやメッセージはすべてダミーデータです。</p>
+    <p data-i18n="foot.b">オープンソースの AIRI（MIT License）をベースにしています。</p>
+    <p>© YUIYUMI</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
