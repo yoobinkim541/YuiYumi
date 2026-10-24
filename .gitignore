@@ -16,3 +16,14 @@ credentials*.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Build / deps
+node_modules/
+dist/
+.vercel/
+crates/**/target/
+*.tsbuildinfo
+
+# Not redistributed from this repo: Cubism Core and model assets are placed at build time
+public/vendor/
+public/models/

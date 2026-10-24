@@ -1,0 +1,157 @@
+// Wire contracts between the browser and the api/ functions. Provider-neutral: no
+// Anthropic, Deepgram or ElevenLabs types cross this boundary.
+
+import { z } from 'zod'
+import { LANGS } from './languages'
+
+export const LangSchema = z.enum(LANGS)
+
+export const EMOTIONS = ['neutral', 'happy', 'thinking', 'surprised', 'sorry', 'focused'] as const
+export const EmotionSchema = z.enum(EMOTIONS)
+export type Emotion = z.infer<typeof EmotionSchema>
+
+// ---------------------------------------------------------------------------
+// Observer (Haiku): screen frame + state -> react / delegate_task
+
+export const ObserveStateSchema = z.object({
+  activeApp: z.string().nullable(),
+  windowTitle: z.string().nullable(),
+  dwellSec: z.number(),
+  minutesSinceLastInterjection: z.number().nullable(),
+  interjectionsToday: z.number().int(),
+  typing: z.boolean(),
+  userSpeaking: z.boolean(),
+})
+export type ObserveState = z.infer<typeof ObserveStateSchema>
+
+export const DialogueTurnSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string(),
+})
+export type DialogueTurn = z.infer<typeof DialogueTurnSchema>
+
+export const ObserveRequestSchema = z.object({
+  frame: z.object({
+    jpegBase64: z.string(),
+    width: z.number().int(),
+    height: z.number().int(),
+  }).nullable(),
+  state: ObserveStateSchema,
+  /** Present when the user just spoke (STT result). */
+  utterance: z.string().optional(),
+  lang: LangSchema,
+  recent: z.array(DialogueTurnSchema).max(20),
+  sessionId: z.string(),
+})
+export type ObserveRequest = z.infer<typeof ObserveRequestSchema>
+
+/** Tool input schemas exposed to the observer model. */
+export const ReactInputSchema = z.object({
+  emotion: EmotionSchema,
+  line: z.string().max(200).optional(),
+  motion: z.string().optional(),
+})
+export const DelegateTaskInputSchema = z.object({
+  request: z.string().max(1000),
+})
+
+export const ObserveActionSchema = z.discriminatedUnion('type', [
+  ReactInputSchema.extend({ type: z.literal('react') }),
+  DelegateTaskInputSchema.extend({ type: z.literal('delegate_task') }),
+])
+export type ObserveAction = z.infer<typeof ObserveActionSchema>
+
+export const ObserveResponseSchema = z.object({
+  actions: z.array(ObserveActionSchema),
+})
+export type ObserveResponse = z.infer<typeof ObserveResponseSchema>
+
+// ---------------------------------------------------------------------------
+// Agent (Sonnet): one model call per request. The browser runs tools and loops.
+
+export type DelegateOrigin = 'utterance' | 'screen'
+
+export const AgentStepRequestSchema = z.object({
+  lang: LangSchema,
+  origin: z.enum(['utterance', 'screen']),
+  /** Anthropic-shaped message params, passed through as-is. */
+  messages: z.array(z.unknown()).min(1),
+  sessionId: z.string(),
+})
+export type AgentStepRequest = z.infer<typeof AgentStepRequestSchema>
+
+export interface AgentStepResponse {
+  /** Anthropic-shaped content blocks of the assistant turn. */
+  content: unknown[]
+  stopReason: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Connectors: one registry of operations, exposed to the agent as tools.
+
+export type ConnectorService = 'mail' | 'calendar' | 'drive' | 'slack' | 'discord'
+export type ConnectorGrade = 'read' | 'write'
+
+export interface ConnectorOpSpec<I extends z.ZodType = z.ZodType> {
+  name: string
+  service: ConnectorService
+  grade: ConnectorGrade
+  description: string
+  input: I
+}
+
+const op = <I extends z.ZodType>(s: ConnectorOpSpec<I>) => s
+
+/** No send or delete operation exists, by design (AC-6). */
+export const CONNECTOR_OPS = [
+  op({ name: 'mail_list', service: 'mail', grade: 'read', description: 'List inbox messages (newest first).', input: z.object({ limit: z.number().int().min(1).max(50).optional() }) }),
+  op({ name: 'mail_read', service: 'mail', grade: 'read', description: 'Read one message by id.', input: z.object({ id: z.string() }) }),
+  op({ name: 'mail_create_draft', service: 'mail', grade: 'write', description: 'Save a reply draft. Never sends.', input: z.object({ replyToId: z.string().optional(), to: z.string(), subject: z.string(), body: z.string() }) }),
+  op({ name: 'calendar_list', service: 'calendar', grade: 'read', description: 'List events in a date range (ISO dates).', input: z.object({ from: z.string(), to: z.string() }) }),
+  op({ name: 'calendar_conflicts', service: 'calendar', grade: 'read', description: 'Find overlapping events in a date range.', input: z.object({ from: z.string(), to: z.string() }) }),
+  op({ name: 'calendar_create_event', service: 'calendar', grade: 'write', description: 'Create a calendar event.', input: z.object({ title: z.string(), start: z.string(), end: z.string() }) }),
+  op({ name: 'slack_channels', service: 'slack', grade: 'read', description: 'List connected Slack channels.', input: z.object({}) }),
+  op({ name: 'slack_read', service: 'slack', grade: 'read', description: 'Read recent messages of a Slack channel.', input: z.object({ channelId: z.string(), limit: z.number().int().min(1).max(50).optional() }) }),
+  op({ name: 'slack_draft_reply', service: 'slack', grade: 'write', description: 'Put a reply into the Slack composer as a draft. Never posts.', input: z.object({ channelId: z.string(), text: z.string() }) }),
+  op({ name: 'discord_channels', service: 'discord', grade: 'read', description: 'List connected Discord channels.', input: z.object({}) }),
+  op({ name: 'discord_read', service: 'discord', grade: 'read', description: 'Read recent messages of a Discord channel.', input: z.object({ channelId: z.string(), limit: z.number().int().min(1).max(50).optional() }) }),
+  op({ name: 'drive_search', service: 'drive', grade: 'read', description: 'Search files by keyword.', input: z.object({ query: z.string() }) }),
+  op({ name: 'drive_read', service: 'drive', grade: 'read', description: 'Read a file by id.', input: z.object({ id: z.string() }) }),
+] as const
+
+export type ConnectorOpName = (typeof CONNECTOR_OPS)[number]['name']
+export const CONNECTOR_OP_NAMES = CONNECTOR_OPS.map(o => o.name) as ConnectorOpName[]
+export const getOpSpec = (name: string) => CONNECTOR_OPS.find(o => o.name === name)
+
+export const LiveConnectorRequestSchema = z.object({
+  op: z.string(),
+  input: z.unknown(),
+  sessionId: z.string(),
+})
+
+// ---------------------------------------------------------------------------
+// Voice. STT: the browser POSTs a 16 kHz mono WAV body to /api/stt?lang=<Lang>.
+
+export const TranscriptSchema = z.object({
+  text: z.string(),
+  confidence: z.number().nullable(),
+  lang: LangSchema,
+})
+export type Transcript = z.infer<typeof TranscriptSchema>
+
+/** TTS: POST JSON to /api/tts, response body is audio/mpeg. */
+export const SpeechRequestSchema = z.object({
+  text: z.string().min(1).max(500),
+  lang: LangSchema,
+  emotion: EmotionSchema.optional(),
+  sessionId: z.string(),
+})
+export type SpeechRequest = z.infer<typeof SpeechRequestSchema>
+
+// ---------------------------------------------------------------------------
+
+export interface ApiError {
+  error: string
+  /** `budget` means the daily or session cap was reached; the client falls back to prepared lines. */
+  code?: 'budget' | 'bad_request' | 'provider' | 'unconfigured'
+}

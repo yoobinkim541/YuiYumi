@@ -1,0 +1,9 @@
+packages:
+  - "."
+onlyBuiltDependencies:
+  - cubism-web-batched-renderer
+  - sharp
+  - esbuild
+  - onnxruntime-web
+  - onnxruntime-node
+  - protobufjs
