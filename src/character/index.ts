@@ -29,6 +29,12 @@ export function initCharacter(): void {
       mouth: (open: number | null) => bus.emit('character:mouth', open === null ? null : { open }),
       bubble: (text: string, ttlMs?: number) => bus.emit('bubble', { text, ttlMs }),
       hit: (x: number, y: number) => characterHitTest(x, y),
+      param: (id: string, value: number | null) => {
+        const m = (current as { devParams?: Map<string, number> } | null)?.devParams
+        if (!m) return
+        if (value === null) m.delete(id)
+        else m.set(id, value)
+      },
       debug: (ids?: string[]) => (current as { debugState?: (ids?: string[]) => unknown } | null)?.debugState?.(ids),
     }
   }

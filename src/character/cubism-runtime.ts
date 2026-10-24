@@ -49,6 +49,8 @@ export class CubismRuntime implements CharacterRuntime {
   private container: HTMLElement | null = null
   private resizeObserver: ResizeObserver | null = null
   private baseSize = { w: 1, h: 1 }
+  /** Dev-only parameter overrides, applied every frame. */
+  readonly devParams = new Map<string, number>()
   private destroyed = false
   private core: CoreKind | null = null
 
@@ -212,6 +214,8 @@ export class CubismRuntime implements CharacterRuntime {
     if (this.node.idleNoise) applyIdleNoise(core, t)
     if (this.node.blink) this.blink.apply(core, dtMs)
     this.lipSync.apply(core, dtMs)
+    // Dev-only parameter overrides (window.__yui.param) for trying out faces.
+    for (const [id, v] of this.devParams) core.setParameterValueById(id, v)
     // A hand on her head pulls it, and her body after it, on top of everything else;
     // physics runs after this hook, so hair and clothes swing with it.
     const pat = this.headPat.step(dtMs / 1000)
