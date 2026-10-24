@@ -8,7 +8,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const run = (cmd, args) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit' })
+// Windows resolves pnpm only through the shell (pnpm.cmd).
+const run = (cmd, args) => execFileSync(cmd, args, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' })
 
 run('node', [join(root, 'src-tauri', 'scripts', 'icons.mjs')])
 const configs = []

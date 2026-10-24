@@ -11,7 +11,7 @@ import sharp from 'sharp'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const icons = join(root, 'src-tauri', 'icons')
-const tauri = (...args) => execFileSync('pnpm', ['exec', 'tauri', ...args], { cwd: root, stdio: 'inherit' })
+const tauri = (...args) => execFileSync('pnpm', ['exec', 'tauri', ...args], { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' })
 
 const BUBBLE = 'M8 10h32a6 6 0 0 1 6 6v14a6 6 0 0 1-6 6H22l-9 8v-8H8a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z'
 
