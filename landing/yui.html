@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>유이 · YUIYUMI</title>
 <meta name="description" content="차분하고 다정한 여우귀 언니, 유이를 소개해요.">
-<meta name="app-url" content="">
+<meta name="app-url" content="https://yuiyumi-seven.vercel.app">
 <meta property="og:title" content="유이 · YUIYUMI">
 <meta property="og:description" content="차분하고 다정한 여우귀 언니, 유이를 소개해요.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="YUIYUMI">
 <meta property="og:url" content="https://yuiyumi.vercel.app/yui">
-<meta property="og:image" content="https://yuiyumi.vercel.app/assets/og.jpg">
+<meta property="og:image" content="https://yuiyumi.vercel.app/assets/og-v2.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="유이와 유미가 나란히 웃고 있는 YUIYUMI 랜딩 화면">
+<meta property="og:image:alt" content="“언제나, 너의 곁에” 문구와 나란히 웃는 유이와 유미">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://yuiyumi.vercel.app/assets/og.jpg">
+<meta name="twitter:image" content="https://yuiyumi.vercel.app/assets/og-v2.jpg">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
@@ -29,7 +29,7 @@
 <style>
 body{margin:0;background:#FFF4FA}
 a{color:#B0306A;text-decoration:none}a:hover{color:#8A1F52}
-.yui-hero{background-image:linear-gradient(90deg,rgba(255,244,250,0.92) 0%,rgba(255,244,250,0.6) 40%,rgba(255,244,250,0) 70%),url(/assets/yui-studio.webp);background-size:cover;background-position:center}
+.yui-hero{background-image:linear-gradient(90deg,rgba(255,244,250,0.85) 0%,rgba(255,244,250,0.45) 32%,rgba(255,244,250,0) 55%),url(/assets/sd/edited-959f092c.webp);background-size:cover;background-position:70% center}
 </style>
 <style>
 #leave{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#FDF0F4;opacity:0;pointer-events:none;transition:opacity .9s ease,backdrop-filter .9s ease;font-family:'Gowun Dodum',sans-serif;font-size:18px;color:#C2416A}
@@ -52,19 +52,16 @@ body.leaving > :not(#leave):not(script){filter:blur(6px)}
 <body>
 <div style="font-family: 'Noto Sans KR', sans-serif; color: #2D1A2A; background: #FFF4FA; min-height: 100vh; overflow: hidden">
 
-<section class="yui-hero" style="position: relative; min-height: 760px">
+<section class="yui-hero" style="position: relative; height: 100vh; min-height: 520px; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between">
   <header style="max-width: 1360px; width: 100%; margin: 0 auto; box-sizing: border-box; padding: 20px 32px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; position: relative; z-index: 2">
     <a href="/" style="min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 20px; border-radius: 999px; background: rgba(255,255,255,0.9); color: #2D1A2A; font-weight: 700">← YUIYUMI 홈</a>
     <a href="/yumi" style="min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 20px; border-radius: 999px; background: rgba(255,255,255,0.9); color: #2D1A2A">유미 보러 가기 →</a>
   </header>
-  <div style="max-width: 1360px; margin: 0 auto; padding: 40px 32px 0; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; position: relative; z-index: 2">
-    <div style="flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px">
+  <div style="max-width: 1360px; width: 100%; margin: 0 auto; box-sizing: border-box; padding: 0 32px; position: relative; z-index: 2">
+    <div style="max-width: 560px; display: flex; flex-direction: column; gap: 10px; padding-bottom: clamp(24px, 8vh, 80px)">
       <span style="align-self: flex-start; padding: 6px 14px; border-radius: 999px; background: #C23A78; color: #FFFFFF; font-size: 13px; font-weight: 700">여우 · 다정한 언니</span>
-      <h1 style="margin: 0; font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 120px; line-height: 1">Yui <span style="font-family: 'Gowun Dodum', sans-serif; font-size: 48px; color: #C23A78">유이</span></h1>
-      <p style="margin: 0; font-family: 'Nanum Pen Script', cursive; font-size: 40px; color: #6A3C58">"괜찮아, 하나씩 같이 하자."</p>
-    </div>
-    <div style="flex: 1 1 420px; min-width: 0; display: flex; justify-content: center">
-      <img src="/assets/yui-cutout.webp" alt="벚꽃 기모노를 입고 웃는 여우귀 소녀 유이" style="height: 680px; max-width: 100%; width: auto; object-fit: contain; object-position: top; display: block">
+      <h1 style="margin: 0; font-family: 'DM Serif Display', serif; font-weight: 400; font-size: clamp(72px, 12vh, 120px); line-height: 1">Yui <span style="font-family: 'Gowun Dodum', sans-serif; font-size: clamp(32px, 4.8vh, 48px); color: #C23A78">유이</span></h1>
+      <p style="margin: 0; font-family: 'Nanum Pen Script', cursive; font-size: clamp(26px, 4vh, 40px); color: #6A3C58">"괜찮아, 하나씩 같이 하자."</p>
     </div>
   </div>
 </section>
