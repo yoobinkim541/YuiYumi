@@ -13,6 +13,8 @@ export type StudioStatus =
 export type PreviewState =
   | { kind: 'project', projectId: string, entry: string, seq: number, srcdoc: string }
   | { kind: 'url', url: string, seq: number }
+  /** Our YouTube page: home grid, or a playing curated video. */
+  | { kind: 'youtube', videoId: string | null, query: string, seq: number }
 
 const storage = typeof localStorage === 'undefined' ? undefined : localStorage
 
@@ -175,7 +177,7 @@ export async function showPreview(projectId: string, entry = 'index.html'): Prom
 export function reloadPreview(): void {
   const pv = studio.preview
   if (!pv) return
-  if (pv.kind === 'url') { studio.preview = { ...pv, seq: ++previewSeq }; return }
+  if (pv.kind === 'url' || pv.kind === 'youtube') { studio.preview = { ...pv, seq: ++previewSeq }; return }
   void showPreview(pv.projectId, pv.entry)
 }
 
@@ -183,6 +185,12 @@ export function reloadPreview(): void {
 export function showUrl(url: string): void {
   studio.previewErrors = []
   studio.preview = { kind: 'url', url, seq: ++previewSeq }
+}
+
+/** Shows the YouTube page; a query or video id picks what plays. */
+export function showYoutube(videoId: string | null, query = ''): void {
+  studio.previewErrors = []
+  studio.preview = { kind: 'youtube', videoId, query, seq: ++previewSeq }
 }
 
 export function previewSeqOf(): number {

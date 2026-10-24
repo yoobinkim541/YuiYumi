@@ -2,12 +2,14 @@
 // Browser: runs studio projects in a sandboxed iframe (srcdoc, opaque origin, no network) and
 // can try to open a web address (most real sites refuse to be framed). See src/desktop/studio.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import type { Lang } from '@shared/languages'
 import { useSettings } from '@/stores/settings'
 import { previewAddress } from '../studio/executor'
 import { isPreviewMessage, PREVIEW_SANDBOX } from '../studio/srcdoc'
-import { reloadPreview, showPreview, showUrl, studio } from '../studio/state'
+import { reloadPreview, showPreview, showUrl, showYoutube, studio } from '../studio/state'
 import { studioStrings } from '../studio/strings'
 import { getProject } from '../studio/vfs'
+import { embedUrl, matchVideo, thumbUrl, TUBE_VIDEOS } from '../studio/youtube'
 import { setWindowTitle } from '../windows'
 
 const settings = useSettings()
@@ -20,9 +22,32 @@ const address = computed(() => {
   const p = pv.value
   if (!p) return ''
   if (p.kind === 'url') return p.url
+  if (p.kind === 'youtube') return p.videoId ? `youtube.com/watch?v=${p.videoId}` : p.query ? `youtube.com/results?search_query=${p.query}` : 'youtube.com'
   return project.value ? previewAddress(project.value, p.entry) : ''
 })
-const pageTitle = computed(() => project.value?.name ?? (pv.value?.kind === 'url' ? address.value : ''))
+const tube = computed(() => (pv.value?.kind === 'youtube' ? pv.value : null))
+const playing = computed(() => (tube.value?.videoId ? TUBE_VIDEOS.find(v => v.id === tube.value!.videoId) ?? { id: tube.value.videoId, title: 'YouTube', channel: '' } : null))
+const pageTitle = computed(() => project.value?.name ?? (tube.value ? (playing.value?.title ?? 'YouTube') : pv.value?.kind === 'url' ? address.value : ''))
+
+const TUBE_TEXT: Record<Lang, { search: string, forYou: string, open: string, noMatch: string, upNext: string }> = {
+  'en': { search: 'Search', forYou: 'Recommended', open: 'Open on youtube.com', noMatch: 'No exact match in this demo. Here are some picks.', upNext: 'Up next' },
+  'ja': { search: '検索', forYou: 'おすすめ', open: 'youtube.com で開く', noMatch: 'このデモでは見つかりませんでした。おすすめをどうぞ。', upNext: '次の動画' },
+  'ko': { search: '검색', forYou: '추천', open: 'youtube.com에서 열기', noMatch: '이 데모에서는 딱 맞는 영상이 없어요. 추천 영상을 골라 보세요.', upNext: '다음 동영상' },
+  'zh-Hans': { search: '搜索', forYou: '推荐', open: '在 youtube.com 打开', noMatch: '本演示中没有完全匹配的视频，看看推荐吧。', upNext: '接下来播放' },
+  'zh-Hant': { search: '搜尋', forYou: '推薦', open: '在 youtube.com 開啟', noMatch: '本示範中沒有完全符合的影片，看看推薦吧。', upNext: '接下來播放' },
+}
+const tt = computed(() => TUBE_TEXT[settings.lang] ?? TUBE_TEXT.en)
+const tubeQuery = ref('')
+watch(() => tube.value?.seq, () => { tubeQuery.value = tube.value?.query ?? '' }, { immediate: true })
+function tubeSearch() {
+  const q = tubeQuery.value.trim()
+  showYoutube(q ? matchVideo(q)?.id ?? null : null, q)
+}
+function openRealYoutube() {
+  const t = tube.value
+  const url = t?.videoId ? `https://www.youtube.com/watch?v=${t.videoId}` : t?.query ? `https://www.youtube.com/results?search_query=${encodeURIComponent(t.query)}` : 'https://www.youtube.com'
+  window.open(url, '_blank', 'noopener')
+}
 
 const editing = ref(false)
 const draft = ref('')
@@ -107,6 +132,42 @@ watch(pageTitle, t => setWindowTitle('browser', t ? `${t} — Browser` : 'Browse
         allow=""
         :title="pageTitle"
       />
+      <div v-else-if="tube" class="yt">
+        <div class="yt-top">
+          <div class="yt-logo"><span class="yt-play" />YouTube</div>
+          <form class="yt-search" @submit.prevent="tubeSearch">
+            <input v-model="tubeQuery" :placeholder="tt.search" spellcheck="false" data-no-drag>
+            <button type="submit" :aria-label="tt.search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg></button>
+          </form>
+          <button type="button" class="yt-open" @click="openRealYoutube">{{ tt.open }}</button>
+        </div>
+        <div v-if="playing" class="yt-watch">
+          <div class="yt-player">
+            <!-- Cross-origin frame: the capture shows the title card underneath instead. -->
+            <div class="yt-cap">▶ {{ playing.title }}</div>
+            <iframe
+              :key="tube.seq" class="yt-frame" data-no-capture :src="embedUrl(playing.id)" :title="playing.title"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+            />
+          </div>
+          <div class="yt-meta"><b>{{ playing.title }}</b><span>{{ playing.channel }}</span></div>
+          <p class="yt-h">{{ tt.upNext }}</p>
+          <div class="yt-row">
+            <button v-for="v in TUBE_VIDEOS.filter(x => x.id !== playing!.id).slice(0, 6)" :key="v.id" type="button" class="yt-card sm" @click="showYoutube(v.id)">
+              <img :src="thumbUrl(v.id)" alt="" crossorigin="anonymous"><b>{{ v.title }}</b><span>{{ v.channel }}</span>
+            </button>
+          </div>
+        </div>
+        <div v-else class="yt-home">
+          <p v-if="tube.query" class="yt-note">{{ tt.noMatch }}</p>
+          <p class="yt-h">{{ tt.forYou }}</p>
+          <div class="yt-grid">
+            <button v-for="v in TUBE_VIDEOS" :key="v.id" type="button" class="yt-card" @click="showYoutube(v.id)">
+              <img :src="thumbUrl(v.id)" alt="" crossorigin="anonymous"><b>{{ v.title }}</b><span>{{ v.channel }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <template v-else-if="pv?.kind === 'url'">
         <iframe
           ref="frame"
@@ -177,4 +238,32 @@ watch(pageTitle, t => setWindowTitle('browser', t ? `${t} — Browser` : 'Browse
 .empty svg { width: 80px; height: 80px; stroke: #c7c7cc; stroke-width: 2.5; fill: none; margin-bottom: 10px; }
 .e1 { margin: 0; font-size: 19px; font-weight: 600; color: #6e6e73; }
 .e2 { margin: 6px 0 0; font-size: 15px; }
+.yt { position: absolute; inset: 0; overflow-y: auto; background: #fff; font-family: Roboto, system-ui, -apple-system, sans-serif; color: #0f0f0f; }
+.yt-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 18px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #eee; }
+.yt-logo { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 19px; letter-spacing: -0.04em; }
+.yt-play { width: 30px; height: 21px; border-radius: 6px; background: #ff0033; position: relative; }
+.yt-play::after { content: ''; position: absolute; left: 12px; top: 6px; border: 5px solid transparent; border-left: 8px solid #fff; border-right: 0; }
+.yt-search { flex: 1; max-width: 540px; margin: 0 auto; display: flex; height: 38px; }
+.yt-search input { flex: 1; min-width: 0; border: 1px solid #ccc; border-right: 0; border-radius: 20px 0 0 20px; padding: 0 16px; font: inherit; font-size: 15px; outline: none; }
+.yt-search input:focus { border-color: #1c62b9; }
+.yt-search button { width: 60px; border: 1px solid #ccc; border-radius: 0 20px 20px 0; background: #f8f8f8; cursor: pointer; }
+.yt-search svg { width: 20px; height: 20px; stroke: #0f0f0f; stroke-width: 1.8; fill: none; }
+.yt-open { border: 0; border-radius: 18px; padding: 8px 14px; background: #f2f2f2; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.yt-open:hover { background: #e5e5e5; }
+.yt-home, .yt-watch { padding: 18px 22px 30px; }
+.yt-h { margin: 6px 0 12px; font-size: 18px; font-weight: 700; }
+.yt-note { margin: 0 0 8px; color: #606060; font-size: 14px; }
+.yt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px 14px; }
+.yt-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.yt-card { display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; text-align: left; font: inherit; cursor: pointer; color: inherit; }
+.yt-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: #eee; }
+.yt-card b { font-size: 14px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.yt-card span { font-size: 12.5px; color: #606060; }
+.yt-card:hover img { filter: brightness(0.92); }
+.yt-player { position: relative; width: 100%; max-width: 980px; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; }
+.yt-cap { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 22px; font-weight: 600; padding: 20px; text-align: center; }
+.yt-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-meta { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 18px; }
+.yt-meta b { font-size: 19px; }
+.yt-meta span { color: #606060; font-size: 14px; }
 </style>

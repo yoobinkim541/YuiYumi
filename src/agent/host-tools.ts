@@ -67,6 +67,18 @@ async function openTab(url: string, deps: HostToolDeps): Promise<ToolOutcome> {
   return { ok: true, data: { opened: url } }
 }
 
+/** Opens our YouTube page in the virtual Browser app and plays the best curated match. */
+async function openVirtualYoutube(videoId: string | null, query: string): Promise<ToolOutcome> {
+  const [{ matchVideo, TUBE_VIDEOS }, { showYoutube }, { showStudioWindow }] = await Promise.all([
+    import('@/desktop/studio/youtube'), import('@/desktop/studio/state'), import('@/desktop/studio/stage'),
+  ])
+  const known = videoId ? TUBE_VIDEOS.find(v => v.id === videoId) : undefined
+  const pick = known ?? (query ? matchVideo(query) : null)
+  showYoutube(videoId ?? pick?.id ?? null, query)
+  showStudioWindow('browser')
+  return { ok: true, data: { opened: 'YouTube in the virtual browser', playing: pick?.title ?? (videoId ? videoId : null), note: pick || videoId ? undefined : 'Showing the YouTube home page; no search is available, so name a song or topic to play.' } }
+}
+
 export const webHostTools: HostTools = {
   context: async () => ({ kind: 'web' }),
   async run(name, input, deps) {
@@ -83,9 +95,13 @@ export const webHostTools: HostTools = {
       case 'open_url': {
         const url = webUrl(String(input.url))
         if (!url) return { ok: false, error: 'Only http and https web addresses can be opened.' }
+        // YouTube plays inside the virtual PC's browser (its embed player can be framed).
+        const yt = (await import('@/desktop/studio/youtube')).parseYoutubeUrl(url)
+        if (yt) return openVirtualYoutube(yt.videoId, yt.query)
         return openTab(url, deps)
       }
       case 'open_app': {
+        if ((await import('@/desktop/studio/youtube')).isYoutubeAppName(String(input.name))) return openVirtualYoutube(null, '')
         const id = virtualAppFor(String(input.name))
         if (!id) return { ok: false, error: `"${String(input.name)}" is not on this virtual computer (mail, calendar, slack, discord, drive, settings, dashboard). ${NEEDS_DESKTOP}` }
         focusWindow(id)
