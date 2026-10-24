@@ -151,7 +151,10 @@ try {
   await reader.cancel().catch(() => {})
   await rt.close()
   await closeProxy()
-  rmSync(tmp, { recursive: true, force: true })
+  // Windows: an agent child process can still hold the project folder as its cwd; the temp
+  // folder is then left for the OS to clean instead of failing a passing run.
+  try { rmSync(tmp, { recursive: true, force: true }) }
+  catch (e) { console.warn(`[smoke] temp folder not removed: ${(e as Error).message}`) }
 }
 console.log(failed ? '[smoke] FAIL' : '[smoke] PASS')
 process.exit(failed ? 1 : 0)

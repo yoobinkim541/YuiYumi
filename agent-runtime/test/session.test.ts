@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { Options, PermissionResult, Query, SDKMessage, SDKUserMessage, query } from '@anthropic-ai/claude-agent-sdk'
 import { describe, expect, it } from 'vitest'
 import { loadConfig } from '../src/config.ts'
@@ -69,7 +70,7 @@ describe('AgentSession', () => {
     expect(o.env?.CLAUDE_CODE_SUBAGENT_MODEL).toBe('claude-sonnet-5-5')
     expect(o.env?.ANTHROPIC_SMALL_FAST_MODEL).toBe('claude-haiku-5-5')
     expect(o.env?.ANTHROPIC_API_KEY).toBe('test-key')
-    expect(o.env?.CLAUDE_CONFIG_DIR).toBe('/tmp/yy-agent-test/claude')
+    expect(o.env?.CLAUDE_CONFIG_DIR).toBe(path.join('/tmp/yy-agent-test', 'claude'))
     s.close()
   })
 
