@@ -261,6 +261,7 @@ pub async fn endpoint(app: AppHandle) -> Result<Endpoint, String> {
 fn stop_proc(p: &mut Proc) {
     // Closing stdin and SIGTERM both make the runtime close its sessions and exit.
     drop(p.stdin.take());
+    #[cfg(unix)]
     if let Ok(pid) = i32::try_from(p.child.id()) {
         unsafe {
             libc::kill(pid, libc::SIGTERM);
