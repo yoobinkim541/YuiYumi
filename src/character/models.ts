@@ -30,7 +30,7 @@ const base = `${import.meta.env.BASE_URL}models/`
 export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
   tt2: {
     id: 'tt2',
-    label: 'TT2.0',
+    label: 'Yumi',
     pack: `${base}tt2.bin`,
     icon: `${base}tt2-icon.png`,
     emotions: TT2_EMOTIONS,
