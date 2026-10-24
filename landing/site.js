@@ -68,4 +68,34 @@
     appLink.setAttribute('aria-disabled', 'true');
     appLink.addEventListener('click', (e) => e.preventDefault());
   }
+
+  // In-page links scroll there smoothly and keep the address bar clean (no #section).
+  const headerOffset = () => ($('header')?.offsetHeight || 0) + 12;
+  const scrollToId = (id, smooth) => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const start = window.scrollY;
+    const y = id === 'top' ? 0 : el.getBoundingClientRect().top + window.scrollY - headerOffset();
+    const top = Math.max(y, 0);
+    window.scrollTo({ top, behavior: smooth && !reduceMotion ? 'smooth' : 'auto' });
+    // Some embedded or throttled views never animate a smooth scroll; land there anyway.
+    if (smooth) setTimeout(() => { if (Math.abs(window.scrollY - top) > 4 && window.scrollY === start) window.scrollTo(0, top); }, 700);
+    return true;
+  };
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (scrollToId(decodeURIComponent(a.getAttribute('href').slice(1)), true)) e.preventDefault();
+  });
+  // Arriving with a hash (e.g. /#download from a character page): drop it, then scroll there.
+  const dropHash = () => {
+    if (!location.hash) return;
+    const id = decodeURIComponent(location.hash.slice(1));
+    history.replaceState(null, '', location.pathname + location.search);
+    return id;
+  };
+  const arrived = dropHash();
+  if (arrived) window.addEventListener('load', () => scrollToId(arrived, false), { once: true });
+  // A typed or pasted #section on this page: same treatment.
+  window.addEventListener('hashchange', () => { const id = dropHash(); if (id) scrollToId(id, true); });
 })();
