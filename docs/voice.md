@@ -12,7 +12,7 @@ InputSource
 
 - **데모 기본값은 스페이스바 말하기.** 현장은 소음이 많아 VAD가 오작동하기 쉽다. VAD는 토글 옵션.
 - 웹: 브라우저 키 이벤트 + `MediaRecorder`. VAD는 `@ricky0123/vad-web`(Silero 기반) 사용 가능.
-- Tauri: 전역 단축키 플러그인으로 앱이 비활성일 때도 수신.
+- 웹 전용이므로 스페이스바 입력은 페이지 포커스 상태에서만 동작한다(텍스트 입력 중에는 무시).
 - VAD 파라미터(초안): 발화 시작 전 300ms pre-roll, 침묵 600ms 지속 시 발화 종료.
 - 눈치 게이트는 두 모드 모두에서 **사용자가 말하는 중이면 끼어들지 않는다**.
 - "조용히"·"관상용" 모드에서는 화면 캡처를 하지 않는다. 이때 말하기 버튼으로 들어온 발화를 STT가 한 글자 이상 인식하면 모드가 해제되고, 인식 결과가 비면 모드를 유지한다(`docs/spec.md` 눈치 엔진 참조).
@@ -38,7 +38,7 @@ InputSource
 - **ElevenLabs**를 TTS로 사용한다. STT는 **Deepgram**(Nova-3)을 사용한다. 저지연 모델 우선.
 - 템플릿 후보는 `elevenlabs/elevenlabs-nextjs-starter`와 `elevenlabs/examples`의 `text-to-speech/nextjs/quickstart/example`이다.
 - 다섯 언어의 보이스 품질은 모델과 보이스마다 다르므로 키 확보 후 실제 문장으로 들어보고 언어별 보이스를 선택한다. 모델명·지원 언어는 현재 문서에서 확인한다.
-- 키는 `ELEVENLABS_API_KEY`로 서버 환경변수에만 둔다. 브라우저·Tauri 앱에는 넣지 않는다.
+- 키는 `ELEVENLABS_API_KEY`로 서버 환경변수에만 둔다. 브라우저 코드에는 넣지 않는다.
 - ElevenLabs는 Anthropic 크레딧으로 결제되지 않는다. 비용을 별도로 확인한다.
 
 ## 끼어들기와 에코
