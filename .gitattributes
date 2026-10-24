@@ -10,3 +10,9 @@
 *.cmo3 filter=lfs diff=lfs merge=lfs -text
 # Web images (landing page, docs) are committed as regular blobs, not LFS.
 *.webp !filter !diff !merge binary
+# The landing share image is served as-is, so keep it a regular blob too.
+landing/assets/*.jpg !filter !diff !merge binary
+# Site and app icons are served as-is.
+landing/**/*.png !filter !diff !merge binary
+public/icons/*.png !filter !diff !merge binary
+public/apple-touch-icon.png !filter !diff !merge binary

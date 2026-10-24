@@ -45,17 +45,27 @@
     }));
   }
 
-  // Web demo link comes from <meta name="app-url">; until it is set the button stays inert.
+  // Demo buttons lead to the web app (<meta name="app-url">). The page veils over, then leaves.
   const appUrl = ($('meta[name="app-url"]')?.content || '').trim();
   const appLink = $('#appLink');
   const appNote = $('#appNote');
-  if (appLink) {
-    if (appUrl) {
-      document.querySelectorAll('.js-app').forEach((a) => { a.href = appUrl; });
-      if (appNote) appNote.hidden = true;
-    } else {
-      appLink.setAttribute('aria-disabled', 'true');
-      appLink.addEventListener('click', (e) => e.preventDefault());
-    }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (appUrl) {
+    if (appNote) appNote.hidden = true;
+    document.querySelectorAll('.js-app').forEach((a) => {
+      a.href = appUrl;
+      a.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        if (reduceMotion) { window.location.href = appUrl; return; }
+        document.body.classList.add('leaving');
+        setTimeout(() => { window.location.href = appUrl; }, 1100);
+      });
+    });
+    // Coming back with the browser's back button restores the page from cache; clear the veil.
+    window.addEventListener('pageshow', () => document.body.classList.remove('leaving'));
+  } else if (appLink) {
+    appLink.setAttribute('aria-disabled', 'true');
+    appLink.addEventListener('click', (e) => e.preventDefault());
   }
 })();
