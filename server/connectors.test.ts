@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sealCred, type Cred } from './auth'
-import { handleConnectorRequest } from './connectors'
-import { resetGoogleCache } from './google'
+import { sealCred, type Cred } from './auth.js'
+import { handleConnectorRequest } from './connectors.js'
+import { resetGoogleCache } from './google.js'
 
 const b64url = (s: string) => Buffer.from(s, 'utf8').toString('base64url')
 

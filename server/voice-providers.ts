@@ -2,8 +2,8 @@
 // Deepgram / ElevenLabs implementations can be swapped (e.g. streaming STT) without
 // touching the routes or the browser.
 
-import type { Lang } from '../shared/languages'
-import type { SpeechRequest, Transcript } from '../shared/contracts'
+import type { Lang } from '../shared/languages.js'
+import type { SpeechRequest, Transcript } from '../shared/contracts.js'
 
 export interface SttProvider {
   /** `wav` is a 16 kHz mono 16-bit PCM WAV file. */

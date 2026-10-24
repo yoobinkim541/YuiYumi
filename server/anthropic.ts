@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { AgentModel } from '../shared/contracts'
-import { env } from './http'
+import type { AgentModel } from '../shared/contracts.js'
+import { env } from './http.js'
 
 let client: Anthropic | undefined
 

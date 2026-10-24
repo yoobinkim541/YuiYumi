@@ -1,10 +1,10 @@
 // POST /api/agent: one task-model call (Sonnet or Opus) per request. The browser runs the tools and loops.
 
-import { AgentStepRequestSchema, type AgentStepResponse } from '../shared/contracts'
-import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic'
-import { admit, record } from '../server/budget'
-import { fail, json, parseBody, preflight, withCors } from '../server/http'
-import { buildAgentRequest, sanitizeMessages } from '../server/prompts/agent'
+import { AgentStepRequestSchema, type AgentStepResponse } from '../shared/contracts.js'
+import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic.js'
+import { admit, record } from '../server/budget.js'
+import { fail, json, parseBody, preflight, withCors } from '../server/http.js'
+import { buildAgentRequest, sanitizeMessages } from '../server/prompts/agent.js'
 
 async function post(request: Request): Promise<Response> {
   const body = await parseBody(request, AgentStepRequestSchema)

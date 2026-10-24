@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { ApiError } from '../shared/contracts'
+import type { ApiError } from '../shared/contracts.js'
 
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {

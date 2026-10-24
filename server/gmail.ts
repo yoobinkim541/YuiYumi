@@ -1,10 +1,10 @@
 // Gmail ops on the signed-in user's mailbox. Results use the mock op shapes
 // (src/connectors/mock/mail.ts); patches carry store-shaped items for the virtual Mail app.
 
-import type { LiveConnectorResponse, LiveDraft, LiveMail, LiveSentMail, LiveStorePatch } from '../shared/contracts'
-import { mapLimit, orNotFound, type GoogleSession } from './google'
-import { RejectedError } from './http'
-import { buildMime, isEmail, parseAddressList, parseGmailMessage, toRaw, type GmailMessage, type ParsedMail } from './mime'
+import type { LiveConnectorResponse, LiveDraft, LiveMail, LiveSentMail, LiveStorePatch } from '../shared/contracts.js'
+import { mapLimit, orNotFound, type GoogleSession } from './google.js'
+import { RejectedError } from './http.js'
+import { buildMime, isEmail, parseAddressList, parseGmailMessage, toRaw, type GmailMessage, type ParsedMail } from './mime.js'
 
 export const GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
 

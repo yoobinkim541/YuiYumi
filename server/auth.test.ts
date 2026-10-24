@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { authStatus, handleAuthRoute, readCreds, sealCred } from './auth'
-import { seal, unseal } from './seal'
+import { authStatus, handleAuthRoute, readCreds, sealCred } from './auth.js'
+import { seal, unseal } from './seal.js'
 
 const ORIGIN = 'http://localhost:5180'
 

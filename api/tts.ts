@@ -2,11 +2,11 @@
 // 503 {code:'unconfigured'} when the key or the language's voice is missing; the client
 // then keeps the text bubble only. The provider sits behind TtsProvider.
 
-import { SpeechRequestSchema } from '../shared/contracts'
-import { admit } from '../server/budget'
-import { elevenLabsTts } from '../server/elevenlabs'
-import { fail, parseBody, preflight, withCors } from '../server/http'
-import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from '../server/voice-providers'
+import { SpeechRequestSchema } from '../shared/contracts.js'
+import { admit } from '../server/budget.js'
+import { elevenLabsTts } from '../server/elevenlabs.js'
+import { fail, parseBody, preflight, withCors } from '../server/http.js'
+import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from '../server/voice-providers.js'
 
 const provider: TtsProvider = elevenLabsTts
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildMime, decodeEncodedWords, encodeWord, guessLang, htmlToText, parseAddressList, parseGmailMessage, toRaw, type GmailMessage } from './mime'
+import { buildMime, decodeEncodedWords, encodeWord, guessLang, htmlToText, parseAddressList, parseGmailMessage, toRaw, type GmailMessage } from './mime.js'
 
 const b64url = (s: string) => Buffer.from(s, 'utf8').toString('base64url')
 

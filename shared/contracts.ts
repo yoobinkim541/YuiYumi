@@ -2,7 +2,7 @@
 // Anthropic, Deepgram or ElevenLabs types cross this boundary.
 
 import { z } from 'zod'
-import { LANGS } from './languages'
+import { LANGS } from './languages.js'
 
 export const LangSchema = z.enum(LANGS)
 

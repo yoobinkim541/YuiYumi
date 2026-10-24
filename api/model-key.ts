@@ -2,7 +2,7 @@
 // Key for the encrypted Live2D model packs under /models/<id>.bin. This is a deterrent
 // against casual asset scraping, not DRM: the browser necessarily receives the key.
 
-import { preflight, withCors } from '../server/http'
+import { preflight, withCors } from '../server/http.js'
 
 async function get(): Promise<Response> {
   const key = process.env.MODEL_ASSET_KEY

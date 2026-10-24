@@ -1,7 +1,7 @@
 import type { ContentBlock } from '@anthropic-ai/sdk/resources/messages'
 import { describe, expect, it } from 'vitest'
-import { ObserveRequestSchema, type ObserveRequest } from '../../shared/contracts'
-import { buildObserveRequest, parseObserveActions } from './observe'
+import { ObserveRequestSchema, type ObserveRequest } from '../../shared/contracts.js'
+import { buildObserveRequest, parseObserveActions } from './observe.js'
 
 const req: ObserveRequest = {
   frame: { jpegBase64: 'AAAA', width: 1920, height: 1080 },

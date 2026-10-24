@@ -5,16 +5,16 @@
 import {
   getOpSpec, LIVE_SAMPLES_ADD_OP, LIVE_SAMPLES_REMOVE_OP, LIVE_SNAPSHOT_OP, LiveConnectorRequestSchema, LangSchema,
   PROVIDER_OF, type LiveConnectorResponse, type LiveService,
-} from '../shared/contracts'
-import { accountName, clearCredCookie, credCookie, readCreds, servicesOf, type Creds } from './auth'
-import { admit, admitCount, admitOutbound } from './budget'
-import { discordChannels, discordPost, discordRead, discordSnapshot, type DiscordCred } from './discord'
-import { gcalConflicts, gcalCreate, gcalDelete, gcalList, gcalSnapshot } from './gcal'
-import { gmailCreateDraft, gmailList, gmailRead, gmailReply, gmailRestore, gmailSend, gmailSendDraft, gmailSnapshot, gmailTrash } from './gmail'
-import { GoogleSession } from './google'
-import { fail, json, NotConnectedError, parseBody, RejectedError, UpstreamError } from './http'
-import { addSamples, removeSamples } from './samples'
-import { slackChannels, slackPost, slackRead, slackSnapshot, type SlackCred } from './slack'
+} from '../shared/contracts.js'
+import { accountName, clearCredCookie, credCookie, readCreds, servicesOf, type Creds } from './auth.js'
+import { admit, admitCount, admitOutbound } from './budget.js'
+import { discordChannels, discordPost, discordRead, discordSnapshot, type DiscordCred } from './discord.js'
+import { gcalConflicts, gcalCreate, gcalDelete, gcalList, gcalSnapshot } from './gcal.js'
+import { gmailCreateDraft, gmailList, gmailRead, gmailReply, gmailRestore, gmailSend, gmailSendDraft, gmailSnapshot, gmailTrash } from './gmail.js'
+import { GoogleSession } from './google.js'
+import { fail, json, NotConnectedError, parseBody, RejectedError, UpstreamError } from './http.js'
+import { addSamples, removeSamples } from './samples.js'
+import { slackChannels, slackPost, slackRead, slackSnapshot, type SlackCred } from './slack.js'
 
 type In = Record<string, unknown>
 interface Ctx { google?: GoogleSession, slack?: SlackCred, discord?: DiscordCred }

@@ -4,13 +4,13 @@
 // 127.0.0.1 loopback redirect and sends it back as `Authorization: Bearer <blob>[,<blob>...]`.
 
 import { createHash, randomBytes } from 'node:crypto'
-import { LIVE_PROVIDERS, type AuthStatus, type LiveProvider, type LiveService } from '../shared/contracts'
-import { outboundLimits } from './budget'
-import { DISCORD_BOT_PERMISSIONS, DISCORD_SCOPES, discordAvailable, exchangeDiscordCode, type DiscordCred } from './discord'
-import { CALENDAR_SCOPE, exchangeGoogleCode, GMAIL_SCOPE, GoogleSession, googleAvailable, revokeGoogle, type GoogleCred } from './google'
-import { cookie, env, fail, json, NotConnectedError, originOf, parseCookies, redirect } from './http'
-import { exchangeSlackCode, revokeSlack, SLACK_USER_SCOPES, slackAvailable, type SlackCred } from './slack'
-import { seal, sealConfigured, unseal } from './seal'
+import { LIVE_PROVIDERS, type AuthStatus, type LiveProvider, type LiveService } from '../shared/contracts.js'
+import { outboundLimits } from './budget.js'
+import { DISCORD_BOT_PERMISSIONS, DISCORD_SCOPES, discordAvailable, exchangeDiscordCode, type DiscordCred } from './discord.js'
+import { CALENDAR_SCOPE, exchangeGoogleCode, GMAIL_SCOPE, GoogleSession, googleAvailable, revokeGoogle, type GoogleCred } from './google.js'
+import { cookie, env, fail, json, NotConnectedError, originOf, parseCookies, redirect } from './http.js'
+import { exchangeSlackCode, revokeSlack, SLACK_USER_SCOPES, slackAvailable, type SlackCred } from './slack.js'
+import { seal, sealConfigured, unseal } from './seal.js'
 
 export type Cred = GoogleCred | SlackCred | DiscordCred
 export type Creds = { google?: GoogleCred, slack?: SlackCred, discord?: DiscordCred }

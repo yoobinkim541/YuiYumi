@@ -1,6 +1,6 @@
 // Persona block shared by the observer and agent system prompts. Pure.
 
-import type { Persona } from '../../shared/contracts'
+import type { Persona } from '../../shared/contracts.js'
 
 /** Appends the user's persona card after the fixed rules. The card shapes tone only. */
 export function personaBlock(persona: Persona | undefined): string {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapDeepgramResponse } from './deepgram'
+import { mapDeepgramResponse } from './deepgram.js'
 
 describe('mapDeepgramResponse', () => {
   it('maps the first alternative', () => {

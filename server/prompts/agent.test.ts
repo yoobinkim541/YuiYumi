@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CONNECTOR_OPS } from '../../shared/contracts'
-import { agentTools, buildAgentRequest, sanitizeMessages } from './agent'
+import { CONNECTOR_OPS } from '../../shared/contracts.js'
+import { agentTools, buildAgentRequest, sanitizeMessages } from './agent.js'
 
 describe('agent request builder', () => {
   const messages = sanitizeMessages([{ role: 'user', content: 'hi' }])!

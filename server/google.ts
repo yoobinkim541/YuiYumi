@@ -3,7 +3,7 @@
 // the updated credential into the cookie when `session.updated` is set.
 
 import { createHash } from 'node:crypto'
-import { env, NotConnectedError, RejectedError, UpstreamError } from './http'
+import { env, NotConnectedError, RejectedError, UpstreamError } from './http.js'
 
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.modify'
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'

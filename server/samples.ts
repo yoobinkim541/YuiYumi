@@ -4,7 +4,7 @@
 // Idempotent through a Gmail label plus a marker header and private event properties;
 // "remove" trashes the sample mails and deletes the sample events.
 
-import type { Lang } from '../shared/languages'
+import type { Lang } from '../shared/languages.js'
 import enCal from '../data/demo/en/calendar.json'
 import enMails from '../data/demo/en/mails.json'
 import jaCal from '../data/demo/ja/calendar.json'
@@ -15,10 +15,10 @@ import hansCal from '../data/demo/zh-Hans/calendar.json'
 import hansMails from '../data/demo/zh-Hans/mails.json'
 import hantCal from '../data/demo/zh-Hant/calendar.json'
 import hantMails from '../data/demo/zh-Hant/mails.json'
-import { CALENDAR, calendarTz, zonedDate } from './gcal'
-import { GMAIL } from './gmail'
-import { mapLimit, type GoogleSession } from './google'
-import { buildMime, parseAddressList, toRaw, type GmailMessage } from './mime'
+import { CALENDAR, calendarTz, zonedDate } from './gcal.js'
+import { GMAIL } from './gmail.js'
+import { mapLimit, type GoogleSession } from './google.js'
+import { buildMime, parseAddressList, toRaw, type GmailMessage } from './mime.js'
 
 interface SampleMail { id: string, from: string, subject: string, body: string, minutesAgo: number, read: boolean, spam?: boolean }
 interface SampleEvent { id: string, title: string, dayOffset: number, start: string, end: string, location?: string }

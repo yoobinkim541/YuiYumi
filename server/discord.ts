@@ -2,9 +2,9 @@
 // Discord" installs the bot into a server the user manages; the sealed credential holds that
 // server's id and every op is limited to its text channels. Posts appear as the bot.
 
-import type { LiveChannel, LiveChatMessage, LiveConnectorResponse, LiveStorePatch } from '../shared/contracts'
-import { mapLimit } from './google'
-import { env, NotConnectedError, RejectedError, UpstreamError } from './http'
+import type { LiveChannel, LiveChatMessage, LiveConnectorResponse, LiveStorePatch } from '../shared/contracts.js'
+import { mapLimit } from './google.js'
+import { env, NotConnectedError, RejectedError, UpstreamError } from './http.js'
 
 const API = 'https://discord.com/api/v10'
 

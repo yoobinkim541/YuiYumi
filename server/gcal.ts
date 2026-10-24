@@ -1,9 +1,9 @@
 // Google Calendar ops on the signed-in user's primary calendar, in that calendar's time zone.
 // Results use the mock op shapes (src/connectors/mock/calendar.ts).
 
-import type { LiveConnectorResponse, LiveEvent, LiveStorePatch } from '../shared/contracts'
-import { orNotFound, type GoogleSession } from './google'
-import { RejectedError } from './http'
+import type { LiveConnectorResponse, LiveEvent, LiveStorePatch } from '../shared/contracts.js'
+import { orNotFound, type GoogleSession } from './google.js'
+import { RejectedError } from './http.js'
 
 export const CALENDAR = 'https://www.googleapis.com/calendar/v3/calendars/primary'
 

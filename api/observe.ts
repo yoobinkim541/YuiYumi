@@ -1,10 +1,10 @@
 // POST /api/observe: screen frame + state (+ utterance) -> observer actions (Haiku).
 
-import { ObserveRequestSchema, type ObserveResponse } from '../shared/contracts'
-import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic'
-import { admit, record } from '../server/budget'
-import { fail, json, parseBody, preflight, withCors } from '../server/http'
-import { buildObserveRequest, parseObserveActions } from '../server/prompts/observe'
+import { ObserveRequestSchema, type ObserveResponse } from '../shared/contracts.js'
+import { anthropic, anthropicConfigured, MODELS } from '../server/anthropic.js'
+import { admit, record } from '../server/budget.js'
+import { fail, json, parseBody, preflight, withCors } from '../server/http.js'
+import { buildObserveRequest, parseObserveActions } from '../server/prompts/observe.js'
 
 async function post(request: Request): Promise<Response> {
   const body = await parseBody(request, ObserveRequestSchema)

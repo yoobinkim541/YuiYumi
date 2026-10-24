@@ -3,9 +3,9 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
-import { CONNECTOR_OPS, type DelegateOrigin, type Persona } from '../../shared/contracts'
-import { LANG_INFO, type Lang } from '../../shared/languages'
-import { personaBlock } from './persona'
+import { CONNECTOR_OPS, type DelegateOrigin, type Persona } from '../../shared/contracts.js'
+import { LANG_INFO, type Lang } from '../../shared/languages.js'
+import { personaBlock } from './persona.js'
 
 export const AGENT_MAX_TOKENS = 4096
 /** 1 request + 8 steps x (assistant + tool results), with headroom. */

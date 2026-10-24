@@ -11,9 +11,9 @@ import {
   type ObserveAction,
   type ObserveRequest,
   type Persona,
-} from '../../shared/contracts'
-import type { Lang } from '../../shared/languages'
-import { personaBlock } from './persona'
+} from '../../shared/contracts.js'
+import type { Lang } from '../../shared/languages.js'
+import { personaBlock } from './persona.js'
 
 const LANGUAGE_NAME: Record<Lang, string> = {
   'en': 'English',

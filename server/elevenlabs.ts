@@ -1,9 +1,9 @@
 // ElevenLabs streaming TTS over plain REST. Returns the mp3 body stream as-is.
 
-import type { VoicePreset } from '../shared/contracts'
-import { LANG_INFO, type Lang } from '../shared/languages'
-import { env } from './http'
-import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from './voice-providers'
+import type { VoicePreset } from '../shared/contracts.js'
+import { LANG_INFO, type Lang } from '../shared/languages.js'
+import { env } from './http.js'
+import { ProviderError, ProviderUnconfiguredError, type TtsProvider } from './voice-providers.js'
 
 /**
  * Voice style presets (model + voice settings). All cover en/ja/ko/zh; check GET /v1/models

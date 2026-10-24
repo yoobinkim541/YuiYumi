@@ -1,9 +1,9 @@
 // Deepgram pre-recorded STT (Nova-3) over plain REST.
 
-import { LANG_INFO, type Lang } from '../shared/languages'
-import type { Transcript } from '../shared/contracts'
-import { env } from './http'
-import { ProviderError, ProviderUnconfiguredError, type SttProvider } from './voice-providers'
+import { LANG_INFO, type Lang } from '../shared/languages.js'
+import type { Transcript } from '../shared/contracts.js'
+import { env } from './http.js'
+import { ProviderError, ProviderUnconfiguredError, type SttProvider } from './voice-providers.js'
 
 const ENDPOINT = 'https://api.deepgram.com/v1/listen'
 const TIMEOUT_MS = 15_000

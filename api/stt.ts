@@ -1,11 +1,11 @@
 // POST /api/stt?lang=<Lang>&sessionId=<id>  body: audio/wav (16 kHz mono 16-bit)
 // Response: Transcript JSON. The provider sits behind SttProvider.
 
-import { LangSchema, type Transcript } from '../shared/contracts'
-import { admit } from '../server/budget'
-import { deepgramStt } from '../server/deepgram'
-import { fail, json, preflight, withCors } from '../server/http'
-import { ProviderError, ProviderUnconfiguredError, type SttProvider } from '../server/voice-providers'
+import { LangSchema, type Transcript } from '../shared/contracts.js'
+import { admit } from '../server/budget.js'
+import { deepgramStt } from '../server/deepgram.js'
+import { fail, json, preflight, withCors } from '../server/http.js'
+import { ProviderError, ProviderUnconfiguredError, type SttProvider } from '../server/voice-providers.js'
 
 const MAX_BYTES = 2 * 1024 * 1024
 const MIN_BYTES = 44 // WAV header only

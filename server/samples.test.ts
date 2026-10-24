@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import koMails from '../data/demo/ko/mails.json'
-import { GoogleSession } from './google'
-import { addSamples } from './samples'
+import { GoogleSession } from './google.js'
+import { addSamples } from './samples.js'
 
 afterEach(() => vi.unstubAllGlobals())
 

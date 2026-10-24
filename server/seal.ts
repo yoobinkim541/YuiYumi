@@ -3,7 +3,7 @@
 // desktop app sends it as a bearer token) and cannot read or alter it.
 
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto'
-import { env } from './http'
+import { env } from './http.js'
 
 const IV = 12
 const TAG = 16

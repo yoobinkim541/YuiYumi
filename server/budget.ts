@@ -1,7 +1,7 @@
 // Spend guard for the public demo link. In-memory per function instance: a soft cap, not
 // an exact ledger. When it trips the client falls back to prepared lines (AC-8).
 
-import { env } from './http'
+import { env } from './http.js'
 
 // USD per million tokens. Check the current price list before relying on these.
 const PRICE: Record<string, { in: number, out: number }> = {

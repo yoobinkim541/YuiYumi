@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { findConflicts, gcalCreate, gcalList, parseBoundIn, toEvent, zonedDate, zonedTime } from './gcal'
-import { GoogleSession } from './google'
-import { RejectedError } from './http'
+import { findConflicts, gcalCreate, gcalList, parseBoundIn, toEvent, zonedDate, zonedTime } from './gcal.js'
+import { GoogleSession } from './google.js'
+import { RejectedError } from './http.js'
 
 const session = () => new GoogleSession({ p: 'google', rt: 'rt', at: 'at', exp: Date.now() + 3_600_000, email: `cal-${Math.random()}@example.com`, gm: true, cal: true })
 

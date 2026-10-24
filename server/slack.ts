@@ -1,9 +1,9 @@
 // Slack Web API with the signed-in user's token (OAuth v2 user scopes), so reads cover the
 // user's channels and posts go out as the user. Results use the mock op shapes.
 
-import type { LiveChannel, LiveChatMessage, LiveConnectorResponse, LiveStorePatch } from '../shared/contracts'
-import { mapLimit } from './google'
-import { env, NotConnectedError, RejectedError, UpstreamError } from './http'
+import type { LiveChannel, LiveChatMessage, LiveConnectorResponse, LiveStorePatch } from '../shared/contracts.js'
+import { mapLimit } from './google.js'
+import { env, NotConnectedError, RejectedError, UpstreamError } from './http.js'
 
 const API = 'https://slack.com/api'
 
