@@ -33,6 +33,8 @@ export interface RuntimeConfig {
   /** https://<app>/api/anthropic: model calls go through the YuiYumi proxy. */
   proxyUrl?: string
   installToken?: string
+  /** Claude Code binary to run (the desktop app bundles it next to main.mjs); else the SDK finds its own. */
+  claudePath?: string
   exitOnStdinClose: boolean
 }
 
@@ -72,6 +74,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     origins: (v('YUIYUMI_AGENT_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean),
     proxyUrl: v('YUIYUMI_AGENT_PROXY_URL')?.replace(/\/$/, ''),
     installToken: v('YUIYUMI_AGENT_INSTALL_TOKEN'),
+    claudePath: v('YUIYUMI_AGENT_CLAUDE_PATH'),
     exitOnStdinClose: argv.includes('--exit-on-stdin-close'),
   }
 }

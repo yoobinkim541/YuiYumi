@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { CONNECTOR_OPS } from '../../shared/contracts.js'
+import { CONNECTOR_OPS, HOST_TOOL_NAMES } from '../../shared/contracts.js'
 import { agentTools, buildAgentRequest, sanitizeMessages } from './agent.js'
 
 describe('agent request builder', () => {
   const messages = sanitizeMessages([{ role: 'user', content: 'hi' }])!
 
-  it('offers exactly the connector ops as tools with JSON schemas', () => {
+  it('offers the connector ops and the host tools with JSON schemas', () => {
     const tools = agentTools()
-    expect(tools.map(t => t.name)).toEqual(CONNECTOR_OPS.map(o => o.name))
+    expect(tools.map(t => t.name)).toEqual([...CONNECTOR_OPS.map(o => o.name), ...HOST_TOOL_NAMES])
     for (const t of tools) {
       expect(t.input_schema.type).toBe('object')
       expect(t.input_schema).not.toHaveProperty('$schema')
@@ -15,6 +15,23 @@ describe('agent request builder', () => {
     const draft = tools.find(t => t.name === 'mail_create_draft')!
     expect(draft.input_schema.required).toEqual(expect.arrayContaining(['to', 'subject', 'body']))
     expect(draft.description).toContain('confirmation')
+  })
+
+  it('describes host tools per host and keeps computer tasks out of screen offers', () => {
+    const web = agentTools('utterance', { kind: 'web' })
+    expect(web.find(t => t.name === 'computer_task')!.description).toContain('virtual computer')
+    expect(web.find(t => t.name === 'open_app')!.description).toContain('mail, calendar, slack')
+    const desk = agentTools('utterance', { kind: 'desktop', apps: ['Calculator', 'Slack\n, evil'] })
+    expect(desk.find(t => t.name === 'computer_task')!.description).toContain('real computer')
+    const openApp = desk.find(t => t.name === 'open_app')!.description!
+    expect(openApp).toContain('Installed apps: Calculator, Slack evil.')
+    expect(agentTools('screen').map(t => t.name)).not.toContain('computer_task')
+    expect(agentTools('screen').map(t => t.name)).toContain('open_url')
+    const many = agentTools('utterance', { kind: 'desktop', apps: Array.from({ length: 400 }, (_, i) => `App number ${i}`) })
+    expect(many.find(t => t.name === 'open_app')!.description!.length).toBeLessThan(3400)
+    const system = String(buildAgentRequest({ model: 'm', lang: 'en', origin: 'utterance', messages, host: { kind: 'desktop' } }).system)
+    expect(system).toContain('computer_task')
+    expect(system).toContain('desktop app')
   })
 
   it('uses auto tool choice, low effort, no thinking override', () => {

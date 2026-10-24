@@ -3,11 +3,13 @@
 // TT2.0 model: no animation graph, so the mapping lives here (NODE_MAP_TT2). All TT2.0
 // motions are 8-15 s loops. State nodes loop their motion until the next node; event
 // nodes (attention, praised, failed) play theirs once, then the idle motion resumes.
-// `motion: null` keeps the idle motion (model3 `Idle` group).
+// `motion: null` keeps the idle motion (model3 `Idle` group). Speaking loops the same
+// smiling nod-and-tilt talk motion Yui's graph uses (standard parameters only).
 //
 // Yui model: settings come from the model's anim-graph.json node animations.
 
 import type { CharacterNode } from '@/core/types'
+import { TT2_CHOREOGRAPHY } from './choreography'
 
 export interface NodeSettings {
   blink: boolean
@@ -26,7 +28,7 @@ export const NODE_MAP_TT2: Record<CharacterNode, NodeSettings> = {
   listening: { ...base, motion: { name: '2-0-tt2-0-simleidle', loop: true } },
   working: { ...base, motion: { name: '2-0-tt2-0-questionmotion', loop: true } },
   waiting: { ...base, motion: { name: '2-0-tt2-0-poutidle', loop: true } },
-  speaking: { ...base, motion: null },
+  speaking: { ...base, motion: TT2_CHOREOGRAPHY.speakingLoop ? { name: TT2_CHOREOGRAPHY.speakingLoop, loop: true } : null },
   attention: { ...base, motion: { name: '2-0-tt2-0-excitingidle', loop: false } },
   praised: { ...base, motion: { name: '2-0-tt2-0-shyidle', loop: false } },
   failed: { ...base, motion: { name: '2-0-tt2-0-sadmotion', loop: false } },

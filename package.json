@@ -24,6 +24,7 @@
     "@elevenlabs/elevenlabs-js": "^2.74.0",
     "@ricky0123/vad-web": "^0.0.31",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
     "@tauri-apps/plugin-global-shortcut": "^2.4.1",
     "cubism-web-batched-renderer": "github:FMsongX2/cubism-web-batched-renderer",
     "jszip": "^3.10.2",

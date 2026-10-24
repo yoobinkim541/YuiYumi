@@ -96,6 +96,19 @@ export type DelegateOrigin = 'utterance' | 'screen'
 export const AGENT_MODELS = ['sonnet', 'opus'] as const
 export type AgentModel = (typeof AGENT_MODELS)[number]
 
+/** Where the browser loop runs: the web demo (virtual PC) or the desktop app (real computer). */
+export const HOST_KINDS = ['web', 'desktop'] as const
+export type HostKind = (typeof HOST_KINDS)[number]
+export const HOST_APP_NAME_MAX = 80
+export const HOST_APPS_MAX = 400
+
+export const HostContextSchema = z.object({
+  kind: z.enum(HOST_KINDS),
+  /** Desktop: installed app names for open_app (the client trims the list). */
+  apps: z.array(z.string().max(HOST_APP_NAME_MAX)).max(HOST_APPS_MAX).optional(),
+})
+export type HostContext = z.infer<typeof HostContextSchema>
+
 export const AgentStepRequestSchema = z.object({
   lang: LangSchema,
   origin: z.enum(['utterance', 'screen']),
@@ -104,6 +117,8 @@ export const AgentStepRequestSchema = z.object({
   sessionId: z.string(),
   persona: PersonaSchema.optional(),
   model: z.enum(AGENT_MODELS).optional(),
+  /** Missing: an older client, treated as the web demo. */
+  host: HostContextSchema.optional(),
 })
 export type AgentStepRequest = z.infer<typeof AgentStepRequestSchema>
 
@@ -183,6 +198,66 @@ export const CONNECTOR_OPS = [
 export type ConnectorOpName = (typeof CONNECTOR_OPS)[number]['name']
 export const CONNECTOR_OP_NAMES = CONNECTOR_OPS.map(o => o.name) as ConnectorOpName[]
 export const getOpSpec = (name: string) => CONNECTOR_OPS.find(o => o.name === name)
+
+// ---------------------------------------------------------------------------
+// Host tools: act on the computer the loop runs on. The browser implements them per host
+// (src/agent/host-tools.ts for the web demo, src/desktop-app/agent-host.ts for the desktop
+// app); the server writes their descriptions per host (server/prompts/agent.ts).
+//
+// Grades: computer_task is write-level work, but the loop shows no confirm card for it.
+// The worker behind it asks per action instead (the desktop agent runtime's permission
+// prompts, docs/agent-runtime.md section 4; the web studio gets the permission level), so a
+// card here would ask twice. open_url / open_app are read-level: they change nothing, and
+// open_url only ever opens http(s) URLs.
+
+export type HostToolName = 'computer_task' | 'open_url' | 'open_app'
+
+export interface HostToolSpec<I extends z.ZodType = z.ZodType> {
+  name: HostToolName
+  grade: ConnectorGrade
+  input: I
+}
+
+const hostTool = <I extends z.ZodType>(s: HostToolSpec<I>) => s
+
+export const HOST_TOOLS = [
+  hostTool({
+    name: 'computer_task',
+    grade: 'write',
+    input: z.object({
+      request: z.string().min(1).max(8000),
+      /** Subfolder of the chosen project folder to work in (a plain folder name). */
+      project: z.string().max(80).optional(),
+    }),
+  }),
+  hostTool({ name: 'open_url', grade: 'read', input: z.object({ url: z.string().min(1).max(2048) }) }),
+  hostTool({ name: 'open_app', grade: 'read', input: z.object({ name: z.string().min(1).max(100) }) }),
+] as const
+
+export const HOST_TOOL_NAMES = HOST_TOOLS.map(t => t.name) as HostToolName[]
+export const getHostToolSpec = (name: string) => HOST_TOOLS.find(t => t.name === name)
+
+/** Normalized http(s) URL, or null for anything else (file:, javascript:, data:, custom schemes). */
+export function webUrl(raw: string): string | null {
+  let s = raw.trim()
+  // "youtube.com" style input: assume https.
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(?:[/:?#]|$)/i.test(s)) s = `https://${s}`
+  try {
+    const u = new URL(s)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+    if (!u.hostname || u.username || u.password) return null
+    return u.href
+  } catch {
+    return null
+  }
+}
+
+/** A project subfolder name the loop may pass on: one plain path segment. */
+export function projectSubfolder(raw: string | undefined): string | null {
+  const s = (raw ?? '').trim()
+  if (!s || s.startsWith('.') || !/^[\p{L}\p{N} ._-]{1,80}$/u.test(s)) return null
+  return s
+}
 
 export const LiveConnectorRequestSchema = z.object({
   op: z.string(),

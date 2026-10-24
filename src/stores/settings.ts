@@ -20,7 +20,7 @@ function browserLang(): Lang {
 }
 
 export const useSettings = defineStore('settings', () => {
-  const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<{ lang: Lang, sound: boolean, mode: AssistantMode, pttKey: unknown, voicePreset: VoicePreset, permission: PermissionLevel, voiceLang: Lang | null, userName: string, welcomed: boolean, agentModel: AgentModel }>
+  const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<{ lang: Lang, sound: boolean, mode: AssistantMode, pttKey: unknown, voicePreset: VoicePreset, permission: PermissionLevel, voiceLang: Lang | null, userName: string, welcomed: boolean, agentModel: AgentModel, agentProjectDir: string }>
   const lang = ref<Lang>(LANGS.includes(saved.lang as Lang) ? saved.lang! : browserLang())
   const sound = ref<boolean>(saved.sound ?? true)
   const mode = ref<AssistantMode>(saved.mode ?? 'active')
@@ -39,14 +39,16 @@ export const useSettings = defineStore('settings', () => {
   const welcomed = ref<boolean>(saved.welcomed === true)
   /** Model that runs tasks; screen watching always uses Haiku. */
   const agentModel = ref<AgentModel>(AGENT_MODELS.includes(saved.agentModel as AgentModel) ? saved.agentModel! : 'sonnet')
+  /** Desktop app: absolute folder the coding agent works in (chosen with the folder picker). Empty: none. */
+  const agentProjectDir = ref<string>(typeof saved.agentProjectDir === 'string' ? saved.agentProjectDir : '')
   const sessionId = crypto.randomUUID()
 
   // CJK glyph selection follows <html lang>.
   watch(lang, l => { document.documentElement.lang = LANG_INFO[l].bcp47 }, { immediate: true })
 
-  watch([lang, sound, mode, pttKey, voicePreset, permission, voiceLang, userName, welcomed, agentModel], () => {
-    localStorage.setItem(KEY, JSON.stringify({ lang: lang.value, sound: sound.value, mode: mode.value, pttKey: pttKey.value, voicePreset: voicePreset.value, permission: permission.value, voiceLang: voiceLang.value, userName: userName.value, welcomed: welcomed.value, agentModel: agentModel.value }))
+  watch([lang, sound, mode, pttKey, voicePreset, permission, voiceLang, userName, welcomed, agentModel, agentProjectDir], () => {
+    localStorage.setItem(KEY, JSON.stringify({ lang: lang.value, sound: sound.value, mode: mode.value, pttKey: pttKey.value, voicePreset: voicePreset.value, permission: permission.value, voiceLang: voiceLang.value, userName: userName.value, welcomed: welcomed.value, agentModel: agentModel.value, agentProjectDir: agentProjectDir.value }))
   }, { deep: true })
 
-  return { lang, sound, mode, pttKey, voicePreset, permission, voiceLang, speechLang, userName, welcomed, agentModel, sessionId }
+  return { lang, sound, mode, pttKey, voicePreset, permission, voiceLang, speechLang, userName, welcomed, agentModel, agentProjectDir, sessionId }
 })

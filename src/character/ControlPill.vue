@@ -69,7 +69,7 @@ function sendChat() {
   if (!text) return
   chatText.value = ''
   bus.emit('thinking', { on: true })
-  bus.emit('voice:transcript', { text, confidence: 1, lang: settings.lang, source: 'chat' })
+  bus.emit('voice:transcript', { text, confidence: 1, lang: settings.speechLang, source: 'chat' })
 }
 
 function onChatKey(e: KeyboardEvent) {

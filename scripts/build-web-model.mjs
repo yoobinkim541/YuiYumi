@@ -8,7 +8,10 @@
 //   one motion group per motion name plus `Idle`;
 // - textures downscaled to 4096 px;
 // - motions: with an anim-graph.json, only those its nodes reference plus the profile
-//   idle motion and the extra reaction motions; otherwise every motion3 under motions/;
+//   idle motion and the extra reaction motions; otherwise every motion3 under motions/.
+//   Either way every motion src/character/choreography.ts names for the model (reaction,
+//   touch, idle and speaking motions) is added; a model without its own copy borrows it
+//   from another model's motions folder (standard parameters only);
 // - ambient loops: profile [[ambient]], else the vtube.json IdleAnimation;
 // - profile.json (model_name, idle_motion, ambient, expressions, mutex_groups, emotions)
 //   and anim-graph.json when present.
@@ -24,6 +27,8 @@ import { fileURLToPath } from 'node:url'
 import JSZip from 'jszip'
 import sharp from 'sharp'
 import { parse as parseToml } from 'smol-toml'
+// Node strips the types; the file is plain data and helpers without runtime imports.
+import { CHOREOGRAPHY, choreographyMotions } from '../src/character/choreography.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = resolve(root, 'public/models')
@@ -37,13 +42,36 @@ const MODELS = [
     defaultIdle: 'taptc-ri-idle-35a-eye-smile',
     extraMotions: [],
     extraMotionFiles: ['models/Yui/motions/authored/taptc-ri-idle-35a-eye-smile.motion3.json'],
+    // Choreography motions TT2.0 has no copy of come from Yui's set: head, body, eye-open,
+    // eye-smile and eyeball curves, all parameters the TT2.0 rig has.
+    borrowMotions: { from: 'models/Yui/motions', names: choreographyMotions(CHOREOGRAPHY.tt2) },
+    // Held head: eyes wide open (no crescent eye-smile, so the eyeballs can be seen looking
+    // up at the hand) with raised brows. On and off without a fade, like Yui's look-up face.
+    extraExpressions: [{
+      name: 'pat-look-up',
+      params: [
+        { Id: 'ParamEyeLOpen', Value: 1, Blend: 'Overwrite' },
+        { Id: 'ParamEyeROpen', Value: 1, Blend: 'Overwrite' },
+        { Id: 'ParamEyeLSmile', Value: 0, Blend: 'Overwrite' },
+        { Id: 'ParamEyeRSmile', Value: 0, Blend: 'Overwrite' },
+        { Id: 'EyeL_Squint', Value: 0, Blend: 'Overwrite' },
+        { Id: 'EyeR_Squint', Value: 0, Blend: 'Overwrite' },
+        { Id: 'ParamBrowLY', Value: 0.4, Blend: 'Add' },
+        { Id: 'ParamBrowRY', Value: 0.4, Blend: 'Add' },
+      ],
+      profile: { kind: 'emotion', fade_in_s: 0, fade_out_s: 0 },
+    }],
+    mutexAdd: { eyes: ['pat-look-up'] },
   },
   {
     id: 'yui',
     src: 'models/Yui',
     defaultIdle: null,
-    // Reaction motions used by the yui entry of src/character/models.ts.
-    extraMotions: [
+    // Motions outside the animation graph: the choreography's reaction, touch and idle
+    // motions (src/character/choreography.ts), plus earlier reaction motions kept for
+    // explicit react events.
+    extraMotions: [...new Set([
+      ...choreographyMotions(CHOREOGRAPHY.yui),
       'sekai-cute-nbglad02-face-smile',
       'sekai-happy-guruguru01',
       'arch-nyarchlinux-arch-thinking',
@@ -54,7 +82,7 @@ const MODELS = [
       'holodreams-notice-01-lv01-face-surprise',
       'holodreams-shy-01-lv03-face-shy',
       'sekai-cute-fidget01-face-shy',
-    ],
+    ])],
   },
 ]
 
@@ -133,6 +161,19 @@ async function buildModel(def, key) {
     const stem = basename(p, MOTION_SUFFIX).normalize('NFC')
     if (!motionIndex.has(stem)) motionIndex.set(stem, p)
   }
+  const missing = []
+  if (def.borrowMotions) {
+    const lender = new Map()
+    for (const p of (await walk(resolve(root, def.borrowMotions.from))).filter(f => f.endsWith(MOTION_SUFFIX)).sort()) {
+      const stem = basename(p, MOTION_SUFFIX).normalize('NFC')
+      if (!lender.has(stem)) lender.set(stem, p)
+    }
+    for (const name of def.borrowMotions.names) {
+      if (motionIndex.has(name)) continue
+      if (lender.has(name)) motionIndex.set(name, lender.get(name))
+      else missing.push(name)
+    }
+  }
 
   const idleMotion = toml.idle_motion ?? (def.defaultIdle && motionIndex.has(def.defaultIdle) ? def.defaultIdle : null)
   let wanted
@@ -148,7 +189,6 @@ async function buildModel(def, key) {
   }
 
   const motionGroups = {}
-  const missing = []
   for (const name of wanted) {
     const p = motionIndex.get(name)
     if (!p) { missing.push(name); continue }

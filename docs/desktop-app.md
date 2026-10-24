@@ -26,6 +26,8 @@ YuiYumi.app (Tauri v2, Rust)                         서버 (Vercel api/, 키 �
 | `src-tauri/src/drag.rs` | 아바타 드래그: 전역 커서를 따라 네이티브 창을 옮기고 소프트 클램프 적용 |
 | `src-tauri/src/auth.rs` | 커넥터 로그인: 시스템 브라우저와 127.0.0.1 루프백, 공급자별 키체인 저장 |
 | `src-tauri/src/system.rs` | 웹사이트 열기, 설치된 앱 실행, 앱 목록 |
+| `src-tauri/src/runtime.rs` | 에이전트 런타임 자식 프로세스(시작, 포트·토큰, 재시작, 종료). `docs/agent-runtime.md` 7절 |
+| `src/desktop-app/agent-host.ts` | 브라우저 루프의 `computer_task`/`open_url`/`open_app` 데스크톱 구현, 컨트롤러 생성 |
 | `src/desktop-app/main.ts` | 진입점. 해시가 없으면 오버레이, `#settings`/`#dashboard`면 패널 |
 | `src/desktop-app/overlay.ts` | 오버레이 초기화, 클릭 투과, 몸통 드래그, 전역 PTT, 트레이 문구, 상태 방송 |
 | `src/desktop-app/panel.ts` | SettingsApp/DashboardApp를 별도 창에 마운트하고 오버레이 상태를 미러링 |
@@ -42,7 +44,7 @@ YuiYumi.app (Tauri v2, Rust)                         서버 (Vercel api/, 키 �
 
 ### 1.2 API 주소
 
-`src/core/api.ts`의 `API_BASE`를 모든 `/api/*` 호출이 쓴다. 데스크톱 빌드는 `DESKTOP_API_BASE` 환경 변수를 `VITE_API_BASE`로 주입한다. 값이 없으면 빌드는 자리표시자 `https://yuiyumi.vercel.app`(현재 응답 없음), 개발 모드(`desktop:dev`)는 빈 값(데스크톱 개발 서버 자체의 `/api` 미들웨어)이다. 서버의 `server/http.ts`는 `tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost` 출처에만 CORS 헤더를 붙이고, `api/*.ts`는 `withCors`와 `OPTIONS = preflight`를 내보낸다. 로컬 Vite 서버는 `server.cors: false`로 이 처리를 핸들러에 맡긴다.
+`src/core/api.ts`의 `API_BASE`를 모든 `/api/*` 호출이 쓴다. 데스크톱 빌드는 `DESKTOP_API_BASE` 환경 변수를 `VITE_API_BASE`로 주입한다. 값이 없으면 빌드는 배포 주소 `https://yuiyumi-seven.vercel.app`, 개발 모드(`desktop:dev`)는 빈 값(데스크톱 개발 서버 자체의 `/api` 미들웨어)이다. 서버의 `server/http.ts`는 `tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost` 출처에만 CORS 헤더를 붙이고, `api/*.ts`는 `withCors`와 `OPTIONS = preflight`를 내보낸다. 로컬 Vite 서버는 `server.cors: false`로 이 처리를 핸들러에 맡긴다.
 
 모델 팩(`public/models/*.bin`, 암호화)은 `dist-desktop`에 복사되어 앱 번들에 포함되고, 복호화 키는 여전히 `/api/model-key`에서 받는다. API 키는 번들에 들어가지 않는다.
 
@@ -76,7 +78,7 @@ YuiYumi.app (Tauri v2, Rust)                         서버 (Vercel api/, 키 �
 
 ### 2.7 웹사이트 열기와 앱 실행
 
-`src/desktop-app/system.ts`가 에이전트 도구용 래퍼를 제공한다(도구 정의와 연결은 별도 트랙).
+`src/desktop-app/system.ts`가 에이전트 도구용 래퍼를 제공하고, 브라우저 루프의 `open_url`/`open_app` 도구가 이를 쓴다(`agent-host.ts`).
 
 | 함수 | 동작 | 결과 |
 |---|---|---|
@@ -113,7 +115,7 @@ DESKTOP_API_BASE=http://localhost:5180 pnpm desktop:build # 로컬 웹 개발 �
 ## 5. 알려진 한계
 
 - **서명·공증 없음.** ad-hoc 서명(`-`)만 한다. 처음 열 때 Gatekeeper 경고가 나오므로 Finder에서 앱을 오른쪽 클릭 후 열기(또는 시스템 설정 > 개인정보 보호 및 보안 > 그래도 열기)로 실행한다. Developer ID 서명과 공증은 이후 작업이다. 서명이 바뀌면 화면 기록 권한을 다시 허용해야 한다.
-- **배포 API 주소 미정.** 기본값 `https://yuiyumi.vercel.app`은 자리표시자다. 실제 배포 주소로 `DESKTOP_API_BASE`를 주고 다시 빌드해야 한다.
+- **배포 API 주소.** `DESKTOP_API_BASE`가 없으면 `https://yuiyumi-seven.vercel.app`을 쓴다. 다른 배포를 쓰려면 이 값을 주고 다시 빌드한다(에이전트 런타임의 프록시 주소도 이 값에서 나온다).
 - **캡처는 메인 디스플레이만**, macOS 14 이상. 캐릭터가 보조 모니터에 있어도 메인 화면을 본다.
 - **화면 상단 근처의 말풍선.** 캐릭터를 화면 위 끝으로 올리면 머리 위 말풍선은 화면 밖으로 나갈 수 있다.
 - **2D 대체 모드**(Live2D 실패 시)에서는 아바타 픽셀 판정이 없어 클릭 투과는 되지만 몸통 드래그가 되지 않는다.

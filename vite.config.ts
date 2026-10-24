@@ -49,7 +49,7 @@ function apiDevServer(): Plugin {
 // Desktop app (Tauri, `--mode desktop`): desktop.html instead of index.html, plus stand-ins for
 // modules that assume the in-page virtual desktop. The settings/dashboard panels run in their
 // own windows, so their '@/voice' and '@/nunchi' imports go to mirrors of the overlay's state.
-const DESKTOP_API_PLACEHOLDER = 'https://yuiyumi.vercel.app'
+const DESKTOP_API_PLACEHOLDER = 'https://yuiyumi-seven.vercel.app'
 
 function desktopShims(): Plugin {
   const settingsDir = fileURLToPath(new URL('./src/settings/', import.meta.url))
@@ -92,6 +92,6 @@ export default defineConfig(({ mode, command }) => {
       include: ['pixi.js', 'pixi-live2d-display/cubism4', 'cubism-web-batched-renderer', 'jszip'],
     },
     // cors: false lets api/* answer the desktop app's preflight itself (server/http.ts).
-    server: { port: 5173, cors: false },
+    server: { port: 5180, cors: false },
   }
 })

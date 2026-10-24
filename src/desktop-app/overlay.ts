@@ -1,16 +1,17 @@
 // Overlay window: the character over the real desktop. Mounts the same character, voice,
 // nunchi and agent modules as the web app, with the native screen source instead of the
-// virtual desktop, and adds what a transparent overlay needs: click-through on transparent
-// pixels, dragging by the avatar body, a global push-to-talk shortcut and the tray labels.
+// virtual desktop and the real computer behind the agent's host tools (agent-host.ts), and
+// adds what a transparent overlay needs: click-through on transparent pixels, dragging by
+// the avatar body, a global push-to-talk shortcut and the tray labels.
 
 import { createPinia } from 'pinia'
-import { createApp, watch } from 'vue'
+import { createApp, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { register, unregisterAll } from '@tauri-apps/plugin-global-shortcut'
 import { bus } from '@/core/bus'
-import { initAgent } from '@/agent'
+import { initAgent, setHostTools } from '@/agent'
 import { characterHitTest, initCharacter, useCharacterStore } from '@/character'
 import { refreshLive, startLiveConnectors } from '@/connectors/live'
 import { buildDemoData, reseedDemoData } from '@/desktop/seed'
@@ -24,6 +25,7 @@ import { useDemo } from '@/stores/demo'
 import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
 import { initVoice, pttDown, pttUp, setVadEnabled, unlockAudio, voiceState } from '@/voice'
+import { createDesktopAgent } from './agent-host'
 import { installApiAuth } from './auth'
 import OverlayApp from './OverlayApp.vue'
 import { screenRect } from './screen'
@@ -49,6 +51,10 @@ export async function mountOverlay(): Promise<void> {
   initCharacter()
   initNunchi()
   initVoice()
+  // computer_task, open_url and open_app act on the real computer here.
+  const agentSession = ref<string | null>(null)
+  const agent = createDesktopAgent({ onSession: (id) => { agentSession.value = id } })
+  setHostTools(agent.host)
   initAgent()
   void startLiveConnectors()
 
@@ -64,8 +70,12 @@ export async function mountOverlay(): Promise<void> {
     nunchi: { ...nunchiStatus },
     activity: { ...activity },
     dialogue: recentDialogue(),
+    agentSession: agentSession.value,
   }), resend)
-  onCommand((c) => { if (typeof c.vad === 'boolean') void setVadEnabled(c.vad) })
+  onCommand((c) => {
+    if (typeof c.vad === 'boolean') void setVadEnabled(c.vad)
+    if (typeof c.agentAsk === 'string' && c.agentAsk.trim()) void agent.ask(c.agentAsk)
+  })
 }
 
 /** Mock connector data (used when a live connector is not signed in), in the UI language. */

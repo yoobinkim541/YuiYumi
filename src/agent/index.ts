@@ -11,6 +11,7 @@ import { useCharacterStore } from '@/character/store'
 import { observerSpokeRecently, pickBuiltin, playBuiltin } from '@/voice'
 import { createStepClient, handleDelegate, type AgentDeps } from './agent-loop'
 import { useConfirmQueue } from './confirm-queue'
+import { hostTools } from './host-tools'
 
 let initialized = false
 
@@ -51,6 +52,7 @@ export function initAgent(): void {
     },
     permission: () => settings.permission,
     actuator: desktopActuator,
+    host: hostTools,
     // An accepted suggestion is acknowledged when it starts (a spoken request already was).
     onStart: (origin) => {
       declined = false
@@ -92,3 +94,4 @@ export function initAgent(): void {
 }
 
 export { useConfirmQueue } from './confirm-queue'
+export { setHostTools, type HostTools } from './host-tools'

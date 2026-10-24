@@ -1,8 +1,8 @@
-// App emotions (shared/contracts.ts EMOTIONS) -> each model's faces and a default
-// reaction motion. A face is a profile emotion label (both profiles share happy, shy,
-// sorry, troubled, surprised, thinking, playful, sleepy) or, where no label fits, an exp3
-// expression name used directly. neutral is always no expressions (both resting faces
-// already smile).
+// App emotions (shared/contracts.ts EMOTIONS) -> each model's faces and a pool of
+// reaction motions (choreography.ts; one is picked at random per reaction). A face is a
+// profile emotion label (both profiles share happy, shy, sorry, troubled, surprised,
+// thinking, playful, sleepy) or, where no label fits, an exp3 expression name used
+// directly. neutral is always no expressions (both resting faces already smile).
 //
 // TT2.0 model:
 //   happy     -> `happy`     blush; the mouth stays free for lip-sync.
@@ -24,38 +24,40 @@
 //                            around her head and a tail wag: "ooh, interesting!"
 // curious carries no reaction motion on either model: it comes with a glance toward the
 // screen activity (character:look), and a head-turning motion would fight that glance.
+// focused carries none either, so the node motion (the working loop) keeps playing.
 // Mouth-drawing expressions are `hides_mouth`: the expression layer drops them while the
 // mouth is active and restores them afterwards.
 
 import type { Emotion } from '@shared/contracts'
+import { TT2_CHOREOGRAPHY, YUI_CHOREOGRAPHY } from './choreography'
 
 export interface EmotionMapping {
   /** Profile [emotions] labels or exp3 expression names; empty = no expressions. */
   faces: readonly string[]
-  /** Motion played when the react event names none. */
-  motion: string | null
+  /** Reaction motions, one picked at random when the react event names none; empty = none. */
+  motions: readonly string[]
 }
 
 export type EmotionMap = Record<Emotion, EmotionMapping>
 
 export const TT2_EMOTIONS: EmotionMap = {
-  neutral: { faces: [], motion: null },
-  happy: { faces: ['happy'], motion: '2-0-tt2-0-happyidle' },
-  thinking: { faces: ['thinking'], motion: '2-0-tt2-0-questionmotion' },
-  surprised: { faces: ['surprised'], motion: '2-0-tt2-0-excitingidle' },
-  sorry: { faces: ['sorry'], motion: '2-0-tt2-0-sadmotion' },
-  focused: { faces: ['thinking'], motion: null },
-  curious: { faces: ['脸红', '震惊嘴'], motion: null },
+  neutral: { faces: [], motions: TT2_CHOREOGRAPHY.emotions.neutral },
+  happy: { faces: ['happy'], motions: TT2_CHOREOGRAPHY.emotions.happy },
+  thinking: { faces: ['thinking'], motions: TT2_CHOREOGRAPHY.emotions.thinking },
+  surprised: { faces: ['surprised'], motions: TT2_CHOREOGRAPHY.emotions.surprised },
+  sorry: { faces: ['sorry'], motions: TT2_CHOREOGRAPHY.emotions.sorry },
+  focused: { faces: ['thinking'], motions: TT2_CHOREOGRAPHY.emotions.focused },
+  curious: { faces: ['脸红', '震惊嘴'], motions: TT2_CHOREOGRAPHY.emotions.curious },
 }
 
 export const YUI_EMOTIONS: EmotionMap = {
-  neutral: { faces: [], motion: null },
-  happy: { faces: ['happy'], motion: 'sekai-cute-nbglad02-face-smile' },
-  thinking: { faces: ['thinking'], motion: 'arch-nyarchlinux-arch-thinking' },
-  surprised: { faces: ['surprised'], motion: 'holodreams-notice-01-lv01-face-surprise' },
-  sorry: { faces: ['sorry'], motion: 'sekai-cute-fidget01-face-shy' },
-  focused: { faces: ['thinking'], motion: null },
-  curious: { faces: ['고양이눈', '반짝이펙트', '꼬리흔들기'], motion: null },
+  neutral: { faces: [], motions: YUI_CHOREOGRAPHY.emotions.neutral },
+  happy: { faces: ['happy'], motions: YUI_CHOREOGRAPHY.emotions.happy },
+  thinking: { faces: ['thinking'], motions: YUI_CHOREOGRAPHY.emotions.thinking },
+  surprised: { faces: ['surprised'], motions: YUI_CHOREOGRAPHY.emotions.surprised },
+  sorry: { faces: ['sorry'], motions: YUI_CHOREOGRAPHY.emotions.sorry },
+  focused: { faces: ['thinking'], motions: YUI_CHOREOGRAPHY.emotions.focused },
+  curious: { faces: ['고양이눈', '반짝이펙트', '꼬리흔들기'], motions: YUI_CHOREOGRAPHY.emotions.curious },
 }
 
 /** CSS animation of the 2D fallback sprite per emotion. */

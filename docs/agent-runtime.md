@@ -33,10 +33,17 @@
 | 코딩, 파일, 셸 명령, 웹 조사, "내 컴퓨터에서 해 줘" | 데스크톱 앱의 런타임(`agent-bridge.ts` → `agent-runtime`) | 결과는 에이전트 패널과 캐릭터 음성으로 전달한다 |
 | 관찰자(Haiku)의 `delegate_task` 제안 | 기존 브라우저 루프 | 화면 기반 제안은 커넥터 업무에 한정한다 |
 
-판단 주체는 브라우저 루프의 작업 모델이다. 브라우저 루프에 `computer_task`(입력: `{ request: string }`) 도구를 하나 추가하고 설명에 위 표의 두 번째 행을 적는다. 도구 처리기는 실행 환경에 따라 다르게 동작한다.
+판단 주체는 브라우저 루프의 작업 모델이다. 브라우저 루프에는 커넥터 외에 호스트 도구 세 개가 있다(`shared/contracts.ts`의 `HOST_TOOLS`, 설명은 `server/prompts/agent.ts`가 실행 환경별로 쓴다). 클라이언트는 매 단계 `host: { kind: 'web' | 'desktop', apps? }`를 보내고, 서버는 그에 맞는 도구 설명과 시스템 프롬프트 줄을 붙인다.
 
-- **데스크톱 앱**: `agentController.ask(request)`를 호출하고 "에이전트 패널에서 작업을 시작했다"는 결과를 돌려준다. 이후 진행·완료 음성은 런타임 이벤트가 맡으므로 브라우저 루프는 짧게 수락만 말한다.
-- **웹 데모**: 런타임이 없다. 처리기는 `{ ok: false, error: 'This needs the YuiYumi desktop app, which can work on files and run commands on your computer.' }`를 돌려주고, 브라우저 루프는 이를 받아 사용자 언어로 "그 작업은 데스크톱 앱에서 할 수 있다"고 답한다. 이 경로는 키·프록시를 전혀 쓰지 않는다.
+| 도구 | 등급 | 데스크톱 앱 (`src/desktop-app/agent-host.ts`) | 웹 데모 (`src/agent/host-tools.ts`) |
+|---|---|---|---|
+| `computer_task({ request, project? })` | write, 확인 카드 없음 | 에이전트 패널 창을 열고 `controller.run(request, { quiet: true })`로 런타임에 맡긴 뒤, 턴이 끝나면 요약을 루프에 돌려준다. `project`는 프로젝트 폴더 안의 하위 폴더 이름 한 단계만 받는다 | `runStudioTask`(`src/desktop/studio`, 가상 코딩 스튜디오)를 부른다. 스튜디오가 없으면 "데스크톱 앱이 필요하다"는 오류를 돌려준다 |
+| `open_url({ url })` | read | 기본 브라우저(`system.ts` `openUrl`) | 새 탭(`window.open`). 팝업이 막히면 제안 카드를 띄우고 그 클릭으로 연다 |
+| `open_app({ name })` | read | 설치된 앱 실행(`openApp`). 설치된 앱 이름(최대 400개, 설명에서 약 3,000자)을 도구 설명에 넣는다 | 가상 데스크톱 앱(mail, calendar, slack, discord, drive, settings, dashboard)을 연다. 그 밖은 데스크톱 앱이 필요하다고 답한다 |
+
+- `computer_task`에 확인 카드를 띄우지 않는 이유: 런타임이 도구 호출마다 4절의 정책으로 다시 묻기 때문에 카드까지 띄우면 두 번 묻게 된다(웹 스튜디오에는 권한 단계를 넘긴다). `open_url`은 http/https만 연다(`webUrl`). 화면 기반 제안(`origin: 'screen'`)에는 서버가 `computer_task`를 주지 않고, 클라이언트도 거부한다.
+- 음성: 런타임의 `start` 문장과 권한 질문은 컨트롤러가 그대로 말하고, `quiet` 실행이라 `end` 문장과 오류는 말하지 않는다. 끝맺음은 루프의 마지막 답 하나뿐이라 결과를 두 번 말하지 않는다.
+- 관찰자(Haiku)는 "유튜브 열어 줘", "Slack 켜줘", 코딩·파일·명령 요청도 `delegate_task`로 넘긴다. "이 폴더" 같은 표현은 그대로 두고 화면에 보이는 경로를 덧붙이지 않는다(실제로 화면의 저장소 경로를 넣은 사례가 있어 관찰자와 `computer_task` 설명에 모두 적었다).
 
 키워드 규칙으로 미리 가르지 않는 이유는 "이 메일 내용을 정리해서 파일로 저장해 줘"처럼 두 영역이 섞인 요청이 흔하기 때문이다. 섞인 요청은 커넥터 쪽에서 내용을 가져온 뒤 `computer_task`에 구체적인 지시로 넘긴다.
 
@@ -95,7 +102,7 @@ SDK는 `permissionMode: 'default'`로 열고, SDK가 사용자 확인이 필요�
 | 헤더 | 위로는 `anthropic-version`, `anthropic-beta`만, 아래로는 `content-type`, `request-id`, `retry-after`, `x-should-retry`만 전달한다. 쿠키와 클라이언트 인증 헤더는 버린다 |
 | 로그 | 키·토큰·본문을 기록하지 않는다. 업스트림 상태 코드와 오류 이름만 남긴다 |
 
-한계: 예산은 함수 인스턴스 메모리에 있는 소프트 상한이라 인스턴스가 여러 개면 합산되지 않는다. 설치 토큰은 사용자 인증 없이 발급되므로 남용을 막는 장치는 IP별 발급 제한과 설치별·전체 예산뿐이다. Vercel 요청 본문 한도(약 4.5MB)를 넘는 아주 긴 대화는 프록시를 통과하지 못한다. `vercel.json`의 `api/**/*.ts` `maxDuration`이 60초라 긴 출력 스트림은 잘릴 수 있으므로 `api/anthropic/**`에는 더 긴 값을 주는 것이 좋다(아래 미해결 항목).
+한계: 예산은 함수 인스턴스 메모리에 있는 소프트 상한이라 인스턴스가 여러 개면 합산되지 않는다. 설치 토큰은 사용자 인증 없이 발급되므로 남용을 막는 장치는 IP별 발급 제한과 설치별·전체 예산뿐이다. Vercel 요청 본문 한도(약 4.5MB)를 넘는 아주 긴 대화는 프록시를 통과하지 못한다. `vercel.json`은 `api/anthropic/**/*.ts`에 Hobby 요금제 최대값인 `maxDuration` 300초를 준다(Fluid compute 기준, 나머지 `api/**`는 60초). 300초를 넘는 단일 모델 응답 스트림은 잘린다.
 
 ## 6. 음성 우선 동작
 
@@ -103,17 +110,24 @@ SDK의 `claude_code` 시스템 프롬프트 프리셋을 그대로 두고 `appen
 
 런타임은 SAY 줄을 전사 텍스트에서 떼어 `speak` 이벤트로 보낸다. SAY 줄은 그 턴에서 도구를 처음 쓸 때 `start`로, 도구 없이 끝나면 `end`로 내보내므로 한 번에 끝나는 답이 시작 알림으로 잘못 읽히지 않는다. 결과에 SAY 줄이 없으면 결과 첫 문장을 `end`로 쓴다. 컨트롤러는 `start`에서 `character:react { emotion: 'focused', line }`을, 권한 요청에서 `curious`와 현지화된 질문 문장을, 결과에서 `happy`/`sorry`/`neutral`과 `end` 문장을 내보낸다. 실행 중에는 `agent:busy`, `thinking`, `character:node: working`을 켠다.
 
-## 7. 데스크톱 앱 연동 (Track T 또는 메인 세션)
+## 7. 데스크톱 앱 연동
 
-1. **런타임 실행**: Tauri에서 자식 프로세스로 띄운다. 개발 중에는 `pnpm --filter @yuiyumi/agent-runtime start -- --exit-on-stdin-close`를 실행한다. 환경 변수로 `YUIYUMI_AGENT_TOKEN`(Rust가 만든 32바이트 이상 난수), `YUIYUMI_AGENT_STATE_DIR`(앱 데이터 폴더), `YUIYUMI_AGENT_PROJECT_DIR`(설정의 프로젝트 폴더, 없으면 생략), 배포에서는 `YUIYUMI_AGENT_PROXY_URL`, 개발 서버에서는 `YUIYUMI_AGENT_ORIGINS=<개발 서버 origin>`을 넘긴다. stdout 첫 줄 `{"type":"ready","port":N}`에서 포트를 읽고 `{ port, token }`을 webview에 Tauri 명령으로 넘긴다. stdin을 열어 두면 앱이 종료될 때 런타임도 종료된다.
-2. **컨트롤러 생성(오버레이 창)**: 음성과 캐릭터가 있는 오버레이에서 만든다.
-   ```ts
-   const agent = createAgentController({ bridge: new AgentBridge(await invoke('agent_runtime_endpoint')), lang: () => settings.speechLang, permission: () => settings.permission, model: () => settings.agentModel, projectDir: () => settings.agentProjectDir, persona: () => ({ name: persona.activePersona.name, speakingStyle: persona.activePersona.speakingStyle }), onSession: id => broadcastAgentSession(id) })
-   ```
-   `settings.agentProjectDir`(폴더 선택 설정)은 아직 없으므로 Track G가 설정 화면에 추가해야 한다.
-3. **패널 표시**: `<AgentPanel :controller="agent" :lang="settings.lang" />`를 마운트한다. 패널을 별도 창(`#agent`)에 띄우면 그 창에서 `emit: () => {}`로 컨트롤러를 하나 더 만들고, 오버레이가 `onSession`으로 알린 세션 ID를 `agent.attach(id)`로 따라가게 한다. 두 창 모두 같은 SSE를 구독하므로 전사와 캐릭터 반응이 함께 움직인다.
-4. **라우팅**: 2절의 `computer_task` 도구를 브라우저 루프(Track V)에 추가하고, 데스크톱 앱에서는 처리기가 `agent.ask(request)`를 부르게 한다.
-5. **종료**: 앱 종료 시 자식 프로세스에 SIGTERM을 보낸다(런타임이 열린 세션을 모두 닫는다).
+1. **런타임 실행** (`src-tauri/src/runtime.rs`): 앱 시작 때 자식 프로세스로 띄운다. 환경은 비우고(`env_clear`) `PATH`(번들 node, Homebrew 등 도구 폴더 포함), `HOME` 등 기본 변수와 `YUIYUMI_AGENT_TOKEN`(32바이트 난수, 실행마다 새로), `YUIYUMI_AGENT_STATE_DIR`(앱 데이터 폴더 `agent-runtime/`)만 넘긴다. 릴리스는 `YUIYUMI_AGENT_PROXY_URL=<DESKTOP_API_BASE>/api/anthropic`(빌드 시 값, 키 없음)과 `YUIYUMI_AGENT_CLAUDE_PATH`(번들 바이너리), 디버그는 셸의 `ANTHROPIC_API_KEY`와 `YUIYUMI_AGENT_ORIGINS=http://localhost:5181`을 넘긴다. stdout 첫 줄에서 포트를 읽고 `agent_runtime_endpoint` 명령이 `{ port, token }`을 돌려준다. 프로세스가 죽었으면 이 명령이 다시 띄운다. stderr는 `~/Library/Logs/app.yuiyumi.desktop/agent-runtime.log`. 종료 시 stdin을 닫고 SIGTERM, 3초 뒤에도 살아 있으면 SIGKILL.
+2. **프로젝트 폴더**: 프로젝트 폴더는 런타임 환경 변수가 아니라 요청마다 `cwd`로 넘긴다. `settings.agentProjectDir`는 설정 > 일반 > 에이전트 프로젝트 폴더에서 Tauri dialog 플러그인으로 고르며 웹에서는 숨긴다. 비어 있으면 `computer_task`가 런타임을 부르지 않고 설정을 안내하는 오류를 돌려준다.
+3. **컨트롤러**: 오버레이가 `createDesktopAgent`(`agent-host.ts`)로 컨트롤러를 만들고 `setHostTools`로 루프에 연결한다. 세션 ID는 오버레이의 런타임 방송(`sync.ts`의 `agentSession`)으로 퍼진다.
+4. **에이전트 패널 창** (`desktop.html#agent`, 440×640, 오버레이 옆): `computer_task`가 시작할 때와 트레이의 "에이전트…" 메뉴로 연다. 창 안의 컨트롤러는 `emit: () => {}`로 만들고 방송된 세션에 `attach`한다. 패널 입력창의 요청은 `sendCommand({ agentAsk })`로 오버레이 컨트롤러에 보내 캐릭터가 말하게 한다.
+
+### 7.1 패키징 (`pnpm desktop:build`)
+
+`src-tauri/scripts/agent-bundle.mjs`가 `src-tauri/target/agent-bundle/`(git 제외)에 다음을 만들고, `build.mjs`가 `bundle.resources`로 `YuiYumi.app/Contents/Resources/agent-runtime/`에 넣는다. 각 바이너리는 원래 서명(Anthropic, Node.js)을 유지한다.
+
+| 파일 | 내용 | 크기 |
+|---|---|---|
+| `main.mjs` | `agent-runtime`을 esbuild로 묶은 ES 모듈(SDK, zod 포함) | 2.1MB |
+| `claude` | SDK 플랫폼 패키지의 Claude Code 바이너리(darwin-arm64) | 274MB |
+| `node` | 공식 Node.js 바이너리(기본 v24.22.1 LTS, `NODE_VERSION`로 변경). nodejs.org에서 받아 SHA-256을 확인하고 `~/.cache/yuiyumi/node`에 캐시한다. Homebrew node는 공유 라이브러리에 링크돼 있어 복사할 수 없다 | 123MB |
+
+합계 약 380MB가 앱에 더해진다. `YUIYUMI_AGENT_BUNDLE=0`이면 런타임 없이 빌드하며, 그때 `computer_task`는 "코딩 에이전트가 이 빌드에 없다"는 오류를 돌려주고 캐릭터가 그렇게 말한다. 디버그 빌드(`desktop:dev`)는 번들 대신 저장소의 `agent-runtime/node_modules/.bin/tsx src/main.ts`와 시스템 node를 쓴다.
 
 ## 8. 개발·테스트
 
@@ -129,8 +143,7 @@ SDK의 `claude_code` 시스템 프롬프트 프리셋을 그대로 두고 `appen
 
 ## 9. 미해결 항목
 
-- **패키징**: SDK는 플랫폼별 Claude Code 바이너리(darwin-arm64 약 270MB)를 선택 의존성으로 받아 실행한다. 데스크톱 배포에는 Node 런타임, `agent-runtime`과 그 `node_modules`(SDK와 해당 플랫폼 바이너리)를 함께 넣거나 SDK 문서의 `pathToClaudeCodeExecutable` 방식으로 바이너리를 따로 두어야 한다. 앱 크기와 코드 서명·공증 영향을 Track T가 확인해야 한다.
+- **패키징**: 7.1절대로 node와 SDK 바이너리를 번들에 넣는다. Developer ID 서명·공증 시 Resources 안 실행 파일의 처리(재서명 여부, hardened runtime 엔타이틀먼트)를 확인해야 한다. Intel Mac은 `darwin-x64` 패키지와 x64 node로 따로 빌드해야 한다.
 - **라이선스**: Claude Agent SDK와 바이너리는 오픈소스가 아니라 Anthropic 상용 약관(`LICENSE.md`: "© Anthropic PBC. All rights reserved", Legal Agreements 적용)을 따른다. 소유자가 말한 "오픈소스 에이전트 백엔드"와 다르므로 확인이 필요하며, 앱에 바이너리를 넣어 재배포하는 조건도 약관을 확인해야 한다.
-- **`vercel.json`**: `api/anthropic/**/*.ts`에 `maxDuration` 300초 정도를 추가하는 것이 좋다. 이 파일은 이 트랙 소유가 아니라서 바꾸지 않았다. catch-all 파일명(`[...path].ts`)이 Next.js가 아닌 Vercel 함수에서 그대로 동작하는지 배포에서 확인해야 하며, 동작하지 않으면 `/api/anthropic/(.*)`를 이 함수로 보내는 rewrite를 추가한다.
-- **프로젝트 폴더 설정**: `settings.agentProjectDir`와 폴더 선택 UI(Tauri dialog)가 필요하다.
+- **`vercel.json` 라우팅**: 배포에서 `POST /api/anthropic/install`은 200이었지만 `POST /api/anthropic/v1/messages`는 Vercel `NOT_FOUND`였다(2026-10-24). Next.js가 아닌 함수에서 `[...path].ts`가 한 단계 경로만 받는 것으로 보여 `/api/anthropic/(.*)`를 `/api/anthropic/proxy`로 보내는 rewrite를 추가했다. 처리기는 `request.url`의 원래 경로로 분기하므로, 재배포 후 `v1/messages`가 404가 아니라 401(토큰 없음)을 돌려주는지 확인해야 한다.
 - **브리지 테스트 타입 검사**: `agent-runtime/test/bridge.test.ts`는 앱 코드(`@/` 별칭)를 불러오므로 런타임 tsconfig에서 제외했다. vitest에서는 실행된다.

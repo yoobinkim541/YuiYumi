@@ -2,9 +2,12 @@
 // body after it) toward the hand on damped springs, and the hand's speed tells slow
 // petting from a fast rub. Adapted from AIRI (MIT).
 //
+// Let go in the middle of a fast rub, she is left dizzy: her head and body roll round in
+// circles for a few seconds, then she shakes it off like a cat and comes round.
+//
 // Everything here is pure: points are client coordinates (y down), times milliseconds
 // from one clock, and `step` returns angles in degrees that the frame hook adds on top
-// of the motion (ParamAngleX/Y/Z for the head, ParamBodyAngleX/Z for the body).
+// of the motion (ParamAngleX/Y/Z for the head, ParamBodyAngleX/Y/Z for the body).
 
 export interface Point2 {
   x: number
@@ -20,24 +23,39 @@ export interface HeadPatHead {
 
 /**
  * Angles in degrees, added on top of the motion: the head (ParamAngleX/Y/Z) and the body
- * swaying after it (ParamBodyAngleX turn, ParamBodyAngleZ tilt).
+ * swaying after it (ParamBodyAngleX turn, ParamBodyAngleY lean, ParamBodyAngleZ tilt).
  */
 export interface HeadPatPose {
   x: number
   y: number
   z: number
   bodyX: number
+  bodyY: number
   bodyZ: number
 }
 
 /** How the held hand pets her: not at all (just holding or pulling), slowly, or fast. */
 export type HeadPatPetting = 'none' | 'slow' | 'fast'
 
+/**
+ * How she comes round after a fast petting is let go: dizzy, her head and body rolling
+ * in circles, then shaking her head like a cat; `none` otherwise.
+ */
+export type HeadPatRecovery = 'none' | 'dizzy' | 'shake'
+
 export interface HeadPatState {
   /** A press on her head is held. */
   holding: boolean
   /** How fast the held hand pets her. */
   petting: HeadPatPetting
+  /** Where she is in coming round after a fast petting was let go. */
+  recovering: HeadPatRecovery
+}
+
+/** Where her eyes look, x right and y up, each in -1..1 (ParamEyeBallX/Y). */
+export interface HeadPatLook {
+  x: number
+  y: number
 }
 
 export interface SpringAxis {
@@ -115,17 +133,48 @@ export const HEAD_PAT_BODY_REACH = 6
  */
 export const HEAD_PAT_BODY_SPRING = { omega: 10, damping: 0.65, maxAcceleration: 2000 } as const
 /**
- * Hand speed, in head radii per second, smoothed over HEAD_PAT_SPEED_SECONDS. Each
- * petting level starts at its `start` speed and ends once the speed stays below its
- * `calm` speed for `calmSeconds`, so she does not flicker between faces. A slow drag only
- * pulls her head along; stroking her head counts as slow petting and a vigorous rub
- * (about two head widths back and forth three times a second) as fast.
+ * Let go mid fast petting, she is dizzy for `seconds`: she rolls round in circles
+ * `hertz` times a second, over to one side, down forward, over to the other side and
+ * back. Her head tilts up to `tilt`°, turns up to `turn`° and nods `nod`° either way
+ * around a `droop`° hang; her whole upper body circles under it (`body`: tilting, leaning
+ * forward and back, turning). The circles swell in over `easeIn` seconds and die away
+ * over the last `easeOut` seconds.
+ */
+export const HEAD_PAT_DIZZY = {
+  seconds: 3,
+  hertz: 0.6,
+  tilt: 14,
+  turn: 5,
+  nod: 7,
+  droop: 3,
+  body: { tilt: 6, lean: 5, turn: 3 },
+  easeIn: 0.6,
+  easeOut: 0.7,
+} as const
+
+/**
+ * Then she shakes it off like a cat: her head shakes from side to side `hertz` times a
+ * second for `seconds`, swelling to `turn`° (with `tilt`° of tilt) and dying away.
+ */
+export const HEAD_PAT_SHAKE = { seconds: 0.6, hertz: 7, turn: 14, tilt: 3 } as const
+
+/**
+ * Hand speed, in CSS pixels per second (not head radii: in a small window her head is a
+ * few dozen pixels across, and a calm stroke would count as a frantic rub), smoothed over
+ * HEAD_PAT_SPEED_SECONDS. Each petting level starts at its `start` speed and ends once
+ * the speed stays below its `calm` speed for `calmSeconds`, so she does not flicker
+ * between faces. A slow drag or a gentle rub only pulls her head along while she looks up
+ * at the hand; stroking her with the mouse (about 600 px/s) is slow petting, and fast
+ * takes a vigorous rub, like a thumb scrubbing a trackpad (1000-1500 px/s).
  */
 export const HEAD_PAT_SPEED_SECONDS = 0.25
 export const HEAD_PAT_PETTING = {
-  slow: { start: 2.5, calm: 1.2, calmSeconds: 0.5 },
-  fast: { start: 7, calm: 5, calmSeconds: 0.4 },
+  slow: { start: 400, calm: 250, calmSeconds: 0.5 },
+  fast: { start: 1100, calm: 750, calmSeconds: 0.4 },
 } as const
+
+/** How far from her eyes, in head radii, the hand has to be for her eyes to turn all the way. */
+export const HEAD_PAT_LOOK_REACH = 1.5
 
 /** A move event older than this counts as the hand having stopped; the speed then decays. */
 const stillAfterSeconds = 0.05
@@ -209,6 +258,41 @@ export function headPatZoneContains(head: HeadPatHead, point: Point2): boolean {
 }
 
 /**
+ * Where the dizzy circles put her head and her body `seconds` into them: degrees to add,
+ * before the springs smooth them.
+ */
+export function headPatDizzyCircle(seconds: number): { x: number, y: number, z: number, body: { x: number, y: number, z: number } } {
+  const { seconds: length, hertz, tilt, turn, nod, droop, body, easeIn, easeOut } = HEAD_PAT_DIZZY
+  const smooth = (u: number) => {
+    const v = Math.min(1, Math.max(0, u))
+    return v * v * (3 - 2 * v)
+  }
+  const t = Math.max(0, seconds)
+  const swell = smooth(t / easeIn) * smooth((length - t) / easeOut)
+  const angle = 2 * Math.PI * hertz * t
+  const side = swell * Math.sin(angle)
+  const forward = swell * Math.cos(angle)
+  return {
+    x: turn * side,
+    y: -swell * droop - nod * forward,
+    z: tilt * side,
+    body: { x: body.turn * side, y: -body.lean * forward, z: body.tilt * side },
+  }
+}
+
+/**
+ * Where her eyes look while a hand holds her head: at the hand (on the top of her head,
+ * that is up). Her head is left to the hand's pull, so only the eyes turn.
+ */
+export function headPatLook(head: HeadPatHead, hand: Point2): HeadPatLook {
+  const reach = head.radius * HEAD_PAT_LOOK_REACH
+  return {
+    x: Math.min(1, Math.max(-1, (hand.x - head.x) / reach)),
+    y: Math.min(1, Math.max(-1, (head.y - hand.y) / reach)),
+  }
+}
+
+/**
  * The head pose a hand holding a point of her head pulls her into. A sideways pull turns
  * the head toward it, an up or down pull nods it, and pulling the grabbed point around
  * the neck tilts it (a hand on the crown moving right tips the crown right). Each angle
@@ -231,22 +315,27 @@ export function headPatPose(head: HeadPatHead, start: Point2, pointer: Point2): 
 }
 
 /**
+ * A hand on her head: pressing on it grabs that point, dragging pulls her head (and her
+ * body after it) after the hand, and the hand's speed tells slow petting from a fast rub.
+ *
  * `step(seconds)` gives the head and body angles to add this frame, or `null` once they
- * are back at rest after a release. `onChange` hears every change of holding/petting.
+ * are back at rest after a release. `onChange` hears every change of
+ * holding/petting/recovering.
  */
 export function createHeadPat(options: { onChange?: (state: HeadPatState) => void } = {}) {
   let grab: { head: HeadPatHead, start: Point2, pointer: Point2, movedAt: number } | null = null
   let speed = 0
   /** Seconds each petting level has spent below its calm speed. */
   const calmSeconds = { slow: 0, fast: 0 }
-  const state: HeadPatState = { holding: false, petting: 'none' }
+  const state: HeadPatState = { holding: false, petting: 'none', recovering: 'none' }
   const axes: Record<'x' | 'y' | 'z', SpringAxis> = {
     x: { position: 0, velocity: 0 },
     y: { position: 0, velocity: 0 },
     z: { position: 0, velocity: 0 },
   }
-  const body: Record<'x' | 'z', SpringAxis> = {
+  const body: Record<'x' | 'y' | 'z', SpringAxis> = {
     x: { position: 0, velocity: 0 },
+    y: { position: 0, velocity: 0 },
     z: { position: 0, velocity: 0 },
   }
   const springs = [...Object.values(axes), ...Object.values(body)]
@@ -256,12 +345,27 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
   let strain = 0
   /** The current heave: its number and the seconds into it. */
   let heave = { index: 0, seconds: 0 }
+  /** Coming round after a fast petting: the phase and the seconds into it. */
+  let recovery: { phase: 'dizzy' | 'shake', seconds: number } | null = null
 
   function update(next: HeadPatState) {
-    if (next.holding === state.holding && next.petting === state.petting) return
+    if (next.holding === state.holding && next.petting === state.petting && next.recovering === state.recovering) return
     state.holding = next.holding
     state.petting = next.petting
+    state.recovering = next.recovering
     options.onChange?.({ ...state })
+  }
+
+  /**
+   * The body follows where the head is, not where the hand is, so it lags behind it,
+   * and eases off well inside its range however far the head goes. Its lean is the
+   * dizzy circles' alone, so it settles back to upright here.
+   */
+  function followHead(dt: number) {
+    const reach = (share: number, head: number) => HEAD_PAT_BODY_REACH * Math.tanh(share * head / HEAD_PAT_BODY_REACH)
+    stepSpring(body.x, reach(HEAD_PAT_BODY_SHARE.x, axes.x.position), HEAD_PAT_BODY_SPRING, dt)
+    stepSpring(body.y, 0, HEAD_PAT_BODY_SPRING, dt)
+    stepSpring(body.z, reach(HEAD_PAT_BODY_SHARE.z, axes.z.position), HEAD_PAT_BODY_SPRING, dt)
   }
 
   return {
@@ -269,7 +373,12 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
       return state
     },
 
-    /** Grabs her head at `point` if it lies on it; returns whether it did. */
+    /** Where her eyes follow the held hand to; null while nothing holds her head. */
+    get look(): HeadPatLook | null {
+      return grab ? headPatLook(grab.head, grab.pointer) : null
+    },
+
+    /** Grabs her head at `point` if it lies on it; returns whether it did. Ends any dizziness. */
     press(point: Point2, head: HeadPatHead, nowMs: number): boolean {
       if (!headPatZoneContains(head, point)) return false
       grab = { head, start: { ...point }, pointer: { ...point }, movedAt: nowMs }
@@ -278,7 +387,8 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
       calmSeconds.fast = 0
       strain = 0
       heave = { index: 0, seconds: 0 }
-      update({ holding: true, petting: 'none' })
+      recovery = null
+      update({ holding: true, petting: 'none', recovering: 'none' })
       return true
     },
 
@@ -286,25 +396,28 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
       if (!grab) return
       const seconds = (nowMs - grab.movedAt) / 1000
       if (seconds <= 0) { grab.pointer = { ...point }; return }
-      const radii = Math.hypot(point.x - grab.pointer.x, point.y - grab.pointer.y) / grab.head.radius
-      speed += (radii / seconds - speed) * (1 - Math.exp(-seconds / HEAD_PAT_SPEED_SECONDS))
+      const pixels = Math.hypot(point.x - grab.pointer.x, point.y - grab.pointer.y)
+      speed += (pixels / seconds - speed) * (1 - Math.exp(-seconds / HEAD_PAT_SPEED_SECONDS))
       grab.pointer = { ...point }
       grab.movedAt = nowMs
       stillSeconds = 0
     },
 
+    /** Lets go. Let go mid fast petting, she is left dizzy before she comes round. */
     release(): void {
+      recovery = grab && state.petting === 'fast' ? { phase: 'dizzy', seconds: 0 } : null
       grab = null
       speed = 0
-      update({ holding: false, petting: 'none' })
+      update({ holding: false, petting: 'none', recovering: recovery ? 'dizzy' : 'none' })
     },
 
     /** Adds a velocity kick (degrees per second) to the springs: a tap's bob or shake. */
-    nudge(kick: Partial<Record<'x' | 'y' | 'z' | 'bodyX' | 'bodyZ', number>>): void {
+    nudge(kick: Partial<Record<'x' | 'y' | 'z' | 'bodyX' | 'bodyY' | 'bodyZ', number>>): void {
       axes.x.velocity += kick.x ?? 0
       axes.y.velocity += kick.y ?? 0
       axes.z.velocity += kick.z ?? 0
       body.x.velocity += kick.bodyX ?? 0
+      body.y.velocity += kick.bodyY ?? 0
       body.z.velocity += kick.bodyZ ?? 0
     },
 
@@ -321,7 +434,7 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
         }
         const slow = level('slow', state.petting !== 'none')
         const fast = level('fast', state.petting === 'fast') && slow
-        update({ holding: true, petting: fast ? 'fast' : slow ? 'slow' : 'none' })
+        update({ holding: true, petting: fast ? 'fast' : slow ? 'slow' : 'none', recovering: 'none' })
 
         // Held off long enough, she heaves her head back toward rest now and then.
         const pull = Math.hypot(grab.pointer.x - grab.start.x, grab.pointer.y - grab.start.y) / grab.head.radius
@@ -341,20 +454,51 @@ export function createHeadPat(options: { onChange?: (state: HeadPatState) => voi
 
         const target = headPatPose(grab.head, grab.start, grab.pointer)
         for (const key of ['x', 'y', 'z'] as const) stepSpring(axes[key], target[key] * giveWay, HEAD_PAT_HOLD_SPRING, dt)
+        followHead(dt)
       }
       else {
-        if (springs.every(a => Math.abs(a.position) < restingDegrees && Math.abs(a.velocity) < restingDegrees)) {
+        // Dizzy, she rolls round in circles, her body under her head; then the springs
+        // take her home while the shake rides on top.
+        let dizzy: ReturnType<typeof headPatDizzyCircle> | null = null
+        if (recovery) {
+          recovery.seconds += dt
+          if (recovery.phase === 'dizzy' && recovery.seconds >= HEAD_PAT_DIZZY.seconds) {
+            recovery = { phase: 'shake', seconds: recovery.seconds - HEAD_PAT_DIZZY.seconds }
+            update({ ...state, recovering: 'shake' })
+          }
+          else if (recovery.phase === 'shake' && recovery.seconds >= HEAD_PAT_SHAKE.seconds) {
+            recovery = null
+            update({ ...state, recovering: 'none' })
+          }
+          if (recovery?.phase === 'dizzy') dizzy = headPatDizzyCircle(recovery.seconds)
+        }
+        if (!recovery && springs.every(a => Math.abs(a.position) < restingDegrees && Math.abs(a.velocity) < restingDegrees)) {
           for (const a of springs) { a.position = 0; a.velocity = 0 }
           return null
         }
-        for (const a of Object.values(axes)) stepSpring(a, 0, HEAD_PAT_RELEASE_SPRING, dt)
+        for (const key of ['x', 'y', 'z'] as const) stepSpring(axes[key], dizzy?.[key] ?? 0, HEAD_PAT_RELEASE_SPRING, dt)
+        if (dizzy) {
+          for (const key of ['x', 'y', 'z'] as const) stepSpring(body[key], dizzy.body[key], HEAD_PAT_BODY_SPRING, dt)
+        }
+        else {
+          followHead(dt)
+        }
       }
-      // The body follows where the head is, not where the hand is, so it lags behind it,
-      // and eases off well inside its range however far the head goes.
-      const reach = (share: number, head: number) => HEAD_PAT_BODY_REACH * Math.tanh(share * head / HEAD_PAT_BODY_REACH)
-      stepSpring(body.x, reach(HEAD_PAT_BODY_SHARE.x, axes.x.position), HEAD_PAT_BODY_SPRING, dt)
-      stepSpring(body.z, reach(HEAD_PAT_BODY_SHARE.z, axes.z.position), HEAD_PAT_BODY_SPRING, dt)
-      return { x: axes.x.position, y: axes.y.position, z: axes.z.position, bodyX: body.x.position, bodyZ: body.z.position }
+      // The cat-like shake: a fast side-to-side that swells and dies away (it starts and
+      // ends at rest, so it neither jumps in nor out), on the head alone.
+      let shake = 0
+      if (recovery?.phase === 'shake') {
+        const t = recovery.seconds
+        shake = Math.sin(Math.PI * t / HEAD_PAT_SHAKE.seconds) * Math.sin(2 * Math.PI * HEAD_PAT_SHAKE.hertz * t)
+      }
+      return {
+        x: axes.x.position + shake * HEAD_PAT_SHAKE.turn,
+        y: axes.y.position,
+        z: axes.z.position + shake * HEAD_PAT_SHAKE.tilt,
+        bodyX: body.x.position,
+        bodyY: body.y.position,
+        bodyZ: body.z.position,
+      }
     },
   }
 }

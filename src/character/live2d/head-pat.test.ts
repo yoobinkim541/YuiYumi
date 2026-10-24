@@ -1,15 +1,18 @@
 // Behavior tests for the head-pat springs and petting levels. Adapted from AIRI (MIT).
-import type { HeadPatState } from './head-pat'
+import type { HeadPatPose, HeadPatState } from './head-pat'
 
 import { describe, expect, it } from 'vitest'
 
 import {
   createHeadPat,
   HEAD_PAT_BODY_REACH,
+  HEAD_PAT_DIZZY,
   HEAD_PAT_HOLD_SPRING,
   HEAD_PAT_PETTING,
   HEAD_PAT_REACH,
+  HEAD_PAT_SHAKE,
   headPatHeaveEffort,
+  headPatLook,
   headPatPose,
   softAdd,
   softLimit,
@@ -39,7 +42,16 @@ function createHand() {
     return pose
   }
 
-  return { pat, changes, hold, press: (point = crown) => pat.press(point, head, nowMs) }
+  return { pat, changes, hold, press: (point = crown, on = head) => pat.press(point, on, nowMs) }
+
+}
+
+/** Grabs her head, rubs it fast for a second, and lets go. */
+function rubFastAndLetGo(hand: ReturnType<typeof createHand>) {
+  hand.press()
+  hand.hold(1, t => ({ x: crown.x + 60 * Math.sin(2 * Math.PI * 6 * t), y: crown.y }))
+  expect(hand.pat.state.petting).toBe('fast')
+  hand.pat.release()
 }
 
 describe('head pat', () => {
@@ -50,6 +62,26 @@ describe('head pat', () => {
     expect(pat.press({ x: 200, y: 260 }, head, 0)).toBe(false) // chin
     expect(pat.press({ x: 320, y: 200 }, head, 0)).toBe(false) // beside her
     expect(pat.press({ x: 200, y: -20 }, head, 0)).toBe(false) // above her
+  })
+
+  it('looks up at the hand that holds her head, with her eyes only', () => {
+    const onCrown = headPatLook(head, crown)
+    expect(onCrown.y).toBeGreaterThan(0.5)
+    expect(Math.abs(onCrown.x)).toBeLessThan(0.01)
+
+    const right = headPatLook(head, { x: crown.x + 60, y: crown.y })
+    expect(right.x).toBeGreaterThan(0.3)
+    const far = headPatLook(head, { x: crown.x - 5000, y: crown.y - 5000 })
+    expect(far).toEqual({ x: -1, y: 1 })
+
+    // The live look follows the held hand and is gone once she is let go.
+    const { pat, press, hold } = createHand()
+    expect(pat.look).toBeNull()
+    press()
+    hold(0.1, () => ({ x: crown.x + 60, y: crown.y }))
+    expect(pat.look!.x).toBeCloseTo(right.x)
+    pat.release()
+    expect(pat.look).toBeNull()
   })
 
   it('pulls her head after the hand: a hand on the crown moving right turns and tips it right', () => {
@@ -159,50 +191,130 @@ describe('head pat', () => {
     expect(Math.max(...poses.map(pose => Math.abs(pose.bodyZ)))).toBeLessThan(HEAD_PAT_BODY_REACH)
   })
 
-  it('tells a slow pat from a fast rub, and calms down a level at a time', () => {
-    const { press, hold, changes, pat } = createHand()
-    press()
-    expect(changes).toEqual([{ holding: true, petting: 'none' }])
+  it('tells a slow pat from a fast rub by the hand\'s speed, whatever the size of her head', () => {
+    // A small window: her head only 32 px in radius, where a calm stroke covers many radii.
+    for (const radius of [80, 32]) {
+      const small = { x: 200, y: 200, radius }
+      const top = { x: 200, y: 200 - radius }
+      const { press, hold, changes, pat } = createHand()
+      press(top, small)
+      expect(changes).toEqual([{ holding: true, petting: 'none', recovering: 'none' }])
 
-    // A slow drag across her head (one radius a second) only pulls it along.
-    hold(1, t => ({ x: crown.x + 80 * t, y: crown.y }))
-    expect(pat.state.petting).toBe('none')
+      // A slow drag (80 px/s) or a gentle rub (30 px each way twice a second, 240 px/s) only
+      // pulls her head along while she looks up at the hand.
+      hold(1, t => ({ x: top.x + 80 * t, y: top.y }))
+      expect(pat.state.petting).toBe('none')
+      hold(1, t => ({ x: top.x + 80 + 30 * Math.sin(2 * Math.PI * 2 * t), y: top.y }))
+      expect(pat.state.petting).toBe('none')
 
-    // Gentle strokes, two a second, under half a radius each way: slow petting.
-    hold(1.5, t => ({ x: crown.x + 80 + 32 * Math.sin(2 * Math.PI * 2 * t), y: crown.y }))
-    expect(pat.state.petting).toBe('slow')
+      // Stroking her with the mouse, 100 px each way one and a half times a second (600 px/s): slow.
+      hold(2, t => ({ x: top.x + 80 + 100 * Math.sin(2 * Math.PI * 1.5 * t), y: top.y }))
+      expect(pat.state.petting).toBe('slow')
 
-    // A vigorous rub, a radius each way three times a second: fast.
-    hold(1, t => ({ x: crown.x + 80 + 80 * Math.sin(2 * Math.PI * 3 * t), y: crown.y }))
-    expect(pat.state.petting).toBe('fast')
+      // A thumb scrubbing, 60 px each way six times a second (1440 px/s): fast.
+      hold(1, t => ({ x: top.x + 80 + 60 * Math.sin(2 * Math.PI * 6 * t), y: top.y }))
+      expect(pat.state.petting).toBe('fast')
 
-    // Resting the hand steps back down, not at once and not straight to nothing.
-    hold(HEAD_PAT_PETTING.fast.calmSeconds / 2)
-    expect(pat.state.petting).toBe('fast')
-    hold(3)
-    expect(pat.state).toEqual({ holding: true, petting: 'none' })
-    expect(changes.map(change => change.petting)).toEqual(['none', 'slow', 'fast', 'slow', 'none'])
+      // Resting the hand steps back down, not at once and not straight to nothing.
+      hold(HEAD_PAT_PETTING.fast.calmSeconds / 2)
+      expect(pat.state.petting).toBe('fast')
+      hold(3)
+      expect(pat.state).toEqual({ holding: true, petting: 'none', recovering: 'none' })
+      expect(changes.map(change => change.petting)).toEqual(['none', 'slow', 'fast', 'slow', 'none'])
+    }
   })
 
-  it('lets go when released: petting ends at once and her head settles back to rest', () => {
+  it('lets go of a slow pat: petting ends at once and her head settles back to rest', () => {
     const { press, hold, pat, changes } = createHand()
     press()
     hold(1, t => ({ x: crown.x + 60 * Math.sin(2 * Math.PI * 3 * t), y: crown.y + 40 }))
-    expect(pat.state.petting).not.toBe('none')
+    expect(pat.state.petting).toBe('slow')
 
     pat.release()
-    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none' })
+    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none', recovering: 'none' })
     // Eased back, not snapped: the first frame after the release is still turned.
     const first = hold(frame)!
     expect(Math.abs(first.y)).toBeGreaterThan(1)
     expect(hold(3)).toBeNull()
   })
 
+  it('let go mid fast petting, she rolls round in dizzy circles, shakes it off like a cat, then comes round', () => {
+    const hand = createHand()
+    const { hold, pat, changes } = hand
+    rubFastAndLetGo(hand)
+    expect(pat.state).toEqual({ holding: false, petting: 'none', recovering: 'dizzy' })
+    const sample = (seconds: number) => Array.from({ length: Math.round(seconds / frame) }, () => hold(frame)!)
+
+    // Dizzy: she rolls round, side, forward, other side, back, one way only (a side-to-side
+    // sway would turn back and forth instead), her head and her whole body alike, wide.
+    const { seconds, tilt, nod, droop, body, easeIn, easeOut } = HEAD_PAT_DIZZY
+    const dizzy = sample(seconds - 0.05)
+    const middle = dizzy.slice(Math.round((easeIn + 0.3) / frame), Math.round((seconds - easeOut) / frame))
+    const expectCircling = (points: { side: number, forward: number }[]) => {
+      const turns = points.map(point => Math.atan2(point.side, point.forward))
+      const steps = turns.slice(1).map((angle, i) => Math.atan2(Math.sin(angle - turns[i]), Math.cos(angle - turns[i])))
+      const swept = steps.reduce((total, step) => total + step, 0)
+      expect(steps.filter(step => Math.sign(step) === Math.sign(swept)).length).toBeGreaterThan(steps.length * 0.95)
+      expect(Math.abs(swept)).toBeGreaterThan(Math.PI * 1.5)
+    }
+    expectCircling(middle.map(pose => ({ side: pose.z / tilt, forward: -(pose.y + droop) / nod })))
+    expectCircling(middle.map(pose => ({ side: pose.bodyZ / body.tilt, forward: -pose.bodyY / body.lean })))
+    const span = (key: 'z' | 'y' | 'bodyY' | 'bodyZ') => Math.max(...middle.map(pose => pose[key])) - Math.min(...middle.map(pose => pose[key]))
+    expect(span('z')).toBeGreaterThan(tilt * 1.5)
+    expect(span('y')).toBeGreaterThan(nod * 1.5)
+    expect(span('bodyZ')).toBeGreaterThan(body.tilt * 1.5)
+    expect(span('bodyY')).toBeGreaterThan(body.lean * 1.5)
+    // The body circles inside its range (the body parameters reach +-10 degrees).
+    expect(Math.max(...dizzy.map(pose => Math.max(Math.abs(pose.bodyX), Math.abs(pose.bodyY), Math.abs(pose.bodyZ))))).toBeLessThan(HEAD_PAT_BODY_REACH + 2)
+
+    // Then a quick shake: many more side-to-side turns in a fraction of the time.
+    const shake = sample(0.1).concat(sample(HEAD_PAT_SHAKE.seconds - 0.1))
+    expect(pat.state.recovering).toBe('shake')
+    const reversals = (poses: { x: number }[]) => poses.slice(2).filter((pose, i) => Math.sign(pose.x - poses[i + 1].x) !== Math.sign(poses[i + 1].x - poses[i].x)).length
+    expect(reversals(shake) / HEAD_PAT_SHAKE.seconds).toBeGreaterThan(4 * reversals(dizzy) / seconds)
+
+    // And she comes round: back to rest. The circles and the settling never jump, and the
+    // shake starts and ends at rest, so neither seam does.
+    const settle = sample(3).filter(Boolean)
+    const steepest = (poses: HeadPatPose[]) => {
+      let most = 0
+      for (let i = 1; i < poses.length; i++) most = Math.max(most, Math.abs(poses[i].x - poses[i - 1].x), Math.abs(poses[i].z - poses[i - 1].z), Math.abs(poses[i].bodyY - poses[i - 1].bodyY))
+      return most
+    }
+    expect(steepest(dizzy)).toBeLessThan(1)
+    // (The sampled shake ends 0.05 s early, so the first frames of `settle` still shake.)
+    const restStart = Math.round(0.06 / frame)
+    expect(steepest(settle.slice(restStart))).toBeLessThan(1)
+    expect(steepest([dizzy.at(-1)!, ...shake.slice(0, 2)])).toBeLessThan(1)
+    expect(steepest(settle.slice(restStart - 2, restStart + 1))).toBeLessThan(1)
+    expect(hold(frame)).toBeNull()
+    expect(changes.map(change => change.recovering).filter((phase, i, every) => phase !== every[i - 1])).toEqual(['none', 'dizzy', 'shake', 'none'])
+  })
+
+  it('takes her head again mid dizziness: the recovery stops for the new grab', () => {
+    const hand = createHand()
+    rubFastAndLetGo(hand)
+    hand.hold(0.5)
+    expect(hand.pat.state.recovering).toBe('dizzy')
+    hand.press()
+    expect(hand.pat.state).toEqual({ holding: true, petting: 'none', recovering: 'none' })
+  })
+
+  it('keeps her upright while held and while settling: the lean belongs to the dizzy circles alone', () => {
+    const { press, hold, pat } = createHand()
+    press()
+    const held = hold(1, t => ({ x: crown.x + 60 * Math.sin(2 * Math.PI * 2 * t), y: crown.y + 30 }))!
+    expect(Math.abs(held.bodyY)).toBeLessThan(0.01)
+    pat.release()
+    expect(Math.abs(hold(0.3)!.bodyY)).toBeLessThan(0.01)
+  })
+
   it('keeps a tap\'s nudge: a velocity kick bobs the head and settles back', () => {
     const { pat, hold } = createHand()
-    pat.nudge({ y: -160, z: 40 })
+    pat.nudge({ y: -160, z: 40, bodyY: 30 })
     const bob = hold(0.1)!
     expect(bob.y).toBeLessThan(-1)
+    expect(bob.bodyY).toBeGreaterThan(0.5)
     expect(hold(4)).toBeNull()
   })
 })

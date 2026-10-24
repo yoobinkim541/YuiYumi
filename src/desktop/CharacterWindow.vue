@@ -5,7 +5,7 @@
 // (expand, talk, sound, move) and an expandable glass menu with a 3-column grid of actions.
 // The island fades out when the cursor leaves the window unless the menu is open.
 // Marked [data-no-capture]: never sent to the observer.
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Lang } from '@shared/languages'
 import { characterHitTest } from '@/character'
 import CharacterLayer from '@/character/CharacterLayer.vue'
@@ -50,6 +50,62 @@ const expanded = ref(false)
 const dragging = ref(false)
 
 let drag: { px: number, py: number, x: number, y: number } | null = null
+
+// Click-through: the window rectangle never takes the mouse. Only the avatar's own pixels
+// (head pat, poke, body drag), the pill, the island and the bubbles do, so the apps
+// behind her stay clickable.
+const root = ref<HTMLElement | null>(null)
+/** Pointer is over a visible pixel of the avatar. */
+const overAvatar = ref(false)
+/** Pointer is over the avatar or one of her controls: shows the island and badge. */
+const hot = ref(false)
+/** Body press that turns into a window drag after a few pixels. */
+let bodyPress: { id: number, px: number, py: number, x: number, y: number } | null = null
+
+function onGlobalMove(e: PointerEvent) {
+  if (bodyPress && e.pointerId === bodyPress.id && !drag) {
+    if (Math.hypot(e.clientX - bodyPress.px, e.clientY - bodyPress.py) > 5) {
+      drag = { px: bodyPress.px, py: bodyPress.py, x: bodyPress.x, y: bodyPress.y }
+      dragging.value = true
+    }
+  }
+  if (drag && bodyPress && e.pointerId === bodyPress.id) {
+    const s = desktopView.scale || 1
+    moveAssistantWindow(drag.x + (e.clientX - drag.px) / s, drag.y + (e.clientY - drag.py) / s)
+    return
+  }
+  if (drag) return
+  overAvatar.value = characterHitTest(e.clientX, e.clientY) !== null
+  const el = document.elementFromPoint(e.clientX, e.clientY)
+  const overUi = !!el && !!root.value?.contains(el) && !!el.closest('.cw-island, .pill, .bubble-anchor, .connect-slot')
+  hot.value = overAvatar.value || overUi
+}
+
+function onGlobalUp(e: PointerEvent) {
+  if (bodyPress && e.pointerId === bodyPress.id) {
+    bodyPress = null
+    if (drag) { drag = null; dragging.value = false }
+  }
+}
+
+/** Capture phase, before the avatar's touch handler: a body press may become a drag. */
+function onPointerDownCapture(e: PointerEvent) {
+  if (e.button !== 0 || !(e.target as HTMLElement).closest('canvas')) return
+  if (characterHitTest(e.clientX, e.clientY) !== 'body') return
+  bodyPress = { id: e.pointerId, px: e.clientX, py: e.clientY, x: assistantWindow.x, y: assistantWindow.y }
+}
+
+onMounted(() => {
+  // Window capture phase: the avatar stops propagation of its own touch moves.
+  window.addEventListener('pointermove', onGlobalMove, { capture: true, passive: true })
+  window.addEventListener('pointerup', onGlobalUp, true)
+  window.addEventListener('pointercancel', onGlobalUp, true)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', onGlobalMove, true)
+  window.removeEventListener('pointerup', onGlobalUp, true)
+  window.removeEventListener('pointercancel', onGlobalUp, true)
+})
 
 function onPointerDown(e: PointerEvent) {
   const target = e.target as HTMLElement
@@ -115,12 +171,14 @@ function hide() {
 <template>
   <div
     v-show="assistantWindow.visible"
+    ref="root"
     class="cw"
-    :class="{ pinned: assistantWindow.pinned, expanded, dragging }"
+    :class="{ pinned: assistantWindow.pinned, expanded, dragging, hot, 'over-avatar': overAvatar }"
     :data-dock-h="dockH"
     :data-dock-v="dockV"
     data-no-capture
     :style="{ left: `${assistantWindow.x}px`, top: `${assistantWindow.y}px`, width: `${CHARACTER_W}px`, height: `${CHARACTER_H}px`, '--pill-zone': `${PILL_ZONE}px` }"
+    @pointerdown.capture="onPointerDownCapture"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -255,8 +313,12 @@ function hide() {
   transition: opacity 0.2s ease-out, transform 0.2s ease-out;
   pointer-events: none;
 }
-.cw:hover .cw-island, .cw.expanded .cw-island { opacity: 1; transform: none; pointer-events: auto; }
-.cw:hover .cw-badge { opacity: 1; transform: none; }
+.cw.hot .cw-island, .cw.expanded .cw-island { opacity: 1; transform: none; pointer-events: auto; }
+.cw.hot .cw-badge { opacity: 1; transform: none; }
+/* Click-through outside her pixels and controls. */
+.cw { pointer-events: none; }
+.cw :deep(.stage canvas) { pointer-events: none; }
+.cw.over-avatar :deep(.stage canvas), .cw.dragging :deep(.stage canvas) { pointer-events: auto; }
 
 .cw-main { display: flex; flex-direction: column; gap: 4px; flex: none; }
 

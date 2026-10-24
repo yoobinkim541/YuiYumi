@@ -15,7 +15,7 @@ export interface BusEvents {
    */
   'character:look': { x: number, y: number, holdMs?: number }
   /** A hand on the avatar: head held and how fast it pets her, or repeated poking. */
-  'character:touch': { kind: 'pet', holding: boolean, petting: 'none' | 'slow' | 'fast' } | { kind: 'poke' }
+  'character:touch': { kind: 'pet', holding: boolean, petting: 'none' | 'slow' | 'fast', recovering?: 'none' | 'dizzy' | 'shake' } | { kind: 'poke' }
   /** Show or hide the "..." typing bubble while a reply is being generated. */
   'thinking': { on: boolean }
   /** Speech bubble text; the character layer shows it. */

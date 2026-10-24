@@ -1,6 +1,7 @@
 // State sharing between the overlay window and the settings/dashboard panel windows. Each
 // window is its own JS realm, so Pinia stores are mirrored over Tauri events (the last write
-// wins) and the overlay, which runs voice, nunchi and the agent, broadcasts its runtime status.
+// wins) and the overlay, which runs voice, nunchi and the agent, broadcasts its runtime status
+// (including the agent runtime session the agent panel window follows).
 
 import type { StoreGeneric } from 'pinia'
 import { ref, watch } from 'vue'
@@ -14,14 +15,16 @@ const EV_HELLO = 'yy://hello'
 const EV_COMMAND = 'yy://command'
 const RUNTIME_INTERVAL_MS = 1500
 
-/** Requests a panel sends to the overlay. */
-export interface Command { vad?: boolean }
+/** Requests a panel sends to the overlay. agentAsk: a request typed into the agent panel. */
+export interface Command { vad?: boolean, agentAsk?: string }
 
 export interface Runtime {
   voice: Record<string, unknown>
   nunchi: Record<string, unknown>
   activity: Record<string, unknown>
   dialogue: DialogueTurn[]
+  /** Agent runtime session the overlay's controller follows (the agent panel attaches to it). */
+  agentSession?: string | null
 }
 
 /** Recent dialogue as last broadcast by the overlay (panel windows). */

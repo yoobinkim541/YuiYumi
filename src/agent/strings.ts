@@ -31,6 +31,8 @@ export interface AgentStrings {
   incompleteLine: string
   /** Spoken when the task finished but the model returned no text. */
   doneLine: string
+  /** Card when the browser blocked a new tab the assistant wanted to open (web demo). */
+  openTab: (host: string) => string
 }
 
 export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
@@ -54,6 +56,7 @@ export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
     fallbackLine: "Sorry, I can't reach my work tools right now. Could you try again in a moment?",
     incompleteLine: "Sorry, I couldn't finish that one.",
     doneLine: 'All done!',
+    openTab: host => `Open ${host} in a new tab?`,
   },
   'ja': {
     suggestionTitle: 'これ、やっておこうか？',
@@ -75,6 +78,7 @@ export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
     fallbackLine: 'ごめんね、今は作業ツールにつながらないみたい。少ししてからもう一回お願い！',
     incompleteLine: 'ごめんね、最後までできなかった。',
     doneLine: 'できたよ！',
+    openTab: host => `${host} を新しいタブで開く？`,
   },
   'ko': {
     suggestionTitle: '이거 내가 해 둘까?',
@@ -96,6 +100,7 @@ export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
     fallbackLine: '미안, 지금은 작업 도구에 연결이 안 돼. 조금 있다가 다시 부탁해!',
     incompleteLine: '미안, 끝까지 못 했어.',
     doneLine: '다 했어!',
+    openTab: host => `${host} 새 탭에서 열까?`,
   },
   'zh-Hans': {
     suggestionTitle: '要我来处理这个吗？',
@@ -117,6 +122,7 @@ export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
     fallbackLine: '抱歉，现在连不上工作工具。请稍后再试一次。',
     incompleteLine: '抱歉，这件事我没能做完。',
     doneLine: '完成啦！',
+    openTab: host => `在新标签页中打开 ${host}？`,
   },
   'zh-Hant': {
     suggestionTitle: '要我來處理這個嗎？',
@@ -138,5 +144,6 @@ export const AGENT_STRINGS: Record<Lang, AgentStrings> = {
     fallbackLine: '抱歉，現在連不上工作工具。請稍後再試一次。',
     incompleteLine: '抱歉，這件事我沒能完成。',
     doneLine: '完成了！',
+    openTab: host => `要在新分頁開啟 ${host} 嗎？`,
   },
 }

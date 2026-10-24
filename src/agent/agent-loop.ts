@@ -3,11 +3,12 @@
 // results back.
 // Pure over its dependencies so it can be tested with a fake fetch.
 
-import { getOpSpec, requiresConfirmation, type AgentModel, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorGrade, type ConnectorOpName, type DelegateOrigin, type Emotion, type PermissionLevel, type Persona } from '@shared/contracts'
+import { getHostToolSpec, getOpSpec, requiresConfirmation, type AgentModel, type AgentStepRequest, type AgentStepResponse, type ApiError, type ConnectorGrade, type ConnectorOpName, type DelegateOrigin, type Emotion, type HostContext, type PermissionLevel, type Persona } from '@shared/contracts'
 import type { Lang } from '@shared/languages'
 import type { BusEvents } from '@/core/bus'
 import type { ToolOutcome } from '@/connectors/registry'
 import type { ConfirmCardInput } from './confirm-queue'
+import type { HostTools } from './host-tools'
 import { buildWritePreview, type PreviewLookup } from './preview'
 import { AGENT_STRINGS } from './strings'
 import { apiUrl } from '@/core/api'
@@ -73,6 +74,8 @@ export interface AgentDeps {
   /** Permission level; decides which grades need a confirm card. Defaults to manual. */
   permission?: () => PermissionLevel
   actuator?: Actuator
+  /** computer_task / open_url / open_app. Without it those tools report an error. */
+  host?: HostTools
   /** A task starts running (after a suggestion is accepted, or right away for a request). */
   onStart?: (origin: DelegateOrigin) => void
   /** The task ended, just before its result is spoken. */
@@ -160,7 +163,30 @@ async function act(deps: AgentDeps, fn: (a: Actuator) => Promise<void> | void): 
   try { await fn(deps.actuator) } catch (e) { console.warn('[agent] actuator', e) }
 }
 
-async function runToolUse(tu: ToolUseBlock, deps: AgentDeps): Promise<ToolResultBlock> {
+/**
+ * Host tools: no confirm card and no virtual desktop staging. computer_task's worker asks
+ * per action itself (see HOST_TOOLS in shared/contracts.ts); open_url and open_app are read-level.
+ */
+async function runHostTool(tu: ToolUseBlock, origin: DelegateOrigin, deps: AgentDeps): Promise<ToolResultBlock | null> {
+  const spec = getHostToolSpec(tu.name)
+  if (!spec) return null
+  const parsed = spec.input.safeParse(tu.input ?? {})
+  if (!parsed.success) return toolResult(tu.id, { ok: false, error: `Invalid input for ${spec.name}: ${parsed.error.message}` })
+  // The server does not offer it for screen offers; a model that calls it anyway is refused.
+  if (spec.name === 'computer_task' && origin === 'screen') return toolResult(tu.id, { ok: false, error: 'computer_task needs a direct request from the user.' })
+  if (!deps.host) return toolResult(tu.id, { ok: false, error: `${spec.name} is not available here.` })
+  const outcome = await deps.host.run(spec.name, parsed.data as Record<string, unknown>, {
+    lang: deps.lang,
+    model: () => deps.model?.() ?? 'sonnet',
+    permission: () => deps.permission?.() ?? 'manual',
+    confirm: deps.confirm,
+  }).catch((e: unknown): ToolOutcome => ({ ok: false, error: (e as Error).message || String(e) }))
+  return toolResult(tu.id, outcome)
+}
+
+async function runToolUse(tu: ToolUseBlock, origin: DelegateOrigin, deps: AgentDeps): Promise<ToolResultBlock> {
+  const hosted = await runHostTool(tu, origin, deps)
+  if (hosted) return hosted
   const spec = getOpSpec(tu.name)
   if (!spec) return toolResult(tu.id, { ok: false, error: `Unknown tool "${tu.name}".` })
   const op = spec.name as ConnectorOpName
@@ -189,11 +215,12 @@ export async function runAgentTask(request: string, origin: DelegateOrigin, deps
   const now = deps.now?.() ?? new Date()
   const maxSteps = deps.maxSteps ?? MAX_STEPS
   const messages: unknown[] = [{ role: 'user', content: buildUserContent(request, origin, lang, now) }]
+  const host: HostContext | undefined = deps.host ? await deps.host.context().catch(() => undefined) : undefined
 
   for (let step = 1; step <= maxSteps; step++) {
     const persona = deps.persona?.()
     const model = deps.model?.()
-    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId, ...(persona ? { persona } : {}), ...(model ? { model } : {}) })
+    const res = await deps.step({ lang, origin, messages, sessionId: deps.sessionId, ...(persona ? { persona } : {}), ...(model ? { model } : {}), ...(host ? { host } : {}) })
     // Assistant content goes back unchanged (thinking blocks included).
     messages.push({ role: 'assistant', content: res.content })
     const toolUses = res.content.filter(isToolUse)
@@ -201,7 +228,7 @@ export async function runAgentTask(request: string, origin: DelegateOrigin, deps
       return { ok: true, text: textOf(res.content), steps: step }
     }
     const results: ToolResultBlock[] = []
-    for (const tu of toolUses) results.push(await runToolUse(tu, deps))
+    for (const tu of toolUses) results.push(await runToolUse(tu, origin, deps))
     messages.push({ role: 'user', content: results })
   }
   return { ok: false, cause: 'max_steps', steps: maxSteps }

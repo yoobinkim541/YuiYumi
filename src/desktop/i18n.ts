@@ -190,7 +190,7 @@ const EN: DesktopStrings = {
   finder: 'Finder',
   trash: 'Trash',
   menus: ['File', 'Edit', 'View', 'Go', 'Window', 'Help'],
-  apps: { mail: 'Mail', calendar: 'Calendar', slack: 'Slack', discord: 'Discord', drive: 'Drive' },
+  apps: { mail: 'Mail', calendar: 'Calendar', slack: 'Slack', discord: 'Discord', drive: 'Drive', code: 'Code', browser: 'Browser' },
   mail: {
     favorites: 'Favorites', mailboxes: 'Mailboxes', inbox: 'Inbox', drafts: 'Drafts', junk: 'Junk', sent: 'Sent',
     messages: (n, u) => `${n} messages${u ? `, ${u} unread` : ''}`,
@@ -216,7 +216,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
     finder: 'Finder',
     trash: 'ゴミ箱',
     menus: ['ファイル', '編集', '表示', '移動', 'ウインドウ', 'ヘルプ'],
-    apps: { mail: 'メール', calendar: 'カレンダー', slack: 'Slack', discord: 'Discord', drive: 'Drive' },
+    apps: { mail: 'メール', calendar: 'カレンダー', slack: 'Slack', discord: 'Discord', drive: 'Drive', code: 'Code', browser: 'ブラウザ' },
     mail: {
       favorites: 'よく使う項目', mailboxes: 'メールボックス', inbox: '受信', drafts: '下書き', junk: '迷惑メール', sent: '送信済み',
       messages: (n, u) => `${n}件のメッセージ${u ? `、未開封${u}件` : ''}`,
@@ -239,7 +239,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
     finder: 'Finder',
     trash: '휴지통',
     menus: ['파일', '편집', '보기', '이동', '윈도우', '도움말'],
-    apps: { mail: 'Mail', calendar: '캘린더', slack: 'Slack', discord: 'Discord', drive: 'Drive' },
+    apps: { mail: 'Mail', calendar: '캘린더', slack: 'Slack', discord: 'Discord', drive: 'Drive', code: 'Code', browser: '브라우저' },
     mail: {
       favorites: '즐겨찾기', mailboxes: '메일상자', inbox: '받은 편지함', drafts: '임시 보관함', junk: '정크 메일', sent: '보낸 편지함',
       messages: (n, u) => `메시지 ${n}개${u ? `, 읽지 않음 ${u}개` : ''}`,
@@ -262,7 +262,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
     finder: '访达',
     trash: '废纸篓',
     menus: ['文件', '编辑', '显示', '前往', '窗口', '帮助'],
-    apps: { mail: '邮件', calendar: '日历', slack: 'Slack', discord: 'Discord', drive: 'Drive' },
+    apps: { mail: '邮件', calendar: '日历', slack: 'Slack', discord: 'Discord', drive: 'Drive', code: 'Code', browser: '浏览器' },
     mail: {
       favorites: '个人收藏', mailboxes: '邮箱', inbox: '收件箱', drafts: '草稿', junk: '垃圾邮件', sent: '已发送',
       messages: (n, u) => `${n} 封邮件${u ? `，${u} 封未读` : ''}`,
@@ -285,7 +285,7 @@ const STRINGS: Record<Lang, DesktopStrings> = {
     finder: 'Finder',
     trash: '垃圾桶',
     menus: ['檔案', '編輯', '顯示方式', '前往', '視窗', '輔助說明'],
-    apps: { mail: '郵件', calendar: '行事曆', slack: 'Slack', discord: 'Discord', drive: 'Drive' },
+    apps: { mail: '郵件', calendar: '行事曆', slack: 'Slack', discord: 'Discord', drive: 'Drive', code: 'Code', browser: '瀏覽器' },
     mail: {
       favorites: '常用項目', mailboxes: '信箱', inbox: '收件匣', drafts: '草稿', junk: '垃圾郵件', sent: '寄件備份',
       messages: (n, u) => `${n} 封郵件${u ? `，${u} 封未讀` : ''}`,

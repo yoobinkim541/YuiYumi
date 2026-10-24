@@ -1,9 +1,11 @@
 // YuiYumi desktop shell: a transparent always-on-top overlay window with the character, a
-// menu bar tray, settings/dashboard panel windows, native screen capture and connector sign-in.
+// menu bar tray, settings/dashboard/agent panel windows, native screen capture, connector
+// sign-in and the local agent runtime (child process).
 // The UI is the same web app (desktop.html); the API stays on the server.
 
 mod auth;
 mod drag;
+mod runtime;
 mod system;
 #[cfg(target_os = "macos")]
 mod macos;
@@ -15,7 +17,7 @@ use base64::Engine;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::webview::{NewWindowResponse, WebviewWindowBuilder};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, Wry};
+use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindow, Wry};
 use tauri_plugin_window_state::StateFlags;
 
 const OVERLAY: &str = "overlay";
@@ -28,6 +30,7 @@ const JPEG_QUALITY: u8 = 70;
 
 struct Tray {
     toggle: MenuItem<Wry>,
+    agent: MenuItem<Wry>,
     settings: MenuItem<Wry>,
     dashboard: MenuItem<Wry>,
     quit: MenuItem<Wry>,
@@ -143,6 +146,8 @@ fn open_panel(app: AppHandle, view: String) -> Result<(), String> {
 struct TrayLabels {
     show: String,
     hide: String,
+    #[serde(default)]
+    agent: Option<String>,
     settings: String,
     dashboard: String,
     quit: String,
@@ -154,6 +159,9 @@ static TRAY_TEXT: Mutex<Option<TrayLabels>> = Mutex::new(None);
 #[tauri::command]
 fn set_tray_labels(app: AppHandle, labels: TrayLabels) {
     let tray = app.state::<Tray>();
+    if let Some(agent) = &labels.agent {
+        let _ = tray.agent.set_text(agent);
+    }
     let _ = tray.settings.set_text(&labels.settings);
     let _ = tray.dashboard.set_text(&labels.dashboard);
     let _ = tray.quit.set_text(&labels.quit);
@@ -177,6 +185,12 @@ fn open_app(name: String) -> Result<String, String> {
 #[tauri::command]
 async fn list_apps() -> Vec<system::AppInfo> {
     tauri::async_runtime::spawn_blocking(system::list_apps).await.unwrap_or_default()
+}
+
+/// Port and token of the local agent runtime (started on app start, restarted if it exited).
+#[tauri::command]
+async fn agent_runtime_endpoint(app: AppHandle) -> Result<runtime::Endpoint, String> {
+    runtime::endpoint(app).await
 }
 
 /// Server origin the frontend talks to (VITE_API_BASE, or the dev server's own origin).
@@ -261,7 +275,7 @@ fn webview<'a>(app: &'a AppHandle, label: &'a str, url: WebviewUrl) -> WebviewWi
 }
 
 fn show_panel(app: &AppHandle, view: &str) -> Result<(), String> {
-    if view != "settings" && view != "dashboard" {
+    if view != "settings" && view != "dashboard" && view != "agent" {
         return Err("unknown view".into());
     }
     if let Some(w) = app.get_webview_window(view) {
@@ -269,15 +283,38 @@ fn show_panel(app: &AppHandle, view: &str) -> Result<(), String> {
         let _ = w.unminimize();
         return w.set_focus().map_err(|e| e.to_string());
     }
-    let title = if view == "settings" { "YuiYumi Settings" } else { "YuiYumi Dashboard" };
-    let w = webview(app, view, WebviewUrl::App(format!("desktop.html#{view}").into()))
-        .title(title)
-        .inner_size(1000.0, 700.0)
-        .min_inner_size(640.0, 480.0)
-        .center()
-        .build()
-        .map_err(|e| e.to_string())?;
+    let mut builder = webview(app, view, WebviewUrl::App(format!("desktop.html#{view}").into()));
+    builder = match view {
+        "settings" => builder.title("YuiYumi Settings").inner_size(1000.0, 700.0).min_inner_size(640.0, 480.0).center(),
+        "dashboard" => builder.title("YuiYumi Dashboard").inner_size(1000.0, 700.0).min_inner_size(640.0, 480.0).center(),
+        // The agent transcript sits next to the character, on the side with more room.
+        _ => {
+            builder = builder.title("YuiYumi Agent").inner_size(AGENT_W, AGENT_H).min_inner_size(360.0, 400.0);
+            match agent_panel_position(app) {
+                Some((x, y)) => builder.position(x, y),
+                None => builder.center(),
+            }
+        }
+    };
+    let w = builder.build().map_err(|e| e.to_string())?;
     w.set_focus().map_err(|e| e.to_string())
+}
+
+const AGENT_W: f64 = 440.0;
+const AGENT_H: f64 = 640.0;
+
+/// Logical position left (or right) of the overlay, kept on the overlay's monitor.
+fn agent_panel_position(app: &AppHandle) -> Option<(f64, f64)> {
+    let overlay = app.get_webview_window(OVERLAY)?;
+    let m = overlay.current_monitor().ok()??;
+    let s = m.scale_factor();
+    let pos = overlay.outer_position().ok()?.to_logical::<f64>(s);
+    let (mx, my) = { let p = m.position().to_logical::<f64>(s); (p.x, p.y) };
+    let size = m.size().to_logical::<f64>(s);
+    let left = pos.x - AGENT_W - 8.0;
+    let x = if left >= mx { left } else { (pos.x + OVERLAY_W + 8.0).min(mx + size.width - AGENT_W) };
+    let y = (pos.y + OVERLAY_H - AGENT_H - 16.0).clamp(my + 32.0, (my + size.height - AGENT_H).max(my + 32.0));
+    Some((x, y))
 }
 
 fn build_overlay(app: &AppHandle) -> tauri::Result<WebviewWindow> {
@@ -313,11 +350,12 @@ fn build_overlay(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let toggle = MenuItem::with_id(app, "toggle", "Hide YuiYumi", true, None::<&str>)?;
+    let agent = MenuItem::with_id(app, "agent", "Agent…", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let dashboard = MenuItem::with_id(app, "dashboard", "Dashboard…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit YuiYumi", true, Some("CmdOrCtrl+Q"))?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&toggle, &sep, &settings, &dashboard, &PredefinedMenuItem::separator(app)?, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &sep, &agent, &settings, &dashboard, &PredefinedMenuItem::separator(app)?, &quit])?;
     TrayIconBuilder::with_id("main")
         .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?)
         .icon_as_template(true)
@@ -326,13 +364,14 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "toggle" => toggle_overlay(app),
+            "agent" => { let _ = show_panel(app, "agent"); }
             "settings" => { let _ = show_panel(app, "settings"); }
             "dashboard" => { let _ = show_panel(app, "dashboard"); }
             "quit" => app.exit(0),
             _ => {}
         })
         .build(app)?;
-    app.manage(Tray { toggle, settings, dashboard, quit });
+    app.manage(Tray { toggle, agent, settings, dashboard, quit });
     Ok(())
 }
 
@@ -340,6 +379,8 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .manage(runtime::AgentRuntime::new())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::POSITION)
@@ -361,6 +402,7 @@ pub fn run() {
             auth_sign_in,
             auth_blobs,
             auth_clear,
+            agent_runtime_endpoint,
         ])
         .setup(|app| {
             // Menu bar app: no Dock icon; the tray holds Show/Hide, Settings and Quit.
@@ -372,8 +414,15 @@ pub fn run() {
             // Restores the remembered spot (the plugin only restores windows it saw at startup).
             use tauri_plugin_window_state::WindowExt;
             let _ = overlay.restore_state(StateFlags::POSITION);
+            // The coding agent behind the character; the overlay asks for its port and token.
+            runtime::start(&handle);
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running YuiYumi");
+        .build(tauri::generate_context!())
+        .expect("error while building YuiYumi")
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                runtime::stop(app);
+            }
+        });
 }

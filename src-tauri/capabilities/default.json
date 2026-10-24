@@ -2,7 +2,12 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Overlay and panel windows",
-  "windows": ["overlay", "settings", "dashboard"],
+  "windows": [
+    "overlay",
+    "settings",
+    "dashboard",
+    "agent"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -13,6 +18,7 @@
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",
-    "global-shortcut:allow-is-registered"
+    "global-shortcut:allow-is-registered",
+    "dialog:allow-open"
   ]
 }

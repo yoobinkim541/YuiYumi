@@ -11,6 +11,7 @@ import { useCharacterStore } from '@/character/store'
 import { usePersona, type PersonaCard } from '@/stores/persona'
 import { USER_NAME_MAX, useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
+import { inTauri } from '@/desktop-app/tauri'
 import ConnectorsPanel from './ConnectorsPanel.vue'
 import Icon from './Icon.vue'
 import { useSettingsI18n, type SettingsPageId } from './i18n'
@@ -41,6 +42,16 @@ function go(id: PageId) {
   stopRecording()
   page.value = id
   scroller.value?.scrollTo({ top: 0 })
+}
+
+// --- Agent project folder (desktop app only: the web demo has no real files)
+
+const desktopApp = inTauri()
+
+async function pickProjectDir() {
+  const { open } = await import('@tauri-apps/plugin-dialog')
+  const dir = await open({ directory: true, multiple: false, defaultPath: settings.agentProjectDir || undefined, title: t.value.general.agentProject })
+  if (typeof dir === 'string' && dir) settings.agentProjectDir = dir
 }
 
 // --- Character card
@@ -278,6 +289,17 @@ const NOTICES: string[] = [
             </button>
           </div>
         </section>
+        <section v-if="desktopApp" class="section">
+          <h2>{{ t.general.agentProject }}</h2>
+          <p class="hint">{{ t.general.agentProjectHint }}</p>
+          <div class="row">
+            <div class="txt"><b class="path" :title="settings.agentProjectDir">{{ settings.agentProjectDir || t.general.agentProjectNone }}</b></div>
+            <div class="row-actions">
+              <button v-if="settings.agentProjectDir" type="button" class="btn" @click="settings.agentProjectDir = ''">{{ t.general.agentProjectClear }}</button>
+              <button type="button" class="btn primary" @click="pickProjectDir">{{ t.general.agentProjectPick }}</button>
+            </div>
+          </div>
+        </section>
         <section class="section">
           <div class="row">
             <div class="txt"><b>{{ t.general.sound }}</b><span>{{ t.general.soundDesc }}</span></div>
@@ -507,5 +529,7 @@ const NOTICES: string[] = [
 .notices li { margin: 4px 0; }
 .radio-card:disabled { opacity: .5; cursor: wait; }
 .radio-card.danger.active { border-color: #f87171; background: #fef2f2; }
+.row .txt b.path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 400; font-size: 12.5px; word-break: break-all; }
+.row-actions { display: flex; flex: none; gap: 8px; }
 .warn { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; }
 </style>

@@ -5,6 +5,7 @@ import type { Emotion } from '@shared/contracts'
 import { bus } from '@/core/bus'
 import type { CharacterNode, CharacterRuntime, MouthPose } from '@/core/types'
 import { DESKTOP_H, DESKTOP_W } from '@/desktop/windows'
+import { MotionPicker } from './choreography'
 import type { EmotionMap } from './emotion-map'
 
 const EMOTION_HOLD_MS = 4000
@@ -28,6 +29,7 @@ export class Director {
   private revertTimer: ReturnType<typeof setTimeout> | null = null
   private offs: (() => void)[] = []
   private emotions: EmotionMap | null = null
+  private picker = new MotionPicker()
 
   start(): void {
     this.offs.push(
@@ -44,7 +46,7 @@ export class Director {
     if (this.revertTimer) clearTimeout(this.revertTimer)
   }
 
-  /** `emotions` gives the default reaction motion of each emotion for this model. */
+  /** `emotions` gives the faces and reaction motions of each emotion for this model. */
   attach(runtime: CharacterRuntime, emotions: EmotionMap | null = null): void {
     this.runtime = runtime
     this.emotions = emotions
@@ -64,7 +66,7 @@ export class Director {
 
   react(emotion: Emotion, line?: string, motion?: string): void {
     this.setEmotion(emotion)
-    const m = motion ?? this.emotions?.[emotion]?.motion
+    const m = motion ?? this.picker.pick(emotion, this.emotions?.[emotion]?.motions ?? [])
     if (m) this.runtime?.playMotion(m)
     if (line) bus.emit('bubble', { text: line })
     if (this.revertTimer) clearTimeout(this.revertTimer)

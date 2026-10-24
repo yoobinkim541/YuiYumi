@@ -3,7 +3,7 @@
 import { reactive } from 'vue'
 import { characterView } from '@/character/state'
 
-export type UserAppId = 'mail' | 'calendar' | 'slack' | 'discord' | 'drive'
+export type UserAppId = 'mail' | 'calendar' | 'slack' | 'discord' | 'drive' | 'code' | 'browser'
 /** Assistant-owned windows. Excluded from captures and from the reported activity. */
 export type AssistantAppId = 'settings' | 'dashboard'
 export type AppId = UserAppId | AssistantAppId
@@ -25,7 +25,7 @@ export const DESKTOP_H = 1080
 export const MENUBAR_H = 40
 export const DOCK_H = 96
 
-export const APP_ORDER: UserAppId[] = ['mail', 'calendar', 'slack', 'discord', 'drive']
+export const APP_ORDER: UserAppId[] = ['mail', 'calendar', 'slack', 'discord', 'drive', 'code', 'browser']
 
 let zTop = 10
 
@@ -40,6 +40,9 @@ export const desktop = reactive({
     discord: win('discord', 'Discord', 220, 90, 1260, 800, false),
     slack: win('slack', 'Slack', 180, 70, 1280, 820, false),
     mail: win('mail', 'Mail', 36, 60, 1140, 870, true),
+    // Virtual coding studio (src/desktop/studio): opened when the agent builds an app.
+    code: win('code', 'Code', 36, 64, 1100, 860, false),
+    browser: win('browser', 'Browser', 500, 104, 980, 820, false),
     settings: win('settings', 'YuiYumi Settings', 360, 110, 1000, 700, false),
     dashboard: win('dashboard', 'YuiYumi Dashboard', 400, 130, 1000, 700, false),
   } as Record<AppId, WindowState>,

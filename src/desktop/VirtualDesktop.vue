@@ -19,6 +19,8 @@ import DiscordApp from './apps/DiscordApp.vue'
 import DriveApp from './apps/DriveApp.vue'
 import MailApp from './apps/MailApp.vue'
 import SlackApp from './apps/SlackApp.vue'
+import CodeApp from './apps/CodeApp.vue'
+import BrowserApp from './apps/BrowserApp.vue'
 
 const viewport = ref<HTMLElement | null>(null)
 const box = ref({ w: DESKTOP_W, h: DESKTOP_H })
@@ -59,7 +61,7 @@ function onAssistantDock() {
 }
 
 const ACCENT: Record<UserAppId, string> = {
-  mail: '#1d6ff2', calendar: '#ff3b30', slack: '#4a154b', discord: '#5865f2', drive: '#0f9d58',
+  mail: '#1d6ff2', calendar: '#ff3b30', slack: '#4a154b', discord: '#5865f2', drive: '#0f9d58', code: '#2d5bd7', browser: '#0a84ff',
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -98,6 +100,8 @@ function onKeydown(e: KeyboardEvent) {
         <WindowFrame id="slack" :accent="ACCENT.slack"><SlackApp /></WindowFrame>
         <WindowFrame id="discord" :accent="ACCENT.discord"><DiscordApp /></WindowFrame>
         <WindowFrame id="drive" :accent="ACCENT.drive"><DriveApp /></WindowFrame>
+        <WindowFrame id="code" :accent="ACCENT.code" unified><CodeApp /></WindowFrame>
+        <WindowFrame id="browser" :accent="ACCENT.browser" unified><BrowserApp /></WindowFrame>
         <!-- Assistant windows: excluded from captures. -->
         <WindowFrame id="settings" no-capture><SettingsApp /></WindowFrame>
         <WindowFrame id="dashboard" no-capture><DashboardApp /></WindowFrame>

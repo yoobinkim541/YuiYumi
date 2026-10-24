@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentStepRequest, PermissionLevel } from '@shared/contracts'
+import { projectSubfolder, webUrl, type AgentStepRequest, type PermissionLevel } from '@shared/contracts'
 import type { ToolOutcome } from '@/connectors/registry'
 import { createStepClient, DECLINED_RESULT, handleDelegate, splitForSpeech, type AgentDeps } from './agent-loop'
 import type { ConfirmCardInput } from './confirm-queue'
+import { virtualAppFor, type HostTools } from './host-tools'
 import { AGENT_STRINGS } from './strings'
 
 type Reply = { status?: number, body: unknown }
@@ -229,5 +230,73 @@ describe('agent loop persona', () => {
     }
     await handleDelegate({ request: 'x', origin: 'utterance' }, deps)
     expect(calls).toEqual(['before:discord_post:outbound', 'after:discord_post:declined'])
+  })
+})
+
+describe('host tools', () => {
+  function host(run: HostTools['run'] = async name => ({ ok: true, data: { did: name } })) {
+    return { context: vi.fn(async () => ({ kind: 'desktop' as const, apps: ['Calculator', 'Slack'] })), run: vi.fn(run) }
+  }
+
+  it('runs computer_task without a confirm card, sends the host context, and feeds the summary back', async () => {
+    const { fetch, bodies } = fakeFetch([
+      { body: { stopReason: 'tool_use', content: [{ type: 'tool_use', id: 'h1', name: 'computer_task', input: { request: 'Make a todo web app', project: 'todo-app' } }] } },
+      { body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'Your todo app is ready in todo-app!' }] } },
+    ])
+    const { deps, confirm, runTool } = makeDeps(fetch, { permission: 'manual' })
+    const h = host(async () => ({ ok: true, data: { summary: 'Created index.html' } }))
+    deps.host = h
+    const result = await handleDelegate({ request: 'build me a todo app', origin: 'utterance' }, deps)
+
+    expect(result).toMatchObject({ ok: true, text: 'Your todo app is ready in todo-app!' })
+    expect(confirm).not.toHaveBeenCalled()
+    expect(runTool).not.toHaveBeenCalled()
+    expect(h.run).toHaveBeenCalledWith('computer_task', { request: 'Make a todo web app', project: 'todo-app' }, expect.objectContaining({ lang: expect.any(Function) }))
+    expect(h.context).toHaveBeenCalledTimes(1)
+    expect(bodies[0]!.host).toEqual({ kind: 'desktop', apps: ['Calculator', 'Slack'] })
+    expect((bodies[1]!.messages[2] as { content: unknown }).content).toEqual([{ type: 'tool_result', tool_use_id: 'h1', content: JSON.stringify({ summary: 'Created index.html' }) }])
+  })
+
+  it('returns host errors as error results and refuses computer_task for screen offers', async () => {
+    const { fetch, bodies } = fakeFetch([
+      { body: { stopReason: 'tool_use', content: [{ type: 'tool_use', id: 'h1', name: 'computer_task', input: { request: 'x' } }, { type: 'tool_use', id: 'h2', name: 'open_url', input: { url: 'https://www.youtube.com' } }] } },
+      { body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'ok' }] } },
+    ])
+    const { deps } = makeDeps(fetch, { confirm: async () => true })
+    const h = host(async () => ({ ok: false, error: 'blocked' }))
+    deps.host = h
+    await handleDelegate({ request: 'offer', origin: 'screen' }, deps)
+    const results = (bodies[1]!.messages[2] as { content: { tool_use_id: string, is_error?: boolean, content: string }[] }).content
+    expect(results[0]).toMatchObject({ tool_use_id: 'h1', is_error: true, content: expect.stringContaining('direct request') })
+    expect(results[1]).toEqual({ type: 'tool_result', tool_use_id: 'h2', content: 'blocked', is_error: true })
+    expect(h.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('validates host tool input', async () => {
+    const { fetch, bodies } = fakeFetch([
+      { body: { stopReason: 'tool_use', content: [{ type: 'tool_use', id: 'h1', name: 'open_app', input: {} }] } },
+      { body: { stopReason: 'end_turn', content: [{ type: 'text', text: 'ok' }] } },
+    ])
+    const { deps } = makeDeps(fetch)
+    deps.host = host()
+    await handleDelegate({ request: 'open', origin: 'utterance' }, deps)
+    expect((bodies[1]!.messages[2] as { content: { is_error?: boolean, content: string }[] }).content[0]).toMatchObject({ is_error: true, content: expect.stringContaining('Invalid input for open_app') })
+  })
+})
+
+describe('host tool helpers', () => {
+  it('opens only http(s) URLs and plain subfolder names', () => {
+    expect(webUrl('https://www.youtube.com')).toBe('https://www.youtube.com/')
+    expect(webUrl('youtube.com')).toBe('https://youtube.com/')
+    expect(webUrl('file:///etc/passwd')).toBeNull()
+    expect(webUrl('javascript:alert(1)')).toBeNull()
+    expect(webUrl('https://user:pw@example.com')).toBeNull()
+    expect(projectSubfolder('todo-app')).toBe('todo-app')
+    expect(projectSubfolder('../x')).toBeNull()
+    expect(projectSubfolder('a/b')).toBeNull()
+    expect(projectSubfolder('.ssh')).toBeNull()
+    expect(virtualAppFor('Slack')).toBe('slack')
+    expect(virtualAppFor('캘린더')).toBe('calendar')
+    expect(virtualAppFor('Calculator')).toBeNull()
   })
 })

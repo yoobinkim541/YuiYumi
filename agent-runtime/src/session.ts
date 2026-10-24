@@ -142,6 +142,7 @@ export class AgentSession {
         env: childEnv(cfg, cred, this.model),
         abortController: this.abort,
         maxBudgetUsd: cfg.maxBudgetUsd,
+        ...(cfg.claudePath ? { pathToClaudeCodeExecutable: cfg.claudePath } : {}),
         ...(this.init.resume ? { resume: this.init.resume } : { sessionId: this.id }),
       },
     })

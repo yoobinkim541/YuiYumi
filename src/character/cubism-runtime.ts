@@ -9,10 +9,11 @@ import type { CharacterNode, CharacterRuntime, MouthPose } from '@/core/types'
 import { ensureCubismCore, type CoreKind } from './core'
 import { applyAmbient, parseAmbientMotion, type AmbientMotion } from './live2d/ambient'
 import type { CoreModel } from './live2d/core-model'
+import { MotionPicker, type MotionPool } from './choreography'
 import { composeExpressions, ExpressionLayer, parseExpression } from './live2d/expressions'
-import { createHeadPat, headPatZoneContains, softAdd, type HeadPatHead, type HeadPatPetting, type HeadPatPose } from './live2d/head-pat'
+import { createHeadPat, headPatZoneContains, softAdd, type HeadPatHead, type HeadPatLook, type HeadPatPose, type HeadPatState } from './live2d/head-pat'
 import { pointInTriangle, TouchGestures, type TouchReaction, type TouchRegion } from './live2d/touch'
-import { applyBreath, applyIdleNoise, AutoBlink, Glance, glanceDirection, LipSync, setMotionLoop } from './live2d/procedural'
+import { applyBreath, applyIdleNoise, AutoBlink, Glance, glanceDirection, LipSync, setMotionLoop, SpeechFace } from './live2d/procedural'
 import { loadModelPack, type ModelPack } from './live2d/pack'
 import { EMPTY_PROFILE, type ModelProfile } from './model-data'
 import type { CharacterModelDef } from './models'
@@ -32,6 +33,12 @@ const HIT_MIN_OPACITY = 0.2
 const POUT_MS = 2600
 /** Taps emit a bus reaction at most this often, so a flurry does not restart motions. */
 const TAP_REACT_COOLDOWN_MS = 2500
+/**
+ * Her eyes turn to the hand holding her head over this time constant (ms), and back to
+ * the motion's gaze over the release one once she is let go.
+ */
+const HAND_LOOK_ATTACK_MS = 60
+const HAND_LOOK_RELEASE_MS = 200
 
 export function webgl2Available(): boolean {
   try {
@@ -50,6 +57,9 @@ export class CubismRuntime implements CharacterRuntime {
   private baseSize = { w: 1, h: 1 }
   /** Dev-only parameter overrides, applied every frame. */
   readonly devParams = new Map<string, number>()
+  /** Dev inspection: parameters whose final values (all layers applied) debugState reports. */
+  private watchIds: string[] = []
+  private watched: Record<string, number> = {}
   private destroyed = false
   private core: CoreKind | null = null
 
@@ -60,6 +70,8 @@ export class CubismRuntime implements CharacterRuntime {
   private ambient: AmbientMotion[] = []
   private blink = new AutoBlink()
   private lipSync = new LipSync()
+  /** Pause blinks, phrase-start brow raises and the idle drift of mouth and brows. */
+  private speechFace = new SpeechFace()
   /** Event-driven glance toward screen activity (character:look); never cursor following. */
   private glance = new Glance()
   private lastGlance: ReturnType<Glance['step']> = null
@@ -73,10 +85,21 @@ export class CubismRuntime implements CharacterRuntime {
 
   // Touch: a held head follows the hand (head-pat springs), petting and pokes change the face.
   private PIXI: any = null
-  private headPat = createHeadPat({ onChange: s => this.onHeadPatChange(s.holding, s.petting) })
+  private headPat = createHeadPat({ onChange: s => this.onHeadPatChange(s) })
+  /** How far her eyes follow the holding hand (0..1), and where they last looked. */
+  private handLookWeight = 0
+  private handLook: HeadPatLook = { x: 0, y: 0 }
+  /** A petting session ended in a dizzy spell: her pleased reaction waits until she comes round. */
+  private petReactPending = false
+  /** Touch and idle motions; never the same one twice in a row. */
+  private picker = new MotionPicker()
+  /** Milliseconds of calm idle left before an idle fidget plays. */
+  private fidgetInMs = 0
   private gestures = new TouchGestures()
   private touchPointer: number | null = null
   private touchFace: string[] = []
+  /** The touch face is a head-pat face, shown instead of the emotion's. */
+  private touchFaceReplaces = false
   private touchFaceTimer: ReturnType<typeof setTimeout> | null = null
   private lastTapReactAt = -Infinity
   private lastPat: HeadPatPose | null = null
@@ -85,6 +108,7 @@ export class CubismRuntime implements CharacterRuntime {
 
   constructor(private readonly def: CharacterModelDef) {
     this.node = def.nodes('idle', null)
+    this.scheduleFidget()
   }
 
   private onPointerMove = (e: PointerEvent) => {
@@ -194,6 +218,7 @@ export class CubismRuntime implements CharacterRuntime {
     // Expressions and ambient loops come from the pack; failures only drop that piece.
     // Every motion is preloaded so the pack's object URLs can be revoked right away.
     const profile = this.profile ?? EMPTY_PROFILE
+    this.expressions.setGroups(profile)
     await Promise.all([
       ...pack.expressions.map(async (ref) => {
         try { this.expressions.add(parseExpression(ref.Name, await pack.json(ref.File), profile)) }
@@ -216,10 +241,20 @@ export class CubismRuntime implements CharacterRuntime {
     applyAmbient(core, this.ambient, t)
     if (this.node.breath) applyBreath(core, t)
     if (this.node.idleNoise) applyIdleNoise(core, t)
-    // No blinking while an expression holds the eyes shut (e.g. a squeezed-eye face).
-    if (this.node.blink && this.expressions.eyeHold() === 0) this.blink.apply(core, dtMs)
+    // Speech accents: a blink at a pause, a brow raise at a phrase start, an idle drift.
+    const face = this.speechFace.step(dtMs, this.lipSync.active ? this.lipSync.level : null)
+    // No blinking while an expression holds the eyes shut or must not blink (swirl eyes).
+    if (this.node.blink && this.expressions.blinkHold() === 0) {
+      if (face.blink) this.blink.force()
+      this.blink.apply(core, dtMs)
+    }
     this.lipSync.apply(core, dtMs)
-    // A glance toward screen activity, on top of the motion; held while she talks.
+    this.addEased(core, 'ParamBrowLY', face.brow)
+    this.addEased(core, 'ParamBrowRY', face.brow)
+    this.addEased(core, 'ParamMouthX', face.mouthX)
+    this.addEased(core, 'ParamMouthShrug', face.shrug)
+    // A glance toward screen activity, on top of the motion; held while she talks. A hand
+    // on her head releases it (her eyes go to the hand, her head is the hand's).
     const g = this.glance.step(dtMs, this.lipSync.active)
     this.lastGlance = g
     if (g) {
@@ -229,10 +264,25 @@ export class CubismRuntime implements CharacterRuntime {
       this.addEased(core, 'ParamAngleY', g.angleY)
       this.addEased(core, 'ParamBodyAngleX', g.bodyX)
     }
+    // While a hand holds her head she looks up at it: the eyeballs blend from the motion's
+    // gaze to the hand and back after the release.
+    const look = this.headPat.look
+    if (look) this.handLook = look
+    const lookTarget = look ? 1 : 0
+    this.handLookWeight += (lookTarget - this.handLookWeight) * (1 - Math.exp(-dtMs / (look ? HAND_LOOK_ATTACK_MS : HAND_LOOK_RELEASE_MS)))
+    if (!look && this.handLookWeight < 1e-3) this.handLookWeight = 0
+    if (this.handLookWeight > 0) {
+      const w = this.handLookWeight
+      for (const [id, to] of [['ParamEyeBallX', this.handLook.x], ['ParamEyeBallY', this.handLook.y]] as const) {
+        const v = core.getParameterValueById(id)
+        core.setParameterValueById(id, v + (to - v) * w)
+      }
+    }
     // Dev-only parameter overrides (window.__yui.param) for trying out faces.
     for (const [id, v] of this.devParams) core.setParameterValueById(id, v)
     // A hand on her head pulls it, and her body after it, on top of everything else;
-    // physics runs after this hook, so hair and clothes swing with it.
+    // physics runs after this hook, so hair and clothes swing with it. Dizzy after a fast
+    // rub, her head and body roll round in circles here too.
     // Each offset eases into the parameter's limit instead of being clamped at it.
     const pat = this.headPat.step(dtMs / 1000)
     this.lastPat = pat
@@ -241,8 +291,39 @@ export class CubismRuntime implements CharacterRuntime {
       this.addEased(core, 'ParamAngleY', pat.y)
       this.addEased(core, 'ParamAngleZ', pat.z)
       this.addEased(core, 'ParamBodyAngleX', pat.bodyX)
+      this.addEased(core, 'ParamBodyAngleY', pat.bodyY)
       this.addEased(core, 'ParamBodyAngleZ', pat.bodyZ)
     }
+    this.stepFidget(dtMs)
+    if (this.watchIds.length) this.watched = Object.fromEntries(this.watchIds.map(id => [id, core.getParameterValueById(id)]))
+  }
+
+  // ---- idle fidgets ------------------------------------------------------------------
+
+  private scheduleFidget() {
+    const [min, max] = this.def.choreography.idle.everyMs
+    this.fidgetInMs = min + Math.random() * (max - min)
+  }
+
+  /**
+   * Counts down only while she is calm: idle node, neutral face, no reaction motion, not
+   * talking, not touched or dizzy, not glancing. Then plays one idle fidget.
+   */
+  private stepFidget(dtMs: number) {
+    const pat = this.headPat.state
+    const calm = this.nodeKey === 'idle' && this.emotion === 'neutral' && !this.reacting && !this.lipSync.active
+      && !pat.holding && pat.recovering === 'none' && !this.lastPat && !this.lastGlance && this.touchFace.length === 0
+    if (!calm) return
+    this.fidgetInMs -= dtMs
+    if (this.fidgetInMs > 0) return
+    this.scheduleFidget()
+    const name = this.pickMotion('idle', this.def.choreography.idle.motions)
+    if (name) this.playMotion(name)
+  }
+
+  /** One motion of `pool` the pack has, never the same as last time for `key`. */
+  private pickMotion(key: string, pool: MotionPool): string | null {
+    return this.picker.pick(key, pool, name => this.groups.has(name))
   }
 
   /** Adds `offset` to a parameter, slowing down into its range limit (see softAdd). */
@@ -266,6 +347,8 @@ export class CubismRuntime implements CharacterRuntime {
    * is laid out in desktop pixels, so the canvas scale is the desktop scale).
    */
   lookAt(clientX: number, clientY: number, holdMs: number): void {
+    // Held or dizzy, her head and eyes belong to the hand and the circles.
+    if (this.headPat.state.holding || this.headPat.state.recovering !== 'none') return
     const c = this.canvasRect()
     const head = this.headClient()
     if (!c || !head) return
@@ -354,7 +437,7 @@ export class CubismRuntime implements CharacterRuntime {
     if (region === 'head') el.style.cursor = 'grabbing'
     this.gestures.down(region, e.clientX, e.clientY, e.timeStamp)
     const head = region === 'head' ? this.headClient() : null
-    if (head) this.headPat.press({ x: e.clientX, y: e.clientY }, head, e.timeStamp)
+    if (head && this.headPat.press({ x: e.clientX, y: e.clientY }, head, e.timeStamp)) this.glance.release()
   }
 
   private hoverAt = 0
@@ -391,23 +474,39 @@ export class CubismRuntime implements CharacterRuntime {
     this.headPat.release()
   }
 
-  /** A hand grabbed or let go of her head, or changed how fast it pets her: her face follows. */
-  private onHeadPatChange(holding: boolean, petting: HeadPatPetting) {
+  /**
+   * A hand grabbed or let go of her head, changed how fast it pets her, or she moved on in
+   * coming round after a fast rub: her face follows. Drawn eyes swap at once.
+   */
+  private onHeadPatChange({ holding, petting, recovering }: HeadPatState) {
     this.gestures.petting(petting !== 'none', performance.now())
-    this.setTouchFace(holding ? this.def.touch.pet[petting] : [])
-    bus.emit('character:touch', { kind: 'pet', holding, petting })
+    const faces = holding ? this.def.touch.pet[petting] : recovering !== 'none' ? this.def.touch.recover[recovering] : []
+    this.setTouchFace(faces, undefined, true)
+    bus.emit('character:touch', { kind: 'pet', holding, petting, recovering })
+    if (holding) this.petReactPending = false
+    else if (recovering === 'none' && this.petReactPending) {
+      this.petReactPending = false
+      this.react({ kind: 'pet', ms: 0 })
+    }
   }
 
-  /** Wears `faces` (labels or expression names) over the emotion, for `ms` or until replaced. */
-  private setTouchFace(faces: readonly string[], ms?: number) {
+  /**
+   * Wears `faces` (labels or expression names) over the emotion, for `ms` or until
+   * replaced. A head-pat face (`replacesEmotion`) takes the whole face over from the
+   * emotion: a smile's eye-smile added on top would bend cat eyes held open into
+   * crescents, and a sad frown would sit under the >< eyes.
+   */
+  private setTouchFace(faces: readonly string[], ms?: number, replacesEmotion = false) {
     if (this.touchFaceTimer) clearTimeout(this.touchFaceTimer)
     this.touchFaceTimer = null
     const profile = this.profile ?? EMPTY_PROFILE
     this.touchFace = faces.flatMap(f => profile.emotions[f] ?? [f])
+    this.touchFaceReplaces = replacesEmotion && this.touchFace.length > 0
     if (ms !== undefined) {
       this.touchFaceTimer = setTimeout(() => {
         this.touchFaceTimer = null
         this.touchFace = []
+        this.touchFaceReplaces = false
         this.refreshExpressions()
       }, ms)
     }
@@ -416,24 +515,30 @@ export class CubismRuntime implements CharacterRuntime {
 
   private react(r: TouchReaction) {
     const now = performance.now()
+    const touch = this.def.choreography.touch
+    const motion = (key: keyof typeof touch) => this.pickMotion(key, touch[key]) ?? undefined
     if (r.kind === 'pet') {
-      // Pleased after being petted; the emotion's motion sways her after the springs settle.
-      bus.emit('character:react', { emotion: 'happy', source: 'fallback' })
+      // Dizzy after a fast rub: pleased once she has come round, not over the circles.
+      if (this.headPat.state.recovering !== 'none') { this.petReactPending = true; return }
+      // Pleased after being petted: a soft, shy motion after the springs settle.
+      bus.emit('character:react', { emotion: 'happy', motion: motion('petted'), source: 'fallback' })
       return
     }
     if (r.kind === 'pout') {
-      // A mild pout on a calm base: the neutral react drops a tap's surprised face.
+      // A mild pout on a calm base: the neutral react drops a tap's surprised face, and a
+      // huff or a head shake says "stop it".
       this.headPat.nudge({ x: 140, bodyX: -40 })
-      bus.emit('character:react', { emotion: 'neutral', source: 'fallback' })
+      bus.emit('character:react', { emotion: 'neutral', motion: motion('poke'), source: 'fallback' })
       this.setTouchFace(this.def.touch.pout, POUT_MS)
       bus.emit('character:touch', { kind: 'poke' })
       return
     }
     if (r.region === 'head') this.headPat.nudge({ y: -160, z: 40 })
-    else this.headPat.nudge({ z: 90, bodyX: 60, bodyZ: 70 })
+    else this.headPat.nudge({ z: 90, bodyX: 60, bodyY: -30, bodyZ: 70 })
     if (now - this.lastTapReactAt < TAP_REACT_COOLDOWN_MS || this.touchFace.length) return
     this.lastTapReactAt = now
-    bus.emit('character:react', { emotion: r.region === 'head' ? 'happy' : 'surprised', source: 'fallback' })
+    if (r.region === 'head') bus.emit('character:react', { emotion: 'happy', motion: motion('tapHead'), source: 'fallback' })
+    else bus.emit('character:react', { emotion: 'surprised', motion: motion('tapBody'), source: 'fallback' })
   }
 
   private fit() {
@@ -501,6 +606,11 @@ export class CubismRuntime implements CharacterRuntime {
     if (node === this.nodeKey && this.model) return
     this.nodeKey = node
     this.node = this.def.nodes(node, this.graph)
+    // A reaction motion still playing finishes first when the new node only loops (or
+    // keeps the idle motion): its loop starts on motionFinish. A one-shot event node
+    // (attention, praised, failed) plays at once.
+    const m = this.node.motion
+    if (this.reacting && (!m || m.loop)) return
     this.reacting = false
     this.applyNode()
   }
@@ -509,9 +619,9 @@ export class CubismRuntime implements CharacterRuntime {
     if (!this.profile) return
     const profile = this.profile
     // Each face is a profile emotion label or, failing that, an expression name.
-    const names = (this.def.emotions[this.emotion]?.faces ?? []).flatMap(f => profile.emotions[f] ?? [f])
-    // The touch face is the last layer, so it wins any mutex group.
-    this.expressions.setActive(composeExpressions([...names, ...this.touchFace], this.profile, this.expressions.names()))
+    const names = this.touchFaceReplaces ? [] : (this.def.emotions[this.emotion]?.faces ?? []).flatMap(f => profile.emotions[f] ?? [f])
+    // The touch face is the last layer, so it wins any mutex group. Drawn eyes swap at once.
+    this.expressions.setActive(composeExpressions([...names, ...this.touchFace], profile, this.expressions.names()))
   }
 
   setEmotion(emotion: Emotion): void {
@@ -537,6 +647,11 @@ export class CubismRuntime implements CharacterRuntime {
     characterView.speaking = pose !== null
   }
 
+  private watchKeys(ids: string[]): Record<string, number> {
+    if (ids.join() !== this.watchIds.join()) { this.watchIds = [...ids]; this.watched = {} }
+    return this.watched
+  }
+
   /** Dev inspection: active expression weights and the values of the given parameters. */
   debugState(ids: string[] = []): Record<string, unknown> {
     const core = this.model?.internalModel.coreModel as CoreModel | undefined
@@ -546,10 +661,14 @@ export class CubismRuntime implements CharacterRuntime {
       node: this.nodeKey,
       emotion: this.emotion,
       expressions: this.expressions.snapshot(),
-      touch: { head: this.headClient(), holding: this.headPat.state.holding, petting: this.headPat.state.petting, face: this.touchFace, pose: this.lastPat },
+      touch: { head: this.headClient(), ...this.headPat.state, face: this.touchFace, pose: this.lastPat, look: this.handLookWeight > 0 ? { ...this.handLook, weight: this.handLookWeight } : null },
+      reacting: this.reacting,
+      fidgetInMs: Math.round(this.fidgetInMs),
       glance: this.lastGlance,
       motion: this.model?.internalModel.motionManager.state.currentGroup ?? null,
       params: Object.fromEntries(ids.map(id => [id, core?.getParameterValueById(id)])),
+      /** The same parameters as last written by the frame hook (every layer applied). */
+      final: this.watchKeys(ids),
     }
   }
 

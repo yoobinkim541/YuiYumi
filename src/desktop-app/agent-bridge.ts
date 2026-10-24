@@ -41,14 +41,19 @@ export class AgentRuntimeError extends Error {
 }
 
 export class AgentBridge {
-  private readonly base: string
-  private readonly token: string
+  private base = ''
+  private token = ''
   private readonly fetchImpl: typeof fetch
 
   constructor(endpoint: AgentRuntimeEndpoint, fetchImpl: typeof fetch = (...a) => fetch(...a)) {
+    this.retarget(endpoint)
+    this.fetchImpl = fetchImpl
+  }
+
+  /** Points at a restarted runtime (new port and token). */
+  retarget(endpoint: AgentRuntimeEndpoint): void {
     this.base = `http://127.0.0.1:${endpoint.port}`
     this.token = endpoint.token
-    this.fetchImpl = fetchImpl
   }
 
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -338,12 +343,19 @@ export interface AgentControllerState {
 
 export type AgentController = ReturnType<typeof createAgentController>
 
+/** How a request started with run() ended. */
+export type RunOutcome =
+  | { ok: true, text: string, say: string, durationMs: number, costUsd: number }
+  | { ok: false, code: string, text: string, say?: string }
+
 export function createAgentController(deps: AgentControllerDeps) {
   const emit = deps.emit ?? ((type, payload) => bus.emit(type, payload))
   const state = reactive<AgentControllerState>({ items: [], sessionId: null, busy: false, connected: false, model: null, cwd: null })
   const S = () => RUNTIME_STRINGS[deps.lang()] ?? EN
   let streamAbort: AbortController | null = null
   let endLine = ''
+  /** A run() caller waiting for the end of its turn; quiet: it speaks the outcome itself. */
+  let waiter: { resolve: (o: RunOutcome) => void, quiet: boolean } | null = null
   let n = 0
   const uid = (p: string) => `${p}${++n}`
 
@@ -358,10 +370,17 @@ export function createAgentController(deps: AgentControllerDeps) {
     emit('character:node', { node: busy ? 'working' : 'idle' })
   }
 
+  function settle(o: RunOutcome): boolean {
+    const w = waiter
+    waiter = null
+    w?.resolve(o)
+    return w?.quiet ?? false
+  }
+
   function fail(code: string, text: string) {
     state.items.push({ kind: 'error', id: uid('e'), code, text })
     setBusy(false)
-    emit('character:react', { emotion: 'sorry', line: text, source: 'agent' })
+    if (!settle({ ok: false, code, text })) emit('character:react', { emotion: 'sorry', line: text, source: 'agent' })
   }
 
   function onEvent(e: AgentEvent) {
@@ -370,7 +389,11 @@ export function createAgentController(deps: AgentControllerDeps) {
       case 'status':
         if (e.state === 'running') setBusy(true)
         else setBusy(false)
-        if (e.state === 'closed') { state.sessionId = null; deps.onSession?.(null) }
+        if (e.state === 'closed') {
+          state.sessionId = null
+          deps.onSession?.(null)
+          settle({ ok: false, code: 'closed', text: 'The agent session ended before the task finished.' })
+        }
         break
       case 'user': state.items.push({ kind: 'user', id: uid('u'), text: e.text }); endLine = ''; break
       case 'text': state.items.push({ kind: 'text', id: uid('t'), text: e.text, say: e.say ?? [], ...(e.parentId ? { parentId: e.parentId } : {}) }); break
@@ -401,11 +424,16 @@ export function createAgentController(deps: AgentControllerDeps) {
         state.items.push({ kind: 'result', id: uid('r'), ok: e.ok, subtype: e.subtype, costUsd: e.costUsd, durationMs: e.durationMs })
         const cancelled = e.subtype === 'cancelled'
         emit('thinking', { on: false })
-        emit('character:react', {
-          emotion: e.ok ? 'happy' : cancelled ? 'neutral' : 'sorry',
-          ...(endLine || (!e.ok && !cancelled) ? { line: endLine || S().sayFailed } : {}),
-          source: 'agent',
-        })
+        const quiet = settle(e.ok
+          ? { ok: true, text: e.text, say: endLine, durationMs: e.durationMs, costUsd: e.costUsd }
+          : { ok: false, code: cancelled ? 'cancelled' : e.subtype, text: e.text || (cancelled ? 'The user stopped the task.' : 'The task did not finish.'), say: endLine })
+        if (!quiet) {
+          emit('character:react', {
+            emotion: e.ok ? 'happy' : cancelled ? 'neutral' : 'sorry',
+            ...(endLine || (!e.ok && !cancelled) ? { line: endLine || S().sayFailed } : {}),
+            source: 'agent',
+          })
+        }
         endLine = ''
         break
       }
@@ -459,6 +487,19 @@ export function createAgentController(deps: AgentControllerDeps) {
     }
   }
 
+  /**
+   * Like ask(), but resolves when the turn ends (result, error or closed session). With
+   * quiet, the end line and errors are not spoken: the caller (the browser loop's
+   * computer_task) reports the outcome. The start line and permission questions still are.
+   */
+  function run(text: string, opts: { quiet?: boolean } = {}): Promise<RunOutcome> {
+    settle({ ok: false, code: 'superseded', text: 'A newer request replaced this one.' })
+    return new Promise((resolve) => {
+      waiter = { resolve, quiet: opts.quiet ?? false }
+      void ask(text)
+    })
+  }
+
   async function answer(requestId: string, allow: boolean): Promise<void> {
     if (!state.sessionId) return
     try { await deps.bridge.answer(state.sessionId, requestId, allow) } catch { /* already resolved */ }
@@ -478,6 +519,7 @@ export function createAgentController(deps: AgentControllerDeps) {
     state.items = []
     state.model = null
     setBusy(false)
+    settle({ ok: false, code: 'cancelled', text: 'The user closed the task.' })
     deps.onSession?.(null)
     if (id) await deps.bridge.close(id).catch(() => {})
   }
@@ -501,5 +543,5 @@ export function createAgentController(deps: AgentControllerDeps) {
     streamAbort = null
   }
 
-  return { state, ask, answer, cancel, reset, attach, dispose, strings: S }
+  return { state, ask, run, answer, cancel, reset, attach, dispose, strings: S }
 }

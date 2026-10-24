@@ -36,12 +36,12 @@ describe('stepSpring', () => {
 })
 
 describe('createHeadPat', () => {
-  it('follows a held drag, detects a fast rub and returns to rest after release', () => {
+  it('follows a held drag, detects a fast rub and comes round to rest after release', () => {
     const changes: HeadPatState[] = []
     const pat = createHeadPat({ onChange: s => changes.push(s) })
     expect(pat.press({ x: 100, y: 200 }, head, 0)).toBe(false)
     expect(pat.press({ x: 100, y: 60 }, head, 0)).toBe(true)
-    // Fast back-and-forth: 1.5 head radii every 50 ms = 30 radii/s.
+    // Fast back-and-forth: 60 px every 50 ms = 1200 px/s.
     let t = 0
     for (let i = 0; i < 20; i++) {
       t += 50
@@ -50,11 +50,13 @@ describe('createHeadPat', () => {
     }
     expect(pat.state.petting).toBe('fast')
     pat.release()
-    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none' })
+    // Let go mid rub she is dizzy first, then shakes it off and rests.
+    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none', recovering: 'dizzy' })
     let pose = pat.step(0.016)
     expect(pose).not.toBeNull()
-    for (let i = 0; i < 600 && pose; i++) pose = pat.step(0.016)
+    for (let i = 0; i < 900 && pose; i++) pose = pat.step(0.016)
     expect(pose).toBeNull()
+    expect(changes.at(-1)).toEqual({ holding: false, petting: 'none', recovering: 'none' })
   })
 
   it('a slow drag pulls the head without petting, and the body trails it', () => {
