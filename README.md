@@ -4,24 +4,29 @@
 
 **웹 데모: https://yuiyumi-seven.vercel.app**
 
-데스크톱 Chrome에서 여는 것을 권장한다. 첫 화면에서 캐릭터의 말풍선으로 언어와 부를 이름을 정하면 데모가 시작된다. 데모의 메일·일정·메시지는 모두 가공 데이터다.
+데스크톱 Chrome에서 여는 것을 권장한다. 첫 화면에서 캐릭터의 말풍선으로 언어와 부를 이름을 정하면 데모가 시작된다. 계정을 연결하지 않은 서비스의 메일·일정·메시지는 모두 가공 데이터다.
 
 ## 주요 기능
 
 - 화면 관찰: 3초마다 화면을 캡처해 Claude Haiku가 상황을 판단하고, 필요할 때 먼저 말을 건다.
-- 업무 대행: Claude Sonnet 에이전트가 메일 답장·발송, 일정 추가·삭제, 알림, Slack·Discord 게시를 처리한다. 권한 단계(수동·자동·권한 무시)에 따라 실행 전 확인을 받는다.
+- 업무 대행: Claude 에이전트(기본 Sonnet, 설정에서 Opus 선택)가 메일 답장·발송, 일정 추가·삭제, 알림, Slack·Discord 게시를 처리한다. 권한 단계(수동·자동·권한 무시)에 따라 실행 전 확인을 받는다.
+- 실계정 연동: 사용자가 자기 Google(Gmail·Calendar)·Slack·Discord 계정을 OAuth로 연결하면 실제 계정에서 동작하고, 연결하지 않은 서비스는 가공 데이터로 동작한다(`docs/integrations-setup.md`).
 - 음성: 누르고 말하기(기본)와 VAD 입력, Deepgram STT, ElevenLabs TTS와 립싱크.
 - 캐릭터: 유미(Yumi, TT2.0)와 유이(Yui) 두 캐릭터, 쓰다듬기·찌르기 반응, 편집 가능한 캐릭터 카드.
 - 다국어: English, 日本語, 한국어, 简体中文, 繁體中文(台灣).
+- macOS 데스크톱 앱: 같은 프런트엔드를 Tauri로 감싼 투명 오버레이로, 실제 화면을 보고 바탕화면 위에 상주한다(`docs/desktop-app.md`).
+- 로컬 에이전트 런타임: 데스크톱 앱에서 파일·셸 작업을 맡는 Claude Agent SDK 기반 백엔드다(`docs/agent-runtime.md`).
 
 ## 구성
 
 | 경로 | 내용 |
 |---|---|
-| `src/` | Vue 3 + Vite 프런트엔드(가상 데스크톱, 캐릭터, 음성, 에이전트 루프, 설정) |
-| `api/`, `server/` | Vercel 서버 함수(observe, agent, stt, tts, 커넥터)와 공용 서버 코드 |
+| `src/` | Vue 3 + Vite 프런트엔드(가상 데스크톱, 캐릭터, 음성, 에이전트 루프, 설정, 데스크톱 앱 진입점) |
+| `api/`, `server/` | Vercel 서버 함수(observe, agent, stt, tts, 커넥터, OAuth)와 공용 서버 코드 |
+| `src-tauri/` | macOS 데스크톱 앱(Tauri v2) |
+| `agent-runtime/` | 로컬 에이전트 런타임 |
 | `shared/` | 브라우저와 서버가 공유하는 계약 스키마와 언어 표 |
-| `docs/` | 기획(spec), 아키텍처, 커넥터, 음성 문서 |
+| `docs/` | 기획(spec), 아키텍처, 커넥터, 실연동 설정, 음성, 데스크톱 앱, 에이전트 런타임 문서 |
 | `landing/` | 랜딩 페이지(정적 사이트) |
 
 자세한 구조는 `docs/architecture.md`를 참조한다.
@@ -33,6 +38,7 @@ pnpm install
 pnpm assets      # Ayagami 코어 빌드, 캐릭터 모델 팩 생성, VAD 자산 복사
 pnpm voices      # 캐릭터별 내장 음성 생성(선택)
 pnpm dev         # http://localhost:5173
+pnpm desktop:dev # macOS 데스크톱 앱 개발 실행(선택, docs/desktop-app.md)
 ```
 
 `.env.local`에 `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY`, 캐릭터 음성 ID(`ELEVENLABS_VOICE_*`), `MODEL_ASSET_KEY`를 둔다. 목록은 `.env.example`에 있다. 키는 서버 함수에서만 읽고 브라우저로 내려보내지 않는다.
