@@ -212,7 +212,8 @@ export class CubismRuntime implements CharacterRuntime {
     applyAmbient(core, this.ambient, t)
     if (this.node.breath) applyBreath(core, t)
     if (this.node.idleNoise) applyIdleNoise(core, t)
-    if (this.node.blink) this.blink.apply(core, dtMs)
+    // No blinking while an expression holds the eyes shut (e.g. a squeezed-eye face).
+    if (this.node.blink && this.expressions.eyeHold() === 0) this.blink.apply(core, dtMs)
     this.lipSync.apply(core, dtMs)
     // Dev-only parameter overrides (window.__yui.param) for trying out faces.
     for (const [id, v] of this.devParams) core.setParameterValueById(id, v)

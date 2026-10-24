@@ -37,6 +37,26 @@ const MODELS = [
     defaultIdle: 'taptc-ri-idle-35a-eye-smile',
     extraMotions: [],
     extraMotionFiles: ['models/Yui/motions/authored/taptc-ri-idle-35a-eye-smile.motion3.json'],
+    // Generated expressions: TT2.0 has no squeezed-eye art, so this builds one from the
+    // eye parameters (eyes pressed shut, lids pushed up, emotional brows) plus the blush.
+    extraExpressions: [
+      {
+        name: '뀨잉',
+        profile: { kind: 'emotion' },
+        params: [
+          { Id: 'ParamEyeLOpen', Value: 0, Blend: 'Overwrite' },
+          { Id: 'ParamEyeROpen', Value: 0, Blend: 'Overwrite' },
+          { Id: 'ParamEyeLSmile', Value: 0, Blend: 'Overwrite' },
+          { Id: 'ParamEyeRSmile', Value: 0, Blend: 'Overwrite' },
+          { Id: 'EyeL_Squint', Value: 1, Blend: 'Overwrite' },
+          { Id: 'EyeR_Squint', Value: 1, Blend: 'Overwrite' },
+          { Id: 'Param100', Value: 1, Blend: 'Overwrite' },
+          { Id: 'Param74', Value: 1, Blend: 'Overwrite' },
+        ],
+      },
+    ],
+    mutexAdd: { eyes: ['뀨잉'] },
+    emotionOverrides: { shy: ['뀨잉'] },
   },
   {
     id: 'yui',
@@ -177,6 +197,15 @@ async function buildModel(def, key) {
     await add(file, join(SRC, f))
     expressions.push({ Name: basename(f, EXP_SUFFIX).normalize('NFC'), File: file })
   }
+  for (const [i, x] of (def.extraExpressions ?? []).entries()) {
+    const file = `expressions/x${String(i).padStart(2, '0')}${EXP_SUFFIX}`
+    zip.file(file, json({ Type: 'Live2D Expression', Parameters: x.params }))
+    expressions.push({ Name: x.name.normalize('NFC'), File: file })
+  }
+  const profileExpressions = { ...(toml.expressions ?? {}) }
+  for (const x of def.extraExpressions ?? []) profileExpressions[x.name.normalize('NFC')] = x.profile
+  const mutexGroups = { ...(toml.mutex_groups ?? {}) }
+  for (const [g, names] of Object.entries(def.mutexAdd ?? {})) mutexGroups[g] = [...(mutexGroups[g] ?? []), ...names]
 
   // --- Static files
   const refs = model3.FileReferences
@@ -212,9 +241,9 @@ async function buildModel(def, key) {
     model_name: toml.model_name ?? basename(model3Name, '.model3.json'),
     idle_motion: idleMotion,
     ambient,
-    expressions: toml.expressions ?? {},
-    mutex_groups: toml.mutex_groups ?? {},
-    emotions: toml.emotions ?? {},
+    expressions: profileExpressions,
+    mutex_groups: mutexGroups,
+    emotions: { ...(toml.emotions ?? {}), ...(def.emotionOverrides ?? {}) },
   }))
 
   // PNG and moc3 barely compress; STORE keeps unzip fast in the browser.

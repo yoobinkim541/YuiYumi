@@ -76,6 +76,16 @@ export class ExpressionLayer {
     return Object.fromEntries([...this.weights].filter(([, w]) => w > 0))
   }
 
+  /** Weight of the strongest expression that overwrites the eye-open parameters (eyes held shut). */
+  eyeHold(): number {
+    let hold = 0
+    for (const [name, def] of this.defs) {
+      const w = this.weights.get(name) ?? 0
+      if (w > hold && def.params.some(p => p.blend === 'Overwrite' && (p.id === 'ParamEyeLOpen' || p.id === 'ParamEyeROpen'))) hold = w
+    }
+    return hold
+  }
+
   setActive(names: readonly string[]): void {
     this.active = new Set(names.filter(n => this.defs.has(n)))
   }
