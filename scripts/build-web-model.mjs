@@ -33,7 +33,8 @@ const MODELS = [
   {
     id: 'tt2',
     src: 'models/TT2.0',
-    defaultIdle: '2-0-tt2-0-smileidle1',
+    // No idle body motion: blink, breath and gaze only.
+    defaultIdle: null,
     extraMotions: [],
   },
   {

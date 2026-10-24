@@ -2,8 +2,8 @@
 //
 // TT2.0 model: no animation graph, so the mapping lives here (NODE_MAP_TT2). All TT2.0
 // motions are 8-15 s loops. State nodes loop their motion until the next node; event
-// nodes (attention, praised, failed) play theirs once, then the idle motion resumes.
-// `motion: null` keeps the idle motion (model3 `Idle` group).
+// nodes (attention, praised, failed) play theirs once, then the body returns to rest.
+// `motion: null` plays no body motion (TT2.0 has no idle motion; blink, breath and gaze only).
 //
 // Yui model: settings come from the model's anim-graph.json node animations.
 
@@ -26,7 +26,6 @@ export const NODE_MAP_TT2: Record<CharacterNode, NodeSettings> = {
   listening: { ...base, motion: { name: '2-0-tt2-0-simleidle', loop: true } },
   working: { ...base, motion: { name: '2-0-tt2-0-questionmotion', loop: true } },
   waiting: { ...base, motion: { name: '2-0-tt2-0-poutidle', loop: true } },
-  // Same body motion as idle; null avoids restarting it when speech starts.
   speaking: { ...base, motion: null },
   attention: { ...base, motion: { name: '2-0-tt2-0-excitingidle', loop: false } },
   praised: { ...base, motion: { name: '2-0-tt2-0-shyidle', loop: false } },
