@@ -27,3 +27,7 @@ crates/**/target/
 # Not redistributed from this repo: Cubism Core and model assets are placed at build time
 public/vendor/
 public/models/
+/models/
+
+# Character model and motion assets: never published to GitHub
+/models/
