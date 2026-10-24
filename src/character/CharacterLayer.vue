@@ -76,13 +76,17 @@ const spriteClass = computed(() => [
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: linear-gradient(180deg, rgba(255, 246, 251, 0.62) 0%, rgba(238, 236, 255, 0.72) 100%);
-  box-shadow: 0 24px 60px rgba(40, 24, 70, 0.26), 0 2px 8px rgba(40, 24, 70, 0.12);
-  backdrop-filter: blur(18px) saturate(160%);
+  /* Transparent window: only the avatar is drawn, like a desktop pet. */
+  background: transparent;
 }
-.viewport { position: relative; flex: 1; overflow: hidden; }
+.viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  /* The legs fade out at the bottom edge instead of a hard cut. */
+  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+}
 .stage { position: absolute; inset: 0; }
 .bubble-anchor {
   position: absolute;
