@@ -1,4 +1,4 @@
-# YuiYumi — Spec v0.4
+# YuiYumi — Spec v0.5
 
 Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
@@ -15,15 +15,25 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 - **"화면 위에 상주"는 웹 버전에서는 페이지 안 상주**로 구현한다. 바탕화면 위 오버레이는 브라우저 제약과 설치 위험 때문에 로드맵이다. 제출 문구는 "데모는 웹, 상주형 오버레이는 다음 단계"로 정직하게 쓴다.
 - **중국 본토 주의**: Google 서비스는 중국 본토에서 쓸 수 없고, Anthropic API는 중국 본토가 공식 지원 지역이 아닌 것으로 알고 있다(둘 다 현재 공식 문서 확인 필요). 주 타겟에 포함하므로 현지 접근성과 대체 서비스 대응을 사전에 확인한다. 화면 인식은 어떤 앱이든 읽으므로 특정 서비스 연동에 의존하지 않는다는 점이 강점이다.
 
-## 확정 사항 (v0.4)
+## 확정 사항 (v0.5)
+
+### v0.5 변경
+
+- 프레임워크를 Next.js에서 **Vue 3 + Vite SPA**로 바꾼다. 서버는 Vercel `api/`의 Web 표준 함수다. `templates/`의 Next.js 스타터는 제공자 호출 구조의 참고 자료로만 쓴다.
+- 심사 데모는 **페이지 안 가상 데스크톱**(1920×1080 논리 캔버스, Mail·Calendar·Slack·Discord·Drive 창)에서 진행한다. `getDisplayMedia` 화면 공유와 공유 동의 흐름은 주 경로에서 제외하고 선택 어댑터로 남긴다.
+- 커넥터에 **Slack·Discord**를 추가하고 Gmail·Calendar·Drive와 하나의 레지스트리(`CONNECTOR_OPS`)로 묶는다. 데모는 가상 데스크톱과 같은 세션 데이터를 쓰는 목업 커넥터이며, 시간이 남으면 Slack·Discord 읽기 전용 봇 토큰 연동을 붙인다.
+- 캐릭터 코어는 Ayagami를 목표로 두되, 오늘은 **공식 Cubism Core 폴백**을 허용한다. Core와 모델 에셋은 커밋하지 않고 빌드 시점에 배치한다.
+- 음성은 브라우저(마이크·VAD·PTT·인코딩·재생·립싱크·끼어들기)와 서버(Deepgram STT·ElevenLabs TTS)로 경계를 나눈다(`docs/voice.md`).
+- 서버는 상태를 갖지 않는다. 에이전트 도구 루프, 확인 카드, 목업 데이터는 브라우저에 둔다. 전체 구조는 `docs/architecture.md`.
+- AC-9를 "관찰 중 표시기"로 바꾼다.
 
 | 항목 | 결정 |
 |---|---|
-| 형태 | **웹 전용**. 데스크톱 앱(exe, Tauri, Electron)은 만들지 않는다 — VC가 미검증 앱을 설치해야 하는 위험 |
-| 기반 | **Next.js(React) 앱을 새로 구성**. [moeru-ai/airi](https://github.com/moeru-ai/airi)(MIT)는 `templates/airi` 발췌본에서 프레임워크와 무관한 로직을 이식한다. TTS·STT는 `templates/`의 ElevenLabs·Deepgram 스타터를 참고한다 |
-| 코어·렌더러 | 코어는 [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami), 렌더러는 [cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer). 연결 어댑터는 미정(아래 "렌더링 스택") |
-| 화면 인식 | 웹 `getDisplayMedia` + **Haiku 비전**. 3초마다 1920×1080 1장을 캡처해 항상 Haiku를 호출 |
-| 배포 | **Vercel** (Next.js, `/api` 라우트) |
+| 형태 | **웹 전용**. 오늘은 데스크톱 앱(exe, Tauri, Electron)을 만들지 않는다 — VC가 미검증 앱을 설치해야 하는 위험. 프로덕션은 같은 웹앱을 웹뷰 데스크톱 앱(Tauri)으로 감싸며, 화면 입력 어댑터(`ScreenSource`)만 교체한다 |
+| 기반 | **Vue 3 + Vite SPA를 새로 구성**. [moeru-ai/airi](https://github.com/moeru-ai/airi)(MIT)는 `templates/airi` 발췌본을 바탕으로 Live2D 연동·오디오 로직을 이식한다. TTS·STT는 `templates/`의 ElevenLabs·Deepgram 스타터의 서버 호출 구조만 참고한다 |
+| 코어·렌더러 | 코어는 [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami)가 목표이며, 오늘은 공식 Cubism Core를 폴백으로 허용한다. 렌더러는 [cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer)(아래 "렌더링 스택") |
+| 화면 인식 | **페이지 안 가상 데스크톱** + **Haiku 비전**. 3초마다 가상 데스크톱 요소를 `modern-screenshot`으로 1920×1080 1장 캡처해 항상 Haiku를 호출 |
+| 배포 | **Vercel** (Vite 정적 빌드 + `api/` 함수). 로컬 `vercel build` 후 `vercel deploy --prebuilt` |
 | 캐릭터 | Live2D 2D 모델은 이미 보유 |
 | 브라우저 | **Chrome 권장**으로 안내 |
 | 크레딧 | **김유빈 계정의 API 크레딧($500) 중 $150는 시연·테스트용으로 예약** (이 PC에서 사용) |
@@ -51,26 +61,27 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 ## 제품 형태
 
-- **웹(심사 링크)**: 링크만 열면 데모가 완결된다. 웹은 브라우저 제약상 바탕화면 위 투명 오버레이가 불가능(Document PiP는 타이틀바 고정·크기 상한·창 1개·투명도 미지원)하므로, 페이지 안에 캐릭터를 띄우고 데모용 화면을 함께 보여 준다.
-- **서버(`api/`)**: Claude, ElevenLabs, 눈치 게이트, 데모 계정 커넥터. 키와 토큰은 서버에만 둔다.
+- **웹(심사 링크)**: 링크만 열면 데모가 완결된다. 웹은 브라우저 제약상 바탕화면 위 투명 오버레이가 불가능(Document PiP는 타이틀바 고정·크기 상한·창 1개·투명도 미지원)하므로, 페이지 안에 가상 데스크톱과 캐릭터를 함께 띄운다. 캐릭터·말풍선·확인 카드는 가상 데스크톱 바깥 레이어에 둔다.
+- **서버(`api/`)**: 상태가 없는 함수다. API 키 보관, Claude·Deepgram·ElevenLabs 호출, 선택적 실연동 커넥터, 인스턴스 메모리 기준 예산 가드만 맡는다. 눈치 게이트, 에이전트 도구 루프, 확인 카드, 목업 데이터는 브라우저에 있다. 키와 토큰은 서버에만 둔다.
 
 ### 스택
 
-- **앱**: Next.js(React) + Vercel. `templates/elevenlabs-nextjs-starter`(TTS)와 `templates/deepgram-nextjs-live-transcription`(STT)의 호출 구조를 참고하되, 키는 서버 환경변수에만 둔다.
-- **AIRI(MIT) 발췌**: `templates/airi`의 `stage-ui-live2d`, `model-driver-lipsync`, `motion-driver-magic`, `pipelines-audio`, `core-agent` 등에서 프레임워크와 무관한 TypeScript 로직을 이식한다. AIRI의 UI는 Vue이므로 컴포넌트는 React로 다시 만든다. 발췌 범위와 주의점은 `templates/airi/README.md`.
+- **앱**: Vue 3 + Vite + Pinia SPA와 Vercel `api/` Web 표준 함수. `templates/elevenlabs-nextjs-starter`(TTS)와 `templates/deepgram-nextjs-live-transcription`(STT)는 Next.js 기반이므로 서버 측 제공자 호출 구조만 참고하고, 키는 서버 환경변수에만 둔다.
+- **AIRI(MIT) 발췌**: `templates/airi`의 `stage-ui-live2d`, `model-driver-lipsync`, `pipelines-audio`, `stream-kit` 등을 참고한다. AIRI의 UI가 Vue 3이므로 Live2D 연동 코드는 AIRI 기반 코드와 자체 구현으로 구성하고, 무거운 UI 의존성은 가져오지 않는다. 발췌 범위와 주의점은 `templates/airi/README.md`.
 - **코어·렌더러**: 아래 "렌더링 스택".
+- **모듈 경계와 계약**: `docs/architecture.md`, `shared/contracts.ts`, `src/core/bus.ts`.
 
 **키 프록시**: ElevenLabs 스타터는 사용자가 입력한 키를 세션에 저장하는 구조(`key-manager`)이므로 가져오지 않는다. LLM·STT·TTS 호출은 모두 서버(`/api`)를 거친다.
 
-**출처 표기**: 제출물과 발표에 "AIRI(MIT) 코드 일부 활용, 눈치 엔진·업무 도구·확인 UX·화면 인식·데모 계정 연동은 자체 구현"이라고 밝히고, 각 템플릿의 `LICENSE`와 저작권 고지를 유지한다.
+**출처 표기**: 제출물과 발표에 "AIRI(MIT) 코드 일부 활용, 렌더러는 cubism-web-batched-renderer, 눈치 엔진·가상 데스크톱·업무 도구·확인 UX·화면 인식·데모 계정 연동은 자체 구현"이라고 밝히고, 각 템플릿의 `LICENSE`와 저작권 고지를 유지한다. 전체 목록은 `THIRD_PARTY_NOTICES.md`.
 
-**일정 위험**: Vue 로직의 React 이식과 Ayagami 어댑터가 17:00 기한에 맞는지가 가장 큰 위험이다. 맞지 않으면 2D 스프라이트 표정 교체로 폴백한다.
+**일정 위험**: 캐릭터 렌더링이 17:00 기한에 맞는지가 가장 큰 위험이다. 오늘은 공식 Cubism Core 경로를 먼저 띄우고 Ayagami는 병행 spike로 검증한다. 렌더링 자체가 되지 않으면 2D 스프라이트 표정 교체로 폴백한다.
 
 ## 눈치 엔진
 
 입력: 같은 화면 체류 시간, 화면 내용(비전), 마지막 끼어들기 후 경과 시간, 오늘 끼어든 횟수, 사용자 발화 여부.
 
-0. **캡처 polling**: 3초마다 공유된 화면을 1920×1080 1장으로 캡처해 Haiku를 호출한다(원본이 더 작으면 그대로). 호출은 게이트 상태와 무관하게 항상 수행한다. 캡처는 브라우저 메모리에서만 다루고 서버에 저장하지 않는다. 1920×1080 한 장은 2,691 visual token(Vision 문서의 `⌈w/28⌉×⌈h/28⌉` 기준)이다.
+0. **캡처 polling**: 3초마다 가상 데스크톱 요소를 1920×1080 1장으로 캡처해 Haiku를 호출한다. 호출은 게이트 상태와 무관하게 항상 수행한다. 캡처는 브라우저 메모리에서만 다루고 서버에 저장하지 않는다. 1920×1080 한 장은 2,691 visual token(Vision 문서의 `⌈w/28⌉×⌈h/28⌉` 기준)이다.
    - "조용히" 또는 "관상용" 모드에서는 캡처 샘플링도 Haiku 호출도 하지 않는다. 이 모드에서 말하기 버튼을 토글해 말하면 Deepgram STT가 인식하고, 인식 결과가 한 글자라도 있으면 모드가 해제되어 활성 상태가 되고 polling이 재개된다. 버튼만 토글하고 말하지 않아 인식 결과가 비면 모드는 그대로 유지된다.
 1. **판단·라우팅(Haiku, tool calling)**: 캡처, 상태 텍스트(체류 시간, 마지막 끼어들기 후 경과, 오늘 횟수), 그리고 있으면 사용자가 방금 말한 내용(Deepgram STT 결과)을 입력으로 받는다. `tool_choice`는 `auto`로 두고 프롬프트로 유도한다. 도구 호출이 없으면 침묵이며, 도구 대신 일반 텍스트가 오면 버린다. 도구는 두 가지다.
    - `react(emotion, line?, motion?)`: 대사나 애니메이션만으로 충분한 반응. `line`은 소리가 켜져 있으면 TTS로 재생하고, 감정은 매핑 파일을 거쳐 표정·모션으로 연결한다.
@@ -83,7 +94,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 | 역할 | 모델 | 하는 일 |
 |---|---|---|
-| 눈 + 라우터 | **Haiku** | 3초마다 공유 화면을 보고 `react`·`delegate_task`를 호출하거나 침묵한다. 사용자 발화가 오면 현재 화면과 함께 판단한다 |
+| 눈 + 라우터 | **Haiku** | 3초마다 가상 데스크톱 화면을 보고 `react`·`delegate_task`를 호출하거나 침묵한다. 사용자 발화가 오면 현재 화면과 함께 판단한다 |
 | 업무 실행 | **Sonnet** | 답장 초안, 일정 확인 등 `delegate_task`로 위임된 업무 |
 
 모델 ID는 환경변수로 바꿀 수 있게 둔다(현재 `claude-haiku-5-5`, `claude-sonnet-5-5`). Opus는 쓰지 않는다.
@@ -113,7 +124,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 - 3초마다 호출은 활성 세션 한 개당 시간당 약 $0.43이다. Haiku 5.5 입력 $0.10/M·출력 $0.50/M, 이미지 2,691토큰 + 텍스트 500토큰 + 출력 100토큰을 가정한 추정이며 2026-10-06 기준 캐시된 가격표를 썼으므로 현재 가격표로 다시 확인한다.
 - 심사자 여러 명이 동시에 열면 같은 키에서 차감되므로, 서버 일일 상한은 예약분 $150 이하로 건다. 세션당 호출 상한도 둔다.
-- 탭이 숨겨졌거나 공유가 끊기면 관찰을 멈춘다.
+- 탭이 숨겨졌거나 사용자가 관찰을 일시정지하면 관찰을 멈춘다.
 
 ## 출력: 소리와 텍스트
 
@@ -125,25 +136,34 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 ## 화면 인식 (웹)
 
-1. 공유된 화면(`getDisplayMedia`)에서 3초마다 캔버스로 1920×1080 1장을 캡처한다.
-2. 캡처마다 Haiku 비전을 호출한다. 체류 시간은 브라우저가 직전 프레임과의 해시·픽셀 차이로 계산해 상태 텍스트로 함께 넘긴다.
+1. 페이지 안 **가상 데스크톱**(1920×1080 고정 논리 캔버스, Mail·Calendar·Slack·Discord·Drive 창)을 3초마다 `modern-screenshot`으로 JPEG 1장 캡처한다.
+2. 캡처마다 Haiku 비전을 호출한다. 체류 시간은 브라우저가 직전 프레임과의 해시 차이로 계산하고, 가상 데스크톱이 아는 활성 앱·창 제목·타이핑 여부와 함께 상태로 넘긴다.
 3. Haiku가 `react` 또는 `delegate_task`를 호출하면 규칙 게이트를 거쳐 실행한다(위 "눈치 엔진").
 4. 서버 일일 상한과 세션당 호출 상한을 둔다(예산 보호).
 
-### 공유 방식과 안내
+### 관찰 대상과 방식
 
-- `getDisplayMedia`로 **창 또는 탭 하나만** 공유하게 안내한다. 전체 화면 공유는 권하지 않는다.
-- 우리 사이트가 **데모용 가짜 메일 화면**을 제공하고, 심사자는 그 탭을 공유한다. 캐릭터와 확인 카드가 보이는 화면을 공유하면 Haiku가 자기 자신을 보게 되므로 캐릭터가 없는 데모 화면 탭을 공유하게 한다.
-- **Chrome 권장**: 첫 화면과 공유 시작 전 안내 문구에 "Chrome에서 열어 주세요"를 명시한다. 브라우저별 지원 차이가 있으므로 구현 시 실제로 확인한다.
-- 공유를 지원하지 않거나 거절하면 **스크립트 장면 모드**로 전환해 데모가 끝까지 돈다(AC-8).
-- 웹은 활성 창 제목을 얻을 수 없다. 장면 구분은 프레임 내용(비전)에 의존한다.
+- 심사 데모는 화면 공유를 쓰지 않는다. 우리가 그린 가상 데스크톱이 관찰 대상이므로 권한 팝업이 없고, 시나리오가 매번 같게 재현된다.
+- 캐릭터, 말풍선, 확인 카드는 가상 데스크톱 요소 **바깥** 레이어에 있으므로 캡처되지 않는다. Haiku가 캐릭터 자신을 보는 문제가 생기지 않는다.
+- 가상 데스크톱이 창을 직접 관리하므로 활성 앱과 창 제목, 타이핑 여부를 정확히 알 수 있다. 장면 구분은 이 활동 신호와 프레임 내용(비전)을 함께 쓴다.
+- 가상 데스크톱의 데이터는 목업 커넥터가 읽고 쓰는 세션 데이터와 같다. 초안이 저장되면 가상 메일 임시보관함에 즉시 나타난다.
+- **Chrome 권장**: 첫 화면 안내 문구에 "Chrome에서 열어 주세요"를 명시한다.
+- 캡처나 API 호출이 실패하면 **스크립트 장면 모드**로 전환해 데모가 끝까지 돈다(AC-8).
 - 캡처 이미지는 서버에 저장하지 않고 요청 처리 후 폐기한다.
+- `getDisplayMedia` 기반 실제 탭 공유는 같은 `ScreenSource` 인터페이스의 **선택 어댑터**로 남기며, 오늘의 주 경로와 공유 동의 화면에는 넣지 않는다.
+- **프로덕션 경로**: 같은 웹앱을 웹뷰 데스크톱 앱(Tauri)으로 감싸고, `ScreenSource`를 네이티브 화면 캡처(자기 창 제외) 구현으로 교체한다. 상위 모듈(눈치 엔진, 에이전트, 캐릭터)은 바꾸지 않는다.
 
-### 공유 중 표시
+### 관찰 중 표시
 
-- 화면을 가리지 않도록 **오른쪽 하단**에 작은 표시기로 둔다(예: 점 + "공유 중" 텍스트).
-- 표시기를 누르면 공유를 중지할 수 있다. 중지는 항상 한 번의 클릭으로 가능해야 한다.
-- 표시기는 캐릭터·확인 카드·공유 대상 데모 화면의 주요 영역과 겹치지 않는 위치를 유지한다(오른쪽 하단이 겹치면 디자인에서 조정).
+- 화면을 가리지 않도록 **오른쪽 하단**에 작은 표시기로 둔다(예: 점 + "관찰 중" 텍스트).
+- 표시기를 한 번 누르면 관찰(캡처와 Haiku 호출)이 일시정지되고, 다시 누르면 재개된다.
+- 표시기는 캐릭터·확인 카드·가상 데스크톱의 주요 영역과 겹치지 않는 위치를 유지한다(오른쪽 하단이 겹치면 디자인에서 조정).
+
+### 사용자 흐름 변경
+
+- 시작 화면 다음의 "공유 안내·동의" 단계(브라우저 탭 선택)를 주 경로에서 제거한다. 시작 화면에서 언어와 소리를 고른 뒤 바로 가상 데스크톱 데모 화면으로 들어간다.
+- 데모 화면의 "공유 중" 상태는 "관찰 중 / 일시정지" 상태로 바꾼다. "공유 거절·불가" 분기는 없어지고, 실패 시 스크립트 장면 모드로 전환하는 분기만 남는다.
+- `docs/user-flow.md`의 공유 관련 서술은 이 절을 기준으로 해석한다.
 
 ## 90초 데모
 
@@ -164,9 +184,13 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 ### 렌더링 스택
 
-- **코어: [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami)** (Rust, MIT/Apache-2.0). moc3 로딩과 변형 계산(`driver`)을 맡는다. 공식 Cubism Core는 쓰지 않는다.
-- **렌더러: [cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer)**. 이 렌더러는 pixi-live2d-display 0.4.0의 Cubism 4 내부 모델과 Cubism Core의 WASM heap 정점 구간을 전제로 하므로, Ayagami의 `driver` 출력과 연결하는 어댑터 방식은 미정이다.
-- Ayagami는 JS API와 npm 패키지가 없고 expression·motion 파일 지원이 미구현이다. 표정(`exp3.json`)과 모션은 파라미터를 직접 구동하는 코드로 대신한다.
+- **코어(목표): [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami)** (Rust, MIT OR Apache-2.0). moc3 로딩과 변형 계산(`driver`)을 맡는다. JS API와 npm 패키지가 없고 expression·motion 파일 지원이 미구현이므로, 오늘은 웹 래퍼를 검증하는 병행 spike로 진행한다. spike가 성공하면 같은 `CharacterRuntime` 인터페이스 뒤에서 교체한다.
+- **코어(오늘의 폴백): 공식 Live2D Cubism Core**. 독점 라이선스이므로 저장소에 커밋하지 않고 빌드 시점에 `public/vendor/`에 배치한다.
+- **렌더러: [cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer)**. pixi-live2d-display 0.4.0의 Cubism 4 내부 모델과 Cubism Core의 WASM heap 정점 구간을 전제로 하므로 폴백 경로와 바로 연결된다. Ayagami의 `driver` 출력과 연결하는 어댑터는 spike에서 정한다.
+- **Live2D 연동 코드**: AIRI(MIT)의 `stage-ui-live2d` 기반 코드와 자체 구현으로 구성한다.
+- **감정 → 표정**: 감정 6종은 모델 프로필(`profile.json`)의 매핑으로 표정·모션에 연결한다. 입을 가리는 표정은 말하는 동안 립싱크를 우선한다.
+- **애니메이션 그래프 상태**: `idle`, `listening`, `working`, `waiting`, `speaking`, `attention`, `praised`, `failed`. 앱 이벤트 → 상태 표로 구동한다.
+- **에셋**: 모델·모션·텍스처는 저장소에 커밋하지 않는다. 빌드 스크립트가 웹에 필요한 파일만 `public/models/`로 복사하고, 배포는 로컬 `vercel build` 후 `vercel deploy --prebuilt`로 한다.
 - 렌더링이 기한 안에 되지 않으면 2D 스프라이트 표정 교체로 폴백한다(시한은 팀 합의 필요).
 
 ## 크레딧 예산
@@ -187,8 +211,8 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 - AC-5: 거절하면 아무것도 저장되지 않는다
 - AC-6: 발송·삭제 도구는 코드에 존재하지 않는다
 - AC-7: 웹 링크가 로그인 없이 열리고 90초 데모가 끝까지 돈다
-- AC-8: API 실패나 화면 공유 불가 시 준비된 대사·스크립트 장면으로 폴백하고 화면이 멈추지 않는다
-- AC-9: 공유 중 표시기가 오른쪽 하단에 있고 한 번의 클릭으로 공유를 중지할 수 있다
+- AC-8: API 실패, 예산 초과, 캡처 실패 시 준비된 대사·스크립트 장면으로 폴백하고 화면이 멈추지 않는다
+- AC-9: 관찰 중 표시기가 오른쪽 하단에 있고 한 번의 클릭으로 관찰(캡처와 Haiku 호출)을 일시정지할 수 있다
 - AC-10: 브라우저에 API 키가 노출되지 않는다(모든 호출이 서버 프록시 경유)
 - AC-11: 잡담·심심해서 부르는 요청은 Sonnet을 호출하지 않고 Haiku의 `react`(표정·모션·대사)로 응답한다
 - AC-12: 업무 요청(초안, 일정)은 잡담으로 오분류되지 않고 정상적으로 수행된다
@@ -197,18 +221,18 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 
 | 구간 | 작업 |
 |---|---|
-| 먼저 | Next.js 뼈대, Vercel 프로젝트 연결, Ayagami spike(`Yui.moc3` 로드 확인) |
-| ~13:00 | `/api` 프록시, 눈치 게이트, 3초 캡처 + Haiku 도구 호출, 확인 카드, 데모 메일 화면 |
-| 13:00 | AC 통과 시 Vercel 배포, 링크 확보 (Tier 1 데모 계정 실연동은 이후 시간이 남을 때) |
+| 먼저 | Vue + Vite 뼈대, `shared/contracts.ts`, Vercel 프로젝트 연결, Ayagami spike(`Yui.moc3` 로드 확인) |
+| ~13:45 | 병렬 트랙: 캐릭터(공식 Core 폴백 렌더), 가상 데스크톱 + 눈치 엔진 + `/api/observe`, 음성(`/api/stt`·`/api/tts`), 에이전트 + 커넥터 + 확인 카드 |
+| 13:45–14:00 | 통합, AC 통과 시 Vercel 배포, 링크 확보 (Slack·Discord·Google 실연동은 이후 시간이 남을 때) |
 | **14:00** | **기능 동결** |
 | 14:00–15:30 | 리허설 3회(Chrome), 덱 2장, **15:30 이전 제출** |
 
-컷 순서: Google 실연동 → 단축키 → TTS 입 모양 → 스페이스바 말하기 외 VAD. 음성 입력·TTS는 Schmidt 미션 근거라 가능한 한 유지한다.
+컷 순서: Slack·Discord·Google 실연동 → Ayagami 코어 교체 → TTS 입 모양 → 스페이스바 말하기 외 VAD. 음성 입력·TTS는 Schmidt 미션 근거라 가능한 한 유지한다.
 
 ## 하지 않을 것
 
-데스크톱 앱, 자동 발송, 결제, 삭제, 입력 자동 조작, 연애·성인 요소.
+오늘의 데스크톱 앱 제작, 자동 발송, 결제, 삭제, 입력 자동 조작, 연애·성인 요소.
 
 ## 로드맵
 
-데스크톱 상주 앱(투명 오버레이), UGC 캐릭터, 일본·중국·대만 시장 현지화 심화(문화·의상·말투), 화면 없는 음성 전용 모드, 업무 호감도에 따른 의상·모션 해금, 쇼츠 클립 공유.
+데스크톱 상주 앱(같은 웹앱을 Tauri 웹뷰로 감싼 투명 오버레이, 네이티브 화면 캡처와 전역 단축키), UGC 캐릭터, 일본·중국·대만 시장 현지화 심화(문화·의상·말투), 화면 없는 음성 전용 모드, 업무 호감도에 따른 의상·모션 해금, 쇼츠 클립 공유.

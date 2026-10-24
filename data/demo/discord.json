@@ -1,0 +1,14 @@
+{
+  "_note": "Fictional demo data. at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "dc-lounge", "name": "lounge", "workspace": "Indie Makers Guild" },
+    { "id": "dc-orbit", "name": "orbit-dev", "workspace": "Indie Makers Guild" }
+  ],
+  "messages": [
+    { "id": "dcm-001", "channelId": "dc-lounge", "author": "pixelfox", "text": "anyone else drinking their third coffee already", "minutesAgo": 50 },
+    { "id": "dcm-002", "channelId": "dc-lounge", "author": "mochi_dev", "text": "third? rookie numbers", "minutesAgo": 48 },
+    { "id": "dcm-003", "channelId": "dc-lounge", "author": "kaito", "text": "game night on Saturday? I can host", "minutesAgo": 20 },
+    { "id": "dcm-004", "channelId": "dc-orbit", "author": "mochi_dev", "text": "pushed the new sync engine to the beta branch, please test on your machines", "minutesAgo": 70 },
+    { "id": "dcm-005", "channelId": "dc-orbit", "author": "kaito", "text": "beta works on my side, startup is about 30% faster", "minutesAgo": 35 }
+  ]
+}

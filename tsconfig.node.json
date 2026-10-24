@@ -11,6 +11,6 @@
     "types": ["node"],
     "paths": { "@shared/*": ["./shared/*"] }
   },
-  "include": ["api/**/*.ts", "server/**/*.ts", "shared/**/*.ts", "vite.config.ts"],
+  "include": ["api/**/*.ts", "server/**/*.ts", "shared/**/*.ts", "vite.config.ts", "vitest.config.ts"],
   "exclude": ["templates", "node_modules"]
 }

@@ -1,0 +1,11 @@
+{
+  "_note": "Fictional demo data. start/end are local times of the seed day (HH:MM), dayOffset 0 = today.",
+  "events": [
+    { "id": "ev-001", "title": "Team stand-up", "dayOffset": 0, "start": "09:30", "end": "09:45", "location": "Huddle room" },
+    { "id": "ev-002", "title": "Lunch with Seojun", "dayOffset": 0, "start": "12:00", "end": "13:00", "location": "Cafe Lumi" },
+    { "id": "ev-003", "title": "Onboarding design review", "dayOffset": 0, "start": "15:00", "end": "16:00", "location": "Room Nebula" },
+    { "id": "ev-004", "title": "Lumen TW partnership call", "dayOffset": 0, "start": "15:00", "end": "15:30", "location": "Online" },
+    { "id": "ev-005", "title": "Weekly report writing", "dayOffset": 0, "start": "17:00", "end": "18:00" },
+    { "id": "ev-006", "title": "Orbit sprint planning", "dayOffset": 1, "start": "11:00", "end": "12:00", "location": "Room Nebula" }
+  ]
+}

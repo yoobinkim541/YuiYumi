@@ -1,0 +1,16 @@
+{
+  "_note": "Fictional demo data. at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "sl-general", "name": "general", "workspace": "Aurora Lab" },
+    { "id": "sl-orbit", "name": "proj-orbit", "workspace": "Aurora Lab" },
+    { "id": "sl-design", "name": "design", "workspace": "Aurora Lab" }
+  ],
+  "messages": [
+    { "id": "slm-001", "channelId": "sl-general", "author": "Mina Choi", "text": "Reminder: the office kitchen will be cleaned at 4pm today. Please take your lunch boxes home!", "minutesAgo": 140 },
+    { "id": "slm-002", "channelId": "sl-general", "author": "Jordan Lee", "text": "Cloud invoice for October is in the finance portal now.", "minutesAgo": 175 },
+    { "id": "slm-003", "channelId": "sl-orbit", "author": "Daniel Wu", "text": "Hoshizora replied positively about Orbit. They want a call to go through pricing.", "minutesAgo": 30 },
+    { "id": "slm-004", "channelId": "sl-orbit", "author": "Daniel Wu", "text": "@Alex could you share the latest Hoshizora quote here before 5pm? I need it for the review deck.", "minutesAgo": 8 },
+    { "id": "slm-005", "channelId": "sl-design", "author": "Seojun Lee", "text": "Uploaded three onboarding variants to Drive. Feedback welcome before the 3pm review.", "minutesAgo": 90 },
+    { "id": "slm-006", "channelId": "sl-design", "author": "Mina Choi", "text": "Variant 2 looks great, but the headline feels a bit long.", "minutesAgo": 60 }
+  ]
+}

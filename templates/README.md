@@ -2,6 +2,8 @@
 
 음성 입출력 구현의 출발점으로 가져온 공식 스타터의 소스 사본이다. 앱 빌드에 포함되지 않으며, 필요한 부분만 앱 코드로 옮겨 쓴다. 수정하지 않고 원본 상태로 둔다.
 
+앱은 Vue 3 + Vite SPA로 구성하며(`docs/spec.md` v0.5), 아래 Next.js 스타터는 서버 측 제공자 호출 구조의 참고 자료로만 쓴다. 이 문서의 "프레임워크 버전" 항목에 있는 Next.js 기준 서술은 v0.4 시점의 내용이다.
+
 | 디렉터리 | 용도 | 원본 | 기준 커밋 | 라이선스 |
 |---|---|---|---|---|
 | `elevenlabs-nextjs-starter/` | TTS (ElevenLabs) | https://github.com/elevenlabs/elevenlabs-nextjs-starter | `86cf28f` (2025-12-12) | MIT |

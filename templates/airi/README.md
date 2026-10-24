@@ -25,6 +25,6 @@
 
 ## 가져다 쓸 때 확인할 점
 
-- **프레임워크**: AIRI의 UI 패키지는 Vue 3(`.vue` 파일)이고 데스크톱은 Electron 계열 패키지 이름을 쓴다. 우리 계획은 Next.js(React)와 Tauri이므로 컴포넌트는 그대로 쓰지 못하고, 프레임워크와 무관한 TypeScript 로직(오디오 파이프라인, 립싱크, 모션, 에이전트 계약)을 이식하는 것이 현실적이다.
+- **프레임워크**: AIRI의 UI 패키지는 Vue 3(`.vue` 파일)이고 데스크톱은 Electron 계열 패키지 이름을 쓴다. 앱은 Vue 3 + Vite(`docs/spec.md` v0.5)이므로 Vue 기반 로직은 이식할 수 있으나, Pinia 스토어와 워크스페이스 의존성은 필요한 부분만 옮긴다.
 - **의존성**: 패키지 간 의존이 `workspace:`와 `catalog:`로 되어 있어 단독으로 설치되지 않는다. `i18n/src/index.ts`는 발췌하지 않은 로케일도 참조한다.
 - **Live2D 코어**: `stage-ui-live2d`는 `pixi-live2d-display`와 공식 Cubism Core 경로를 전제로 한다. 코어를 Ayagami로 쓰기로 한 결정(`docs/spec.md` 렌더링 스택)과는 별도로 어댑터가 필요하다.
