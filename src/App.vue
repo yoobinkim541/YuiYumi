@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import VirtualDesktop from './desktop/VirtualDesktop.vue'
 import ConfirmCard from './ui/ConfirmCard.vue'
-import WelcomeName from './ui/WelcomeName.vue'
 </script>
 
 <template>
@@ -13,8 +12,6 @@ import WelcomeName from './ui/WelcomeName.vue'
     <VirtualDesktop class="desktop" />
     <!-- Page overlay: not part of the capture. -->
     <ConfirmCard />
-    <!-- First visit: language, what to call the user, start (unlocks audio). -->
-    <WelcomeName />
   </div>
 </template>
 

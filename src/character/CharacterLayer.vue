@@ -4,7 +4,9 @@
 // The window is marked [data-no-capture], so the character is never part of a capture.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { CharacterRuntime } from '@/core/types'
+import { useSettings } from '@/stores/settings'
 import SpeechBubble from '@/ui/SpeechBubble.vue'
+import WelcomeName from '@/ui/WelcomeName.vue'
 import ControlPill from './ControlPill.vue'
 import { FALLBACK_ANIM } from './emotion-map'
 import { mountCharacter, unmountCharacter } from './index'
@@ -13,6 +15,7 @@ import { characterView } from './state'
 import { useCharacterStore } from './store'
 
 const store = useCharacterStore()
+const settings = useSettings()
 const stage = ref<HTMLDivElement | null>(null)
 let runtime: CharacterRuntime | null = null
 let generation = 0
@@ -49,7 +52,9 @@ const spriteClass = computed(() => [
 <template>
   <div class="character-layer" :data-mode="characterView.mode" :data-node="characterView.node" :data-character="store.character">
     <div class="bubble-anchor">
-      <SpeechBubble />
+      <!-- First visit: she asks what to call the user, typed into her bubble. -->
+      <WelcomeName v-if="!settings.welcomed" />
+      <SpeechBubble v-else />
     </div>
     <!-- Upper body only: the legs fall below the window edge. -->
     <div class="window">
