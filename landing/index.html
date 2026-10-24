@@ -21,7 +21,7 @@ a{color:#4A3A44;text-decoration:none}a:hover{color:#D94672}
 .bloom{animation:sway 3.2s 3s ease-in-out infinite;transform-origin:50% 50%}
 .burst{position:absolute;pointer-events:none;animation:drift 4.2s ease-out infinite}
 .glass{background:rgba(255,255,255,0.74);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
-@keyframes write{from{clip-path:inset(-30% 100% -30% 0)}to{clip-path:inset(-30% 0 -30% 0)}}
+@keyframes write{from{clip-path:inset(-30% 100% -30% -6%)}to{clip-path:inset(-30% -6% -30% -6%)}}
 @keyframes draw{from{stroke-dashoffset:640}to{stroke-dashoffset:0}}
 @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes pop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
@@ -111,7 +111,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
 <div style="position: relative; z-index: 1">
 
 <!-- NAV -->
-<header style="position: sticky; top: 0; z-index: 5; background: rgba(255,247,250,0.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.9); box-shadow: 0 6px 24px rgba(200,90,130,0.10)">
+<header style="position: sticky; top: 0; z-index: 5">
   <div style="max-width: 1480px; margin: 0 auto; padding: 18px 48px; display: flex; flex-wrap: wrap; align-items: center; gap: 24px 64px">
     <a href="#top" style="font-family: 'Dancing Script', cursive; font-weight: 700; font-size: 36px; color: #E0567E; line-height: 1">Yumi</a>
     <nav aria-label="주요 메뉴" style="display: flex; flex-wrap: wrap; gap: 34px; font-size: 16px; flex: 1 1 auto">
@@ -141,10 +141,10 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
 <section id="top" style="max-width: 1480px; margin: 0 auto; padding: 0 48px; display: flex; flex-wrap: wrap; align-items: center; min-height: calc(min(100vh, 1000px) - 90px)">
   <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: clamp(10px, 2vh, 22px); padding: clamp(12px, 3vh, 40px) 0 clamp(16px, 4vh, 64px); position: relative; z-index: 2">
     <div style="display: flex; align-items: center; gap: 12px; margin-left: 24px">
-      <span class="w1" style="font-family: 'Dancing Script', cursive; font-weight: 600; font-size: clamp(38px, 5.5vh, 52px); color: #E78CA8; line-height: 1">Yumi</span>
-      <span class="paw" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="#E78CA8"><ellipse cx="12" cy="15.5" rx="5" ry="4.2"></ellipse><circle cx="5.5" cy="10" r="2.2"></circle><circle cx="9.5" cy="6" r="2.3"></circle><circle cx="14.5" cy="6" r="2.3"></circle><circle cx="18.5" cy="10" r="2.2"></circle></svg></span>
+      <span class="w1" style="font-family: 'Dancing Script', cursive; font-weight: 600; font-size: clamp(38px, 5.5vh, 52px); color: #FFFFFF; -webkit-text-stroke: 5px #E0567E; paint-order: stroke fill; text-shadow: 0 4px 12px rgba(224,86,126,0.3); line-height: 1">Yumi</span>
+      <span class="paw" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#E0567E" stroke-width="1.6"><ellipse cx="12" cy="15.5" rx="5" ry="4.2"></ellipse><circle cx="5.5" cy="10" r="2.2"></circle><circle cx="9.5" cy="6" r="2.3"></circle><circle cx="14.5" cy="6" r="2.3"></circle><circle cx="18.5" cy="10" r="2.2"></circle></svg></span>
     </div>
-    <h1 style="margin: 0; font-family: 'Nanum Brush Script', cursive; font-weight: 400; color: #E0567E; line-height: 0.95; position: relative">
+    <h1 style="margin: 0; font-family: 'Nanum Brush Script', cursive; font-weight: 400; color: #FFFFFF; -webkit-text-stroke: 7px #E0567E; paint-order: stroke fill; text-shadow: 0 6px 18px rgba(224,86,126,0.35); line-height: 0.95; position: relative">
       <span class="w2" style="display: block; font-size: clamp(64px, 10.5vh, 104px); transform: rotate(-4deg); transform-origin: left center">언제나,</span>
       <span style="display: flex; align-items: center; gap: 14px; margin-top: 8px">
         <span class="flower" aria-hidden="true" style="position: relative"><span class="bloom" style="display: inline-block"><svg width="62" height="62" viewBox="0 0 24 24" fill="none" stroke="#E0567E" stroke-width="1.4"><circle cx="12" cy="7" r="4"></circle><circle cx="7" cy="11" r="4"></circle><circle cx="17" cy="11" r="4"></circle><circle cx="9" cy="17" r="4"></circle><circle cx="15" cy="17" r="4"></circle><circle cx="12" cy="12.5" r="1.6" fill="#E0567E"></circle></svg></span>
@@ -166,14 +166,6 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
         지금 만나러 가기
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
       </a>
-    </div>
-    <div class="r3" style="display: flex; gap: 14px; margin-left: 6px">
-      <a href="#support" class="icon-btn" aria-label="X" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.75); color: #E0567E; display: inline-flex; align-items: center; justify-content: center">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.8 2h3.4l-7.4 8.5L22.5 22h-6.8l-5.3-7-6.1 7H.9l7.9-9L.5 2h7l4.8 6.4zm-1.2 18h1.9L6.5 3.9h-2z"></path></svg></a>
-      <a href="#support" class="icon-btn" aria-label="Discord" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.75); color: #E0567E; display: inline-flex; align-items: center; justify-content: center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.3 5.3A17 17 0 0 0 15 4l-.5 1a15.6 15.6 0 0 0-5 0L9 4a17 17 0 0 0-4.3 1.3C2 9.3 1.3 13.2 1.6 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 10.8 0l.4.3-1.7.8 1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-2.9-11.7zM8.5 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"></path></svg></a>
-      <a href="#support" class="icon-btn" aria-label="후원하기" style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.75); color: #E0567E; display: inline-flex; align-items: center; justify-content: center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"></path><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"></path><path d="M8 3v3M12 3v3"></path></svg></a>
     </div>
   </div>
 
@@ -210,7 +202,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
     </div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 56px 22px">
       <div class="glass card-hover" style="position: relative; border-radius: 28px; padding: 132px 26px 30px; border: 1px solid rgba(255,255,255,0.9)">
-        <img src="/assets/sd/yumi-sd-5-05.webp" alt="편지를 든 SD 유미" style="position: absolute; top: -44px; left: 50%; margin-left: -80px; width: 160px; height: auto">
+        <img src="/assets/sd/edited-1a57fa17.webp" alt="편지를 든 SD 유미" style="position: absolute; top: -44px; left: 50%; margin-left: -80px; width: 160px; height: auto">
         <div style="font-weight: 700; font-size: 19px; color: #3E2F38; text-align: center">메일 요약 · 답장 초안</div>
         <div style="font-size: 15px; line-height: 1.75; color: #5A4652; margin-top: 10px; text-align: center">받은 메일을 정리하고 새 메일·답장·초안을 써요. 보내기 전엔 확인 카드로 물어봐요.</div>
       </div>
@@ -250,7 +242,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
         <div style="font-size: 15px; line-height: 1.7; color: #5A4652">가벼운 말엔 표정과 대사로, 업무는 메일·일정·채팅 도구로 차근차근 처리해요.</div>
       </li>
       <li style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; border-radius: 24px; background: #FFFFFF">
-        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; border-radius: 50%; background: #E0567E; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span><img src="/assets/sd/yumi-sd-5-15.webp" alt="" style="width: 76px; height: 76px; object-fit: contain"></div>
+        <div style="display: flex; align-items: center; gap: 12px"><span style="width: 36px; height: 36px; border-radius: 50%; background: #E0567E; color: #FFFFFF; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">3</span><img src="/assets/sd/edited-884633bc.webp" alt="" style="width: 76px; height: 76px; object-fit: contain"></div>
         <div style="font-weight: 700; font-size: 18px; color: #3E2F38">보내기 전엔 확인받아요</div>
         <div style="font-size: 15px; line-height: 1.7; color: #5A4652">발송·게시는 확인 카드를 거쳐요. 창을 열고 입력하는 모습까지 화면에서 보여 줘요.</div>
       </li>
@@ -261,7 +253,7 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
   <!-- Characters -->
   <!-- Nunchi rules and permission levels -->
   <section id="nunchi" class="glass" style="position: relative; border-radius: 36px; padding: 64px; border: 1px solid rgba(255,255,255,0.9); display: flex; flex-wrap: wrap; gap: 40px">
-    <img src="/assets/sd/yumi-sd-5-14.webp" alt="" style="position: absolute; right: 12px; top: -56px; width: 96px; height: auto">
+    <img src="/assets/sd/edited-2a4c69af.webp" alt="" style="position: absolute; right: 12px; top: -56px; width: 96px; height: auto">
     <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
       <span style="font-family: 'Dancing Script', cursive; font-size: 30px; color: #E78CA8">Nunchi</span>
       <h2 style="margin: 0; font-family: 'Gowun Dodum', sans-serif; font-weight: 400; font-size: 40px; line-height: 1.3; color: #3E2F38">눈치는 있게, 선은 지키게</h2>
@@ -325,13 +317,13 @@ header.nav-open nav[aria-label="주요 메뉴"]{display:flex!important;position:
       <figure style="margin: 0; padding: 12px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/assets/sd/yumi-sd-3-09.webp" alt="" style="width: 110px; height: 110px; object-fit: contain"><figcaption style="font-size: 14px; color: #5A4652">난처함</figcaption></figure>
       <figure style="margin: 0; padding: 12px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/assets/sd/yumi-sd-2-04.webp" alt="" style="width: 110px; height: 110px; object-fit: contain"><figcaption style="font-size: 14px; color: #5A4652">졸림</figcaption></figure>
       <figure style="margin: 0; padding: 12px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/assets/sd/yumi-sd-2-13.webp" alt="" style="width: 110px; height: 110px; object-fit: contain"><figcaption style="font-size: 14px; color: #5A4652">아이디어</figcaption></figure>
-      <figure style="margin: 0; padding: 12px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/assets/sd/yumi-sd-5-14.webp" alt="" style="width: 110px; height: 110px; object-fit: contain"><figcaption style="font-size: 14px; color: #5A4652">알림</figcaption></figure>
+      <figure style="margin: 0; padding: 12px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 4px"><img src="/assets/sd/edited-2a4c69af.webp" alt="" style="width: 110px; height: 110px; object-fit: contain"><figcaption style="font-size: 14px; color: #5A4652">알림</figcaption></figure>
     </div>
   </section>
 
   <!-- Download -->
   <section id="download" style="display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; padding: 40px 0">
-    <img src="/assets/sd/yumi-sd-5-16.webp" alt="You can do it 팻말을 든 SD 유미" style="width: 190px; height: auto">
+    <img src="/assets/sd/edited-afd19a86.webp" alt="You can do it 팻말을 든 SD 유미" style="width: 190px; height: auto">
     <h2 style="margin: 0; font-family: 'Nanum Brush Script', cursive; font-weight: 400; font-size: 84px; line-height: 1; color: #E0567E">오늘부터, 같이 하자</h2>
     <p style="margin: 0; font-size: 18px; color: #3E2F38; font-weight: 500">설치 없이 브라우저에서 · Chrome 권장</p>
     <p id="appNote">체험 링크는 곧 열려요.</p>
