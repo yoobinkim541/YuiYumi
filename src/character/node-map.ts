@@ -2,8 +2,8 @@
 //
 // TT2.0 model: no animation graph, so the mapping lives here (NODE_MAP_TT2). All TT2.0
 // motions are 8-15 s loops. State nodes loop their motion until the next node; event
-// nodes (attention, praised, failed) play theirs once, then the body returns to rest.
-// `motion: null` plays no body motion (TT2.0 has no idle motion; blink, breath and gaze only).
+// nodes (attention, praised, failed) play theirs once, then the idle motion resumes.
+// `motion: null` keeps the idle motion (model3 `Idle` group).
 //
 // Yui model: settings come from the model's anim-graph.json node animations.
 

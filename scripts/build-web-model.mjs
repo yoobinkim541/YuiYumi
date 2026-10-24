@@ -33,9 +33,10 @@ const MODELS = [
   {
     id: 'tt2',
     src: 'models/TT2.0',
-    // No idle body motion: blink, breath and gaze only.
-    defaultIdle: null,
+    // Idle body motion shared with the Yui model (standard parameters only).
+    defaultIdle: 'taptc-ri-idle-35a-eye-smile',
     extraMotions: [],
+    extraMotionFiles: ['models/Yui/motions/authored/taptc-ri-idle-35a-eye-smile.motion3.json'],
   },
   {
     id: 'yui',
@@ -124,6 +125,11 @@ async function buildModel(def, key) {
   // --- Motion index (stem -> path)
   const motionIndex = new Map()
   for (const p of (await walk(join(SRC, 'motions'))).filter(f => f.endsWith(MOTION_SUFFIX)).sort()) {
+    const stem = basename(p, MOTION_SUFFIX).normalize('NFC')
+    if (!motionIndex.has(stem)) motionIndex.set(stem, p)
+  }
+  for (const rel of def.extraMotionFiles ?? []) {
+    const p = resolve(root, rel)
     const stem = basename(p, MOTION_SUFFIX).normalize('NFC')
     if (!motionIndex.has(stem)) motionIndex.set(stem, p)
   }
