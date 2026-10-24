@@ -9,6 +9,16 @@ import { currentStatus, pttDown, pttUp, setVadEnabled, unlockAudio, voiceState }
 
 const settings = useSettings()
 const watching = computed(() => settings.mode === 'active')
+
+const LABELS = {
+  'ko': { talk: '누르고 말하기', vad: 'VAD (자동 음성 감지)', watch: '화면 보기', sound: '소리', settings: '설정' },
+  'ja': { talk: '押して話す', vad: 'VAD（音声自動検出）', watch: '画面を見る', sound: 'サウンド', settings: '設定' },
+  'en': { talk: 'Hold to talk', vad: 'VAD (voice detection)', watch: 'Watch screen', sound: 'Sound', settings: 'Settings' },
+  'zh-Hans': { talk: '按住说话', vad: 'VAD（语音检测）', watch: '查看屏幕', sound: '声音', settings: '设置' },
+  'zh-Hant': { talk: '按住說話', vad: 'VAD（語音偵測）', watch: '查看螢幕', sound: '聲音', settings: '設定' },
+} as const
+const L = computed(() => LABELS[settings.lang] ?? LABELS.en)
+const onOff = (on: boolean) => (on ? ' · ON' : ' · OFF')
 const status = computed(() => currentStatus())
 
 function talkDown(e: PointerEvent) {
@@ -38,8 +48,8 @@ function toggleSound() {
       type="button"
       class="pb"
       :class="{ on: voiceState.recording }"
-      title="Hold to talk"
-      aria-label="Hold to talk"
+      :data-tip="L.talk"
+      :aria-label="L.talk"
       @pointerdown="talkDown"
       @pointerup="talkUp"
       @pointercancel="talkUp"
@@ -50,9 +60,9 @@ function toggleSound() {
       type="button"
       class="pb"
       :class="{ on: voiceState.vadEnabled }"
-      :title="voiceState.vadEnabled ? 'Voice detection on' : 'Voice detection off'"
+      :data-tip="L.vad + onOff(voiceState.vadEnabled)"
       :aria-pressed="voiceState.vadEnabled"
-      aria-label="Voice detection"
+      :aria-label="L.vad"
       @click="toggleVad"
     >
       <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2M21 12h0" /></svg>
@@ -61,9 +71,9 @@ function toggleSound() {
       type="button"
       class="pb"
       :class="{ on: watching }"
-      :title="watching ? 'Watching the screen' : 'Not watching the screen'"
+      :data-tip="L.watch + onOff(watching)"
       :aria-pressed="watching"
-      aria-label="Screen watching"
+      :aria-label="L.watch"
       @click="toggleWatching"
     >
       <svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" /><circle cx="12" cy="12" r="3" /></svg>
@@ -72,15 +82,15 @@ function toggleSound() {
       type="button"
       class="pb"
       :class="{ on: settings.sound }"
-      :title="settings.sound ? 'Sound on' : 'Sound off'"
+      :data-tip="L.sound + onOff(settings.sound)"
       :aria-pressed="settings.sound"
-      aria-label="Sound"
+      :aria-label="L.sound"
       @click="toggleSound"
     >
       <svg v-if="settings.sound" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></svg>
       <svg v-else viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" /><path d="M16 10l4 4M20 10l-4 4" /></svg>
     </button>
-    <button type="button" class="pb" title="Settings" aria-label="Settings" @click="focusWindow('settings')">
+    <button type="button" class="pb" :data-tip="L.settings" :aria-label="L.settings" @click="focusWindow('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>
     </button>
     <span class="status" :data-status="status" />
@@ -126,6 +136,25 @@ function toggleSound() {
 .pb:hover { background: rgba(74, 63, 92, 0.08); color: #3c3349; }
 .pb:active { transform: scale(0.94); }
 .pb.on { background: rgba(255, 106, 140, 0.16); color: #e2456f; }
+.pb { position: relative; }
+/* Name tooltip above the icon. */
+.pb[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translate(-50%, 4px);
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(38, 32, 48, 0.92);
+  color: #fff;
+  font: 600 12px/1.3 system-ui, -apple-system, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s;
+}
+.pb[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
 .pb svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .status {
   position: absolute;

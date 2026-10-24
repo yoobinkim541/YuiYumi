@@ -37,26 +37,6 @@ const MODELS = [
     defaultIdle: 'taptc-ri-idle-35a-eye-smile',
     extraMotions: [],
     extraMotionFiles: ['models/Yui/motions/authored/taptc-ri-idle-35a-eye-smile.motion3.json'],
-    // Generated expressions: TT2.0 has no squeezed-eye art, so this builds one from the
-    // eye parameters (eyes pressed shut, lids pushed up, emotional brows) plus the blush.
-    extraExpressions: [
-      {
-        name: '뀨잉',
-        profile: { kind: 'emotion' },
-        params: [
-          { Id: 'ParamEyeLOpen', Value: 0, Blend: 'Overwrite' },
-          { Id: 'ParamEyeROpen', Value: 0, Blend: 'Overwrite' },
-          { Id: 'ParamEyeLSmile', Value: 0, Blend: 'Overwrite' },
-          { Id: 'ParamEyeRSmile', Value: 0, Blend: 'Overwrite' },
-          { Id: 'EyeL_Squint', Value: 1, Blend: 'Overwrite' },
-          { Id: 'EyeR_Squint', Value: 1, Blend: 'Overwrite' },
-          { Id: 'Param100', Value: 1, Blend: 'Overwrite' },
-          { Id: 'Param74', Value: 1, Blend: 'Overwrite' },
-        ],
-      },
-    ],
-    mutexAdd: { eyes: ['뀨잉'] },
-    emotionOverrides: { shy: ['뀨잉'] },
   },
   {
     id: 'yui',

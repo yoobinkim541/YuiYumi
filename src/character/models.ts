@@ -49,7 +49,7 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     emotions: TT2_EMOTIONS,
     nodes: node => NODE_MAP_TT2[node] ?? NODE_MAP_TT2.idle,
     framing: { visible: 0.5, topCut: 0.02 },
-    touch: { head: { x: 0.5, y: 0.222, radius: 0.135 }, pet: ['shy'], pout: ['playful'] },
+    touch: { head: { x: 0.5, y: 0.222, radius: 0.135 }, pet: ['震惊'], pout: ['playful'] },
   },
   yui: {
     id: 'yui',

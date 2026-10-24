@@ -62,7 +62,10 @@ export function topUserWindow(): WindowState | null {
 
 /** Character window (always on top, frameless) placed in desktop coordinates. */
 export const CHARACTER_W = 400
-export const CHARACTER_H = 540
+/** Height reserved under the avatar for the control pill. */
+export const PILL_ZONE = 72
+/** Avatar area plus the pill zone. */
+export const CHARACTER_H = 540 + PILL_ZONE
 export const assistantWindow = reactive({
   visible: true,
   pinned: true,

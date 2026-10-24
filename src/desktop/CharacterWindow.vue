@@ -15,8 +15,14 @@ import Icon from '@/settings/Icon.vue'
 import { useSettings } from '@/stores/settings'
 import { pttDown, pttUp, unlockAudio, voiceState } from '@/voice'
 import {
-  assistantWindow, CHARACTER_H, CHARACTER_W, DESKTOP_H, DESKTOP_W, desktopView, DOCK_H, focusWindow, MENUBAR_H, moveAssistantWindow,
+  assistantWindow, CHARACTER_H, CHARACTER_W, DESKTOP_H, DESKTOP_W, desktopView, DOCK_H, focusWindow, MENUBAR_H, moveAssistantWindow, PILL_ZONE,
 } from './windows'
+
+// The controls island docks toward the inside of the screen: a window on the right half
+// puts it on the left, a window on the lower half puts it at the top. It always stays
+// above the pill zone.
+const dockH = computed(() => (assistantWindow.x + CHARACTER_W / 2 > DESKTOP_W / 2 ? 'left' : 'right'))
+const dockV = computed(() => (assistantWindow.y + CHARACTER_H / 2 > DESKTOP_H / 2 ? 'top' : 'bottom'))
 
 const store = useCharacterStore()
 const settings = useSettings()
@@ -89,8 +95,10 @@ function hide() {
     v-show="assistantWindow.visible"
     class="cw"
     :class="{ pinned: assistantWindow.pinned, expanded }"
+    :data-dock-h="dockH"
+    :data-dock-v="dockV"
     data-no-capture
-    :style="{ left: `${assistantWindow.x}px`, top: `${assistantWindow.y}px`, width: `${CHARACTER_W}px`, height: `${CHARACTER_H}px` }"
+    :style="{ left: `${assistantWindow.x}px`, top: `${assistantWindow.y}px`, width: `${CHARACTER_W}px`, height: `${CHARACTER_H}px`, '--pill-zone': `${PILL_ZONE}px` }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -110,27 +118,27 @@ function hide() {
       <Transition name="cw-menu">
         <div v-if="expanded" class="cw-menu" role="menu">
           <div class="cw-grid">
-            <button type="button" class="ob" title="Open settings" aria-label="Open settings" @click="open('settings')">
+            <button type="button" class="ob" data-tip="Open settings" aria-label="Open settings" @click="open('settings')">
               <Icon name="settings" />
             </button>
-            <button type="button" class="ob" :title="`Switch character (now ${label})`" aria-label="Switch character" @click="nextCharacter">
+            <button type="button" class="ob" :data-tip="`Switch character (now ${label})`" aria-label="Switch character" @click="nextCharacter">
               <Icon name="smile" />
             </button>
-            <button type="button" class="ob" title="Open dashboard" aria-label="Open dashboard" @click="open('dashboard')">
+            <button type="button" class="ob" data-tip="Open dashboard" aria-label="Open dashboard" @click="open('dashboard')">
               <Icon name="dashboard" />
             </button>
-            <button type="button" class="ob" title="Center window" aria-label="Center window" @click="centerWindow">
+            <button type="button" class="ob" data-tip="Center window" aria-label="Center window" @click="centerWindow">
               <Icon name="target" />
             </button>
             <button
               type="button" class="ob" :class="{ dim: !assistantWindow.pinned }"
-              :title="assistantWindow.pinned ? 'Unpin from top' : 'Pin on top'"
+              :data-tip="assistantWindow.pinned ? 'Unpin from top' : 'Pin on top'"
               :aria-pressed="assistantWindow.pinned"
               @click="assistantWindow.pinned = !assistantWindow.pinned"
             >
               <Icon name="pin" />
             </button>
-            <button type="button" class="ob danger" title="Hide character" aria-label="Hide character" @click="hide">
+            <button type="button" class="ob danger" data-tip="Hide character" aria-label="Hide character" @click="hide">
               <Icon name="close-circle" />
             </button>
           </div>
@@ -140,7 +148,7 @@ function hide() {
       <div class="cw-main">
         <button
           type="button" class="ob" :aria-expanded="expanded"
-          :title="expanded ? 'Collapse' : 'Expand'"
+          :data-tip="expanded ? 'Collapse' : 'Expand'"
           @click="expanded = !expanded"
         >
           <Icon name="chevron-up" class="cw-arrow" :style="{ transform: `rotate(${expanded ? 180 : 0}deg)` }" />
@@ -149,7 +157,7 @@ function hide() {
           type="button"
           class="ob talk"
           :class="{ on: voiceState.recording }"
-          title="Hold to talk (or hold Space)"
+          data-tip="Hold to talk (or hold Space)"
           aria-label="Hold to talk"
           @pointerdown.prevent="onTalkDown"
           @pointerup="pttUp()"
@@ -161,13 +169,13 @@ function hide() {
         </button>
         <button
           type="button" class="ob"
-          :title="settings.sound ? 'Mute speech' : 'Unmute speech'"
+          :data-tip="settings.sound ? 'Mute speech' : 'Unmute speech'"
           :aria-pressed="!settings.sound"
           @click="toggleSound"
         >
           <Icon :name="settings.sound ? 'volume' : 'volume-off'" />
         </button>
-        <button type="button" class="ob cw-move" title="Drag to move window" aria-label="Drag to move window">
+        <button type="button" class="ob cw-move" data-tip="Drag to move window" aria-label="Drag to move window">
           <Icon name="move" />
         </button>
       </div>
@@ -213,7 +221,7 @@ function hide() {
 .cw-island {
   position: absolute;
   right: 8px;
-  bottom: 8px;
+  bottom: calc(var(--pill-zone) + 8px);
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -274,4 +282,34 @@ function hide() {
   from { opacity: 0; transform: translateX(12px) scale(0.9); }
   to { opacity: 1; transform: none; }
 }
+
+/* Docking variants: the island moves toward the screen's inside, the badge to the other side. */
+.cw[data-dock-h='left'] .cw-island { right: auto; left: 8px; flex-direction: row-reverse; transform-origin: bottom left; }
+.cw[data-dock-h='left'] .cw-badge { left: auto; right: 8px; }
+.cw[data-dock-v='top'] .cw-island { bottom: auto; top: 8px; align-items: flex-start; }
+.cw[data-dock-v='top'] .cw-badge { top: auto; bottom: calc(var(--pill-zone) + 8px); }
+.cw[data-dock-h='left'] .cw-menu { transform-origin: bottom left; }
+.cw[data-dock-v='top'] .cw-menu { transform-origin: top right; }
+.cw[data-dock-h='left'][data-dock-v='top'] .cw-menu { transform-origin: top left; }
+
+/* Name tooltip on hover (overlay buttons). */
+.ob { position: relative; }
+.ob[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translate(-50%, 4px);
+  z-index: 5;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(38, 32, 48, 0.92);
+  color: #fff;
+  font: 600 12px/1.3 system-ui, -apple-system, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s;
+}
+.ob[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
 </style>
