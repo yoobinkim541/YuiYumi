@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 데스크톱 캐릭터 | Desktop Mate (Steam) | 바탕화면·창 위에 앉는 3D 캐릭터. 대화·AI·화면 인식 없음 | 가장 비슷한 **형태**. 우리는 지능과 업무를 얹는다 |
 | 오픈소스 | Open-LLM-VTuber | Live2D + LLM + 음성, 데스크톱 펫 모드, 화면 인식 지원 | 기능은 가장 가깝지만 범용 대화형. 업무 수행·확인 카드·눈치 판단 없음. 라이선스는 GitHub상 불명(NOASSERTION), 사용 전 확인 |
-| 오픈소스 | AIRI (moeru-ai) | 자체 호스팅 AI 캐릭터. MIT, 웹·Electron | 포크 후보(spec 참고). 업무용 아님 |
+| 오픈소스 | AIRI (moeru-ai) | 자체 호스팅 AI 캐릭터. MIT, 웹·Electron | **우리의 기반**(spec 참고, `stage-web` 포크). 업무용 아님 |
 | 빅테크 | Microsoft Mico / Copilot Vision | 캐릭터 + 허용 시 화면을 보고 먼저 제안 | "화면 보는 비서"가 시장에서 검증됨. 차이는 Live2D 캐릭터성·멀티언어·가벼운 독립 앱 |
 | 컴패니언 앱 | Grok Ani, Zeta, Character.AI, Replika | 대화 상대 | 정은 있고 일은 안 함 |
 | 고전 | Clippy, Shimeji | 화면 위 도우미·펫의 원형 | 발표 한 줄: "Clippy가 실패한 이유는 눈치가 없어서" |
