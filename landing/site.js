@@ -69,6 +69,33 @@
     appLink.addEventListener('click', (e) => e.preventDefault());
   }
 
+  // Install as an app (PWA). Chrome, Edge and Android offer a prompt; iPhone and iPad use Share → Add to Home Screen.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  const installBox = $('#installBox');
+  const installBtn = $('#installBtn');
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (installBox && !standalone) {
+    let deferred = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferred = e;
+      installBox.hidden = false;
+      installBtn.hidden = false;
+    });
+    installBtn.addEventListener('click', async () => {
+      if (!deferred) return;
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+      installBox.hidden = true;
+    });
+    window.addEventListener('appinstalled', () => { installBox.hidden = true; });
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+      installBox.hidden = false;
+      $('#iosInstallHint').hidden = false;
+    }
+  }
+
   // In-page links scroll there smoothly and keep the address bar clean (no #section).
   const headerOffset = () => ($('header')?.offsetHeight || 0) + 12;
   const scrollToId = (id, smooth) => {
