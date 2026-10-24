@@ -73,6 +73,26 @@
     appLink.addEventListener('click', (e) => e.preventDefault());
   }
 
+  // Desktop download buttons point at the latest GitHub release page; when the API answers,
+  // each one links straight to its installer (.dmg for macOS, .exe/.msi for Windows).
+  // A platform without an installer in the release keeps its button hidden.
+  const releaseLinks = document.querySelectorAll('.js-release');
+  if (releaseLinks.length) {
+    const kinds = { mac: /\.dmg$/i, win: /\.(exe|msi)$/i };
+    fetch('https://api.github.com/repos/FMsongX2/YuiYumi/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((rel) => {
+        const version = $('#releaseVersion');
+        if (version && rel.tag_name) version.textContent = `· ${rel.tag_name}`;
+        releaseLinks.forEach((a) => {
+          const asset = (rel.assets || []).find((x) => kinds[a.dataset.os]?.test(x.name));
+          a.hidden = !asset;
+          if (asset) a.href = asset.browser_download_url;
+        });
+      })
+      .catch(() => {});
+  }
+
   // Install as an app (PWA). Chrome, Edge and Android offer a prompt; iPhone and iPad use Share → Add to Home Screen.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   const installBox = $('#installBox');
