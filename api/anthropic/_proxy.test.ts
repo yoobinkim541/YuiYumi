@@ -45,16 +45,26 @@ describe('UsageMeter', () => {
 })
 
 describe('handleProxy', () => {
-  it('rejects missing or forged install tokens, other paths, models and query params', async () => {
+  it('rejects missing or forged install tokens, other paths and models', async () => {
     const token = await installToken()
     const ok = { model: 'claude-sonnet-5-5', max_tokens: 10, messages: [] }
     expect((await handleProxy(messages('nope', ok))).status).toBe(401)
     expect((await handleProxy(messages(token, ok, '/v1/models'))).status).toBe(404)
-    expect((await handleProxy(messages(token, ok, '/v1/messages?foo=1'))).status).toBe(400)
     expect([...allowedModels()].sort()).toEqual(['claude-haiku-5-5', 'claude-opus-5-5', 'claude-sonnet-5-5'])
     const bad = await handleProxy(messages(token, { ...ok, model: 'claude-fable-5-1' }))
     expect(bad.status).toBe(400)
     expect(await bad.json()).toMatchObject({ type: 'error', error: { type: 'invalid_request_error' } })
+  })
+
+  it('drops router-added query parameters and forwards only beta', async () => {
+    const token = await installToken()
+    let url = ''
+    const fakeFetch = (async (u: string) => { url = u; return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }) }) as unknown as typeof fetch
+    const ok = { model: 'claude-sonnet-5-5', max_tokens: 10, messages: [] }
+    expect((await handleProxy(messages(token, ok, '/v1/messages?path=v1%2Fmessages&beta=true'), fakeFetch)).status).toBe(200)
+    expect(url).toBe('https://api.anthropic.com/v1/messages?beta=true')
+    await handleProxy(messages(token, ok, '/v1/messages?path=x'), fakeFetch)
+    expect(url).toBe('https://api.anthropic.com/v1/messages')
   })
 
   it('forwards with the server key only, clamps max_tokens and passes the stream through', async () => {
