@@ -166,7 +166,7 @@ function onChatKey(e: KeyboardEvent) {
   justify-content: space-evenly;
   gap: 6px;
   /* Wide enough to cover the sleeves where the model is cut. */
-  min-width: 90%;
+  min-width: 96%;
   height: 56px;
   padding: 0 14px;
   border-radius: 999px;

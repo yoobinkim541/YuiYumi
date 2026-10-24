@@ -42,7 +42,7 @@ function modelKey(): Promise<CryptoKey> {
   return keyPromise
 }
 
-const MIME: Record<string, string> = { png: 'image/png', json: 'application/json' }
+const MIME: Record<string, string> = { png: 'image/png', webp: 'image/webp', json: 'application/json' }
 
 export async function loadModelPack(url: string, id: string): Promise<ModelPack> {
   const [key, res] = await Promise.all([modelKey(), fetch(url)])

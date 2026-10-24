@@ -196,11 +196,13 @@ async function buildModel(def, key) {
 
   // --- Textures
   const textures = await Promise.all(refs.Textures.map(async (tex, i) => {
-    const file = `textures/texture_${String(i).padStart(2, '0')}.png`
+    // WebP keeps the packs small for the first visit (about a third of PNG at this size);
+    // alpha stays near lossless so mesh edges do not fringe.
+    const file = `textures/texture_${String(i).padStart(2, '0')}.webp`
     const img = sharp(join(SRC, tex))
     const { width = TEXTURE_SIZE } = await img.metadata()
     const size = Math.min(width, TEXTURE_SIZE)
-    zip.file(file, await img.resize(size, size, { fit: 'fill', kernel: 'lanczos3' }).png({ compressionLevel: 6 }).toBuffer())
+    zip.file(file, await img.resize(size, size, { fit: 'fill', kernel: 'lanczos3' }).webp({ quality: 90, alphaQuality: 100, effort: 5, smartSubsample: true }).toBuffer())
     return file
   }))
 
@@ -227,7 +229,9 @@ async function buildModel(def, key) {
   }))
 
   // PNG and moc3 barely compress; STORE keeps unzip fast in the browser.
-  const plain = await zip.generateAsync({ type: 'nodebuffer', compression: 'STORE' })
+  // Deflate shrinks the motion and expression JSON a lot; the encrypted pack itself cannot
+  // be compressed on the wire.
+  const plain = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } })
   await writeFile(join(OUT, `${def.id}.bin`), encrypt(key, plain))
 
   const icon = vtube?.FileReferences?.Icon ?? files.find(f => /icon.*\.png$/i.test(f))

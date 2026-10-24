@@ -6,6 +6,7 @@
 // The island fades out when the cursor leaves the window unless the menu is open.
 // Marked [data-no-capture]: never sent to the observer.
 import { computed, ref } from 'vue'
+import type { Lang } from '@shared/languages'
 import { characterHitTest } from '@/character'
 import CharacterLayer from '@/character/CharacterLayer.vue'
 import { CHARACTER_MODELS } from '@/character/models'
@@ -23,11 +24,26 @@ import {
 // puts it on the left, a window on the lower half puts it at the top. It always stays
 // above the pill zone.
 const dockH = computed(() => (assistantWindow.x + CHARACTER_W / 2 > DESKTOP_W / 2 ? 'left' : 'right'))
-const dockV = computed(() => (assistantWindow.y + CHARACTER_H / 2 > DESKTOP_H / 2 ? 'top' : 'bottom'))
+// Always beside the pill: the speech bubble owns the space over her head.
+const dockV = computed(() => 'bottom' as const)
 
 const store = useCharacterStore()
 const settings = useSettings()
 const label = computed(() => CHARACTER_MODELS[store.character].label)
+
+interface IslandTips {
+  settings: string, switchTo: (now: string) => string, dashboard: string, center: string
+  pin: string, unpin: string, hide: string, more: string, less: string
+  talk: (key: string) => string, mute: string, unmute: string, move: string
+}
+const TIPS: Record<Lang, IslandTips> = {
+  'en': { settings: 'Open settings', switchTo: n => `Switch character (now ${n})`, dashboard: 'Open dashboard', center: 'Center window', pin: 'Pin on top', unpin: 'Unpin from top', hide: 'Hide character', more: 'More', less: 'Close menu', talk: k => `Hold to talk (or hold ${k})`, mute: 'Mute speech', unmute: 'Unmute speech', move: 'Drag to move' },
+  'ja': { settings: '設定を開く', switchTo: n => `キャラクターを切り替え（今: ${n}）`, dashboard: 'ダッシュボードを開く', center: '中央に戻す', pin: '最前面に固定', unpin: '固定を解除', hide: 'キャラクターを隠す', more: 'その他', less: 'メニューを閉じる', talk: k => `押して話す（${k} 長押しでも可）`, mute: '音声をミュート', unmute: 'ミュート解除', move: 'ドラッグで移動' },
+  'ko': { settings: '설정 열기', switchTo: n => `캐릭터 바꾸기 (지금: ${n})`, dashboard: '대시보드 열기', center: '가운데로', pin: '맨 위에 고정', unpin: '고정 해제', hide: '캐릭터 숨기기', more: '더 보기', less: '메뉴 닫기', talk: k => `누르고 말하기 (${k} 길게 눌러도 돼요)`, mute: '음성 끄기', unmute: '음성 켜기', move: '끌어서 옮기기' },
+  'zh-Hans': { settings: '打开设置', switchTo: n => `切换角色（当前：${n}）`, dashboard: '打开仪表盘', center: '移到中间', pin: '置顶', unpin: '取消置顶', hide: '隐藏角色', more: '更多', less: '关闭菜单', talk: k => `按住说话（也可按住 ${k}）`, mute: '静音', unmute: '取消静音', move: '拖动移动' },
+  'zh-Hant': { settings: '開啟設定', switchTo: n => `切換角色（目前：${n}）`, dashboard: '開啟儀表板', center: '移到中間', pin: '置頂', unpin: '取消置頂', hide: '隱藏角色', more: '更多', less: '關閉選單', talk: k => `按住說話（也可按住 ${k}）`, mute: '靜音', unmute: '取消靜音', move: '拖曳移動' },
+}
+const tip = computed(() => TIPS[settings.lang] ?? TIPS.en)
 const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 const expanded = ref(false)
 /** Position changes animate (agent choreography, move_self) except while dragging. */
@@ -124,27 +140,27 @@ function hide() {
       <Transition name="cw-menu">
         <div v-if="expanded" class="cw-menu" role="menu">
           <div class="cw-grid">
-            <button type="button" class="ob" data-tip="Open settings" aria-label="Open settings" @click="open('settings')">
+            <button type="button" class="ob" :data-tip="tip.settings" :aria-label="tip.settings" @click="open('settings')">
               <Icon name="settings" />
             </button>
-            <button type="button" class="ob" :data-tip="`Switch character (now ${label})`" aria-label="Switch character" @click="nextCharacter">
-              <Icon name="smile" />
+            <button type="button" class="ob" :data-tip="tip.switchTo(label)" :aria-label="tip.switchTo(label)" @click="nextCharacter">
+              <Icon name="swap" />
             </button>
-            <button type="button" class="ob" data-tip="Open dashboard" aria-label="Open dashboard" @click="open('dashboard')">
+            <button type="button" class="ob" :data-tip="tip.dashboard" :aria-label="tip.dashboard" @click="open('dashboard')">
               <Icon name="dashboard" />
             </button>
-            <button type="button" class="ob" data-tip="Center window" aria-label="Center window" @click="centerWindow">
+            <button type="button" class="ob" :data-tip="tip.center" :aria-label="tip.center" @click="centerWindow">
               <Icon name="target" />
             </button>
             <button
               type="button" class="ob" :class="{ dim: !assistantWindow.pinned }"
-              :data-tip="assistantWindow.pinned ? 'Unpin from top' : 'Pin on top'"
+              :data-tip="assistantWindow.pinned ? tip.unpin : tip.pin"
               :aria-pressed="assistantWindow.pinned"
               @click="assistantWindow.pinned = !assistantWindow.pinned"
             >
               <Icon name="pin" />
             </button>
-            <button type="button" class="ob danger" data-tip="Hide character" aria-label="Hide character" @click="hide">
+            <button type="button" class="ob danger" :data-tip="tip.hide" :aria-label="tip.hide" @click="hide">
               <Icon name="close-circle" />
             </button>
           </div>
@@ -154,17 +170,17 @@ function hide() {
       <div class="cw-main">
         <button
           type="button" class="ob" :aria-expanded="expanded"
-          :data-tip="expanded ? 'Collapse' : 'Expand'"
+          :data-tip="expanded ? tip.less : tip.more" :aria-label="expanded ? tip.less : tip.more"
           @click="expanded = !expanded"
         >
-          <Icon name="chevron-up" class="cw-arrow" :style="{ transform: `rotate(${expanded ? 180 : 0}deg)` }" />
+          <Icon name="more" />
         </button>
         <button
           type="button"
           class="ob talk"
           :class="{ on: voiceState.recording }"
-          :data-tip="`Hold to talk (or hold ${pttLabel})`"
-          aria-label="Hold to talk"
+          :data-tip="tip.talk(pttLabel)"
+          :aria-label="tip.talk(pttLabel)"
           @pointerdown.prevent="onTalkDown"
           @pointerup="pttUp()"
           @pointercancel="pttUp()"
@@ -175,13 +191,13 @@ function hide() {
         </button>
         <button
           type="button" class="ob"
-          :data-tip="settings.sound ? 'Mute speech' : 'Unmute speech'"
+          :data-tip="settings.sound ? tip.mute : tip.unmute"
           :aria-pressed="!settings.sound"
           @click="toggleSound"
         >
           <Icon :name="settings.sound ? 'volume' : 'volume-off'" />
         </button>
-        <button type="button" class="ob cw-move" data-tip="Drag to move window" aria-label="Drag to move window">
+        <button type="button" class="ob cw-move" :data-tip="tip.move" :aria-label="tip.move">
           <Icon name="move" />
         </button>
       </div>

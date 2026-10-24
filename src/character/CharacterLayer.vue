@@ -91,14 +91,16 @@ const spriteClass = computed(() => [
   inset: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Only the model viewport clips; the pill floats with its full shadow. */
+  overflow: visible;
   /* Transparent window: only the avatar is drawn, like a desktop pet. */
   background: transparent;
 }
 .viewport {
-  /* Ends exactly at the top edge of the control pill: the avatar rises out of it. */
+  /* Ends at the middle of the control pill, so the cut edge hides behind the pill (also at
+     its rounded ends) and the avatar still rises out of it. */
   position: absolute;
-  inset: 0 0 var(--pill-top, 64px) 0;
+  inset: 0 0 var(--pill-cut, 36px) 0;
   overflow: hidden;
 }
 .stage { position: absolute; inset: 0; }

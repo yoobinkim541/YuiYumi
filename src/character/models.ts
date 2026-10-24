@@ -70,7 +70,7 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
     nodes: (node, graph) => graph
       ? graphNodeSettings(graph, node)
       : { blink: true, breath: true, lookAt: false, idleNoise: false, motion: null },
-    framing: { visible: 0.5, topCut: 0.02 },
+    framing: { visible: 0.6, topCut: 0.02 },
     touch: {
       head: { x: 0.5, y: 0.163, radius: 0.09 },
       // Held: frown, shrug and knit brows (a flinch). Slow strokes: squeezed >< eyes over
@@ -81,6 +81,6 @@ export const CHARACTER_MODELS: Record<CharacterId, CharacterModelDef> = {
   },
 }
 
-export const DEFAULT_CHARACTER: CharacterId = 'tt2'
+export const DEFAULT_CHARACTER: CharacterId = 'yui'
 
 export const isCharacterId = (v: unknown): v is CharacterId => v === 'tt2' || v === 'yui'
