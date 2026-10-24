@@ -2,10 +2,11 @@
 // (503 unconfigured, 429 budget, provider error, abort); the bubble stays text-only.
 
 import type { SpeechRequest } from '@shared/contracts'
+import { apiUrl } from '@/core/api'
 
 export async function fetchSpeech(req: SpeechRequest, signal: AbortSignal): Promise<ArrayBuffer | null> {
   try {
-    const res = await fetch('/api/tts', {
+    const res = await fetch(apiUrl('/api/tts'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(req),

@@ -1,0 +1,12 @@
+--- ayagami-src/repo/ayagami/src/driver/mod.rs	2026-10-24 12:22:31
++++ ayagami-patched/ayagami/src/driver/mod.rs	2026-10-24 12:29:38
+@@ -713,7 +713,8 @@
+                         st.affine.translation,
+                         st.affine.translation + vec2(0., -0.1),
+                     ];
+-                    pst.apply(&mut p, &mut st.visual);
++                    // Visual already inherited above; only transform the probe points.
++                    pst.apply(&mut p, &mut Visual::default());
+                     let angle = if p[1] != p[0] {
+                         (p[1] - p[0]).perp().to_angle()
+                     } else {

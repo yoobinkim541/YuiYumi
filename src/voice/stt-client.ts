@@ -5,6 +5,7 @@ import type { Lang } from '@shared/languages'
 import { bus } from '@/core/bus'
 import { voiceState } from './state'
 import { encodeWav16, STT_SAMPLE_RATE } from './wav'
+import { apiUrl } from '@/core/api'
 
 export type SpeechSource = 'vad' | 'ptt'
 
@@ -20,7 +21,7 @@ export async function transcribe(samples16k: Float32Array, ctx: SttContext): Pro
   const qs = new URLSearchParams({ lang: ctx.lang, sessionId: ctx.sessionId })
   voiceState.transcribing++
   try {
-    const res = await fetch(`/api/stt?${qs}`, {
+    const res = await fetch(apiUrl(`/api/stt?${qs}`), {
       method: 'POST',
       headers: { 'content-type': 'audio/wav' },
       body: wav,

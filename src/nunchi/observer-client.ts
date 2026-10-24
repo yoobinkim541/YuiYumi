@@ -1,4 +1,5 @@
 import { ObserveResponseSchema, type ApiError, type ObserveRequest, type ObserveResponse } from '@shared/contracts'
+import { apiUrl } from '@/core/api'
 
 export type ObserveResult =
   | { ok: true, response: ObserveResponse }
@@ -6,7 +7,7 @@ export type ObserveResult =
 
 export async function postObserve(req: ObserveRequest, signal?: AbortSignal): Promise<ObserveResult> {
   try {
-    const res = await fetch('/api/observe', {
+    const res = await fetch(apiUrl('/api/observe'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(req),

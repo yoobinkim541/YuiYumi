@@ -1,6 +1,7 @@
 // Browser side of the optional live connectors: POST /api/connectors/<service>.
 
 import type { ApiError, ConnectorService } from '@shared/contracts'
+import { apiUrl } from '@/core/api'
 
 export class LiveConnectorError extends Error {
   constructor(message: string, readonly status: number, readonly code?: ApiError['code']) { super(message) }
@@ -13,7 +14,7 @@ export async function callLive(
   sessionId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<unknown> {
-  const res = await fetchImpl(`/api/connectors/${service}`, {
+  const res = await fetchImpl(apiUrl(`/api/connectors/${service}`), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ op, input, sessionId }),

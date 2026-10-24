@@ -56,7 +56,10 @@ export default defineConfig(({ mode }) => {
         '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
       },
     },
-    optimizeDeps: { exclude: ['onnxruntime-web', '@ricky0123/vad-web'] },
+    optimizeDeps: {
+      exclude: ['onnxruntime-web', '@ricky0123/vad-web'],
+      include: ['pixi.js', 'pixi-live2d-display/cubism4', 'cubism-web-batched-renderer', 'jszip'],
+    },
     server: { port: 5173 },
   }
 })

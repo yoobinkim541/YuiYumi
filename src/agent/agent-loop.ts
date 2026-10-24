@@ -9,6 +9,7 @@ import type { ToolOutcome } from '@/connectors/registry'
 import type { ConfirmCardInput } from './confirm-queue'
 import { buildWritePreview } from './preview'
 import { AGENT_STRINGS } from './strings'
+import { apiUrl } from '@/core/api'
 
 export const MAX_STEPS = 8
 export const SUGGESTION_TIMEOUT_MS = 45_000
@@ -24,7 +25,7 @@ export class AgentStepError extends Error {
 
 export function createStepClient(fetchImpl: typeof fetch = (...a) => fetch(...a)) {
   return async (req: AgentStepRequest): Promise<AgentStepResponse> => {
-    const res = await fetchImpl('/api/agent', {
+    const res = await fetchImpl(apiUrl('/api/agent'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(req),

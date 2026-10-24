@@ -15,7 +15,7 @@
 | 프로젝트 | 라이선스 | 사용 방식 |
 |---|---|---|
 | [FMsongX2/cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer) | Live2D Open Software License (저장소의 `LICENSE.md` 참조) | Live2D 모델의 배치 렌더러로 의존성에 포함한다. Cubism Core는 이 패키지에 포함되어 있지 않다 |
-| [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami) | MIT OR Apache-2.0 | 목표 캐릭터 코어(moc3 로딩·변형 계산)이다. 웹 래퍼를 검증하는 spike 단계에서 사용한다 |
+| [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami) | MIT OR Apache-2.0 | 기본 캐릭터 코어(moc3 로딩·변형 계산)이다. `crates/ayagami-web`에서 WASM으로 빌드해 `Live2DCubismCore`와 같은 형태의 facade로 감싼다. `crates/ayagami-web/vendor/ayagami`는 원본 소스에 deformer 투명도 중복 적용을 고친 로컬 패치(`vendor/ayagami-double-visual.patch`)를 적용한 사본이며, 원본의 `LICENSE-MIT`, `LICENSE-APACHE`, `COPYRIGHT`를 유지한다 |
 | [pixi-live2d-display](https://github.com/guansss/pixi-live2d-display) | MIT | Live2D 모델 로딩과 PixiJS 연동에 사용한다 |
 | [pixi.js](https://github.com/pixijs/pixijs) | MIT | 캐릭터 레이어의 WebGL 렌더링에 사용한다 |
 
@@ -28,6 +28,7 @@
 | [pinia](https://github.com/vuejs/pinia) | MIT | 설정과 데모 세션 데이터의 상태 관리 |
 | [zod](https://github.com/colinhacks/zod) | MIT | 브라우저와 서버 사이의 계약 스키마와 요청 검증 |
 | [modern-screenshot](https://github.com/qq15725/modern-screenshot) | MIT | 가상 데스크톱 요소의 3초 주기 JPEG 캡처 |
+| [jszip](https://github.com/Stuk/jszip) | MIT OR GPL-3.0-or-later (MIT 선택) | 암호화된 모델 팩의 압축과 해제 |
 | [@vercel/node](https://github.com/vercel/vercel) | Apache-2.0 | Vercel 서버 함수 타입과 런타임 |
 
 ## 4. 음성

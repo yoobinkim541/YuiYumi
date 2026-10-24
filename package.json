@@ -10,7 +10,8 @@
     "test": "vitest run",
     "model": "node scripts/build-web-model.mjs",
     "predev": "node scripts/copy-vad-assets.mjs",
-    "prebuild": "node scripts/copy-vad-assets.mjs"
+    "prebuild": "node scripts/copy-vad-assets.mjs",
+    "assets": "node scripts/build-ayagami.mjs && node scripts/build-web-model.mjs && node scripts/copy-vad-assets.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
