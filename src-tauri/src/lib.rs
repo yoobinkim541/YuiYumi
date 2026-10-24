@@ -134,8 +134,9 @@ fn drag_start(window: WebviewWindow, character: drag::CharRect, anchor: Option<[
     drag::start(window, character, anchor);
 }
 
+/// Async: building a webview window from a synchronous command deadlocks on Windows (WebView2).
 #[tauri::command]
-fn open_panel(app: AppHandle, view: String) -> Result<(), String> {
+async fn open_panel(app: AppHandle, view: String) -> Result<(), String> {
     show_panel(&app, &view)
 }
 

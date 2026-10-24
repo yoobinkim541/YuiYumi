@@ -23,6 +23,9 @@ image = { version = "0.25", default-features = false, features = ["jpeg"] }
 open = "5"
 url = "2"
 
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }
 block2 = "0.6"

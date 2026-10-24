@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { decidePermission, gradeTool, summarizeResult, summarizeTool } from '../src/tools.ts'
 
@@ -62,7 +63,7 @@ describe('decidePermission', () => {
 
 describe('summaries', () => {
   it('describes calls in one line, paths relative to the project', () => {
-    expect(summarizeTool('Write', { file_path: '/work/project/src/hello.txt', content: 'hi' }, cwd)).toBe('src/hello.txt')
+    expect(summarizeTool('Write', { file_path: '/work/project/src/hello.txt', content: 'hi' }, cwd)).toBe(path.join('src', 'hello.txt'))
     expect(summarizeTool('Bash', { command: 'pnpm test\n--run', description: 'Run tests' }, cwd)).toBe('Run tests: pnpm test --run')
     expect(summarizeTool('Grep', { pattern: 'TODO', path: '/work/project/src' }, cwd)).toBe('"TODO" in src')
     expect(summarizeTool('Read', { file_path: '/etc/hosts' }, cwd)).toBe('/etc/hosts')
