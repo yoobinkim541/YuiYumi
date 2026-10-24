@@ -12,7 +12,7 @@ export interface SttProvider {
 
 export interface TtsProvider {
   /** Cheap local check (keys, per-language voice) so routes can answer 503 before spending budget. */
-  isConfigured(lang: Lang): boolean
+  isConfigured(lang: Lang, character?: string): boolean
   /** Resolves to audio/mpeg bytes, streamed when the provider supports it. */
   synthesize(req: SpeechRequest, signal?: AbortSignal): Promise<ReadableStream<Uint8Array> | ArrayBuffer>
 }

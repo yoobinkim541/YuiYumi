@@ -157,6 +157,8 @@ export const SpeechRequestSchema = z.object({
   text: z.string().min(1).max(500),
   lang: LangSchema,
   emotion: EmotionSchema.optional(),
+  /** Character speaking; selects its voice (ELEVENLABS_VOICE_<ID>) before the per-language voice. */
+  character: z.enum(['tt2', 'yui']).optional(),
   sessionId: z.string(),
 })
 export type SpeechRequest = z.infer<typeof SpeechRequestSchema>

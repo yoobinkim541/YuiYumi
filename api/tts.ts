@@ -15,7 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   if (req instanceof Response) return req
 
   // Check configuration before spending budget.
-  if (!provider.isConfigured(req.lang)) return fail(503, 'tts unconfigured', 'unconfigured')
+  if (!provider.isConfigured(req.lang, req.character)) return fail(503, 'tts unconfigured', 'unconfigured')
   if (!admit(req.sessionId)) return fail(429, 'budget exceeded', 'budget')
 
   try {

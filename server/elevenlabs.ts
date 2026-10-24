@@ -15,20 +15,24 @@ const TIMEOUT_MS = 20_000
 /** ISO 639-1 code for `language_code`; ignored by models that do not support it. */
 const ISO639: Record<Lang, string> = { 'en': 'en', 'ja': 'ja', 'ko': 'ko', 'zh-Hans': 'zh', 'zh-Hant': 'zh' }
 
-/** Returns the voice id for a language, or undefined when its env var is unset. */
-export function voiceIdFor(lang: Lang): string | undefined {
-  return env(LANG_INFO[lang].elevenVoiceEnv)
+/**
+ * Voice id for a request: the character's own voice (ELEVENLABS_VOICE_TT2 / _YUI) speaks
+ * every language through the multilingual model; the per-language voice is the fallback.
+ */
+export function voiceIdFor(lang: Lang, character?: string): string | undefined {
+  return (character ? env(`ELEVENLABS_VOICE_${character.toUpperCase()}`) : undefined)
+    ?? env(LANG_INFO[lang].elevenVoiceEnv)
 }
 
 export const elevenLabsTts: TtsProvider = {
-  isConfigured(lang) {
-    return !!env('ELEVENLABS_API_KEY') && !!voiceIdFor(lang)
+  isConfigured(lang, character) {
+    return !!env('ELEVENLABS_API_KEY') && !!voiceIdFor(lang, character)
   },
 
   async synthesize(req, signal) {
     const key = env('ELEVENLABS_API_KEY')
     if (!key) throw new ProviderUnconfiguredError('ELEVENLABS_API_KEY')
-    const voiceId = voiceIdFor(req.lang)
+    const voiceId = voiceIdFor(req.lang, req.character)
     if (!voiceId) throw new ProviderUnconfiguredError(LANG_INFO[req.lang].elevenVoiceEnv)
 
     const url = new URL(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream`)
