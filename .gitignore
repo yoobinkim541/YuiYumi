@@ -34,3 +34,11 @@ public/voice/
 
 # Character model and motion assets: never published to GitHub
 /models/
+
+# Local-only copies and sources: never published to GitHub
+/YuiYumi-models/
+/YuiYumi-app/
+/airi/
+/cubism-web-batched-renderer/
+/landing img/
+/.omp/

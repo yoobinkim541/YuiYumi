@@ -44,7 +44,7 @@ Bloom x Anthropic x Seoul AI Hub | Ambition for Korea 해커톤 (2026-10-24)
 | 기반 | **Vue 3 + Vite SPA를 새로 구성**. [moeru-ai/airi](https://github.com/moeru-ai/airi)(MIT)는 `templates/airi` 발췌본을 바탕으로 Live2D 연동·오디오 로직을 이식한다. TTS·STT는 `templates/`의 ElevenLabs·Deepgram 스타터의 서버 호출 구조만 참고한다 |
 | 코어·렌더러 | 코어는 [AyagamiDev/ayagami](https://github.com/AyagamiDev/ayagami)가 목표이며, 오늘은 공식 Cubism Core를 폴백으로 허용한다. 렌더러는 [cubism-web-batched-renderer](https://github.com/FMsongX2/cubism-web-batched-renderer)(아래 "렌더링 스택") |
 | 화면 인식 | **페이지 안 가상 데스크톱** + **Haiku 비전**. 3초마다 가상 데스크톱 요소를 `modern-screenshot`으로 1920×1080 1장 캡처해 Haiku를 호출(게이트가 막는 동안은 건너뜀). 데스크톱 앱은 실제 화면을 캡처 |
-| 배포 | **Vercel** (Vite 정적 빌드 + `api/` 함수). 로컬 `vercel build` 후 `vercel deploy --prebuilt`. 웹 데모 주소는 https://yuiyumi-seven.vercel.app |
+| 배포 | **Vercel** (Vite 정적 빌드 + `api/` 함수). 로컬 `vercel build` 후 `vercel deploy --prebuilt`. 웹 데모 주소는 https://yuiyumi.vercel.app |
 | 캐릭터 | **유미(Yumi, TT2.0)와 유이(Yui, 자체 모델)** 두 캐릭터. 한 번에 한 명, 설정에서 전환. 모델은 암호화 팩으로만 배포하고 저장소에는 올리지 않는다 |
 | 브라우저 | **Chrome 권장**으로 안내 |
 | 크레딧 | **김유빈 계정의 API 크레딧($500) 중 $150는 시연·테스트용으로 예약** (이 PC에서 사용) |

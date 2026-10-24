@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://yuiyumi-seven.vercel.app"><img src="landing/assets/og-v2.jpg" alt="YuiYumi — 화면 옆에 사는 Live2D 캐릭터 비서" width="100%"></a>
+  <a href="https://yuiyumi.vercel.app"><img src="landing/assets/og-v2.jpg" alt="YuiYumi — 화면 옆에 사는 Live2D 캐릭터 비서" width="100%"></a>
 </p>
 
 <h1 align="center">YuiYumi · 유이유미</h1>
@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://yuiyumi-seven.vercel.app"><b>웹 데모</b></a> ·
+  <a href="https://yuiyumi.vercel.app"><b>웹 데모</b></a> ·
   <a href="https://yuiyumi.vercel.app">소개 페이지</a> ·
   <a href="docs/user-guide.md">사용 설명서</a> ·
   <a href="docs/spec.md">기획안</a>

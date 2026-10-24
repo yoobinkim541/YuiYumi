@@ -44,7 +44,7 @@ YuiYumi.app (Tauri v2, Rust)                         서버 (Vercel api/, 키 �
 
 ### 1.2 API 주소
 
-`src/core/api.ts`의 `API_BASE`를 모든 `/api/*` 호출이 쓴다. 데스크톱 빌드는 `DESKTOP_API_BASE` 환경 변수를 `VITE_API_BASE`로 주입한다. 값이 없으면 빌드는 배포 주소 `https://yuiyumi-seven.vercel.app`, 개발 모드(`desktop:dev`)는 빈 값(데스크톱 개발 서버 자체의 `/api` 미들웨어)이다. 서버의 `server/http.ts`는 `tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost` 출처에만 CORS 헤더를 붙이고, `api/*.ts`는 `withCors`와 `OPTIONS = preflight`를 내보낸다. 로컬 Vite 서버는 `server.cors: false`로 이 처리를 핸들러에 맡긴다.
+`src/core/api.ts`의 `API_BASE`를 모든 `/api/*` 호출이 쓴다. 데스크톱 빌드는 `DESKTOP_API_BASE` 환경 변수를 `VITE_API_BASE`로 주입한다. 값이 없으면 빌드는 배포 주소 `https://yuiyumi.vercel.app`, 개발 모드(`desktop:dev`)는 빈 값(데스크톱 개발 서버 자체의 `/api` 미들웨어)이다. 서버의 `server/http.ts`는 `tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost` 출처에만 CORS 헤더를 붙이고, `api/*.ts`는 `withCors`와 `OPTIONS = preflight`를 내보낸다. 로컬 Vite 서버는 `server.cors: false`로 이 처리를 핸들러에 맡긴다.
 
 모델 팩(`public/models/*.bin`, 암호화)은 `dist-desktop`에 복사되어 앱 번들에 포함되고, 복호화 키는 여전히 `/api/model-key`에서 받는다. API 키는 번들에 들어가지 않는다.
 
@@ -115,7 +115,7 @@ DESKTOP_API_BASE=http://localhost:5180 pnpm desktop:build # 로컬 웹 개발 �
 ## 5. 알려진 한계
 
 - **서명·공증 없음.** ad-hoc 서명(`-`)만 한다. 처음 열 때 Gatekeeper 경고가 나오므로 Finder에서 앱을 오른쪽 클릭 후 열기(또는 시스템 설정 > 개인정보 보호 및 보안 > 그래도 열기)로 실행한다. Developer ID 서명과 공증은 이후 작업이다. 서명이 바뀌면 화면 기록 권한을 다시 허용해야 한다.
-- **배포 API 주소.** `DESKTOP_API_BASE`가 없으면 `https://yuiyumi-seven.vercel.app`을 쓴다. 다른 배포를 쓰려면 이 값을 주고 다시 빌드한다(에이전트 런타임의 프록시 주소도 이 값에서 나온다).
+- **배포 API 주소.** `DESKTOP_API_BASE`가 없으면 `https://yuiyumi.vercel.app`을 쓴다. 다른 배포를 쓰려면 이 값을 주고 다시 빌드한다(에이전트 런타임의 프록시 주소도 이 값에서 나온다).
 - **캡처는 메인 디스플레이만**, macOS 14 이상. 캐릭터가 보조 모니터에 있어도 메인 화면을 본다.
 - **화면 상단 근처의 말풍선.** 캐릭터를 화면 위 끝으로 올리면 머리 위 말풍선은 화면 밖으로 나갈 수 있다.
 - **2D 대체 모드**(Live2D 실패 시)에서는 아바타 픽셀 판정이 없어 클릭 투과는 되지만 몸통 드래그가 되지 않는다.

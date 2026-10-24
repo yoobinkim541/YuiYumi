@@ -2,7 +2,7 @@
 // lines) from a deployment into public/ so a machine without the private model sources (CI)
 // can package the desktop app. The VAD assets come from node_modules (copy-vad-assets.mjs).
 //
-// Usage: node scripts/fetch-public-assets.mjs https://yuiyumi-seven.vercel.app
+// Usage: node scripts/fetch-public-assets.mjs https://yuiyumi.vercel.app
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
