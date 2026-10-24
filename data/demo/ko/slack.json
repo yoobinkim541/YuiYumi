@@ -1,0 +1,64 @@
+{
+  "_note": "Fictional demo data (ko). at is computed at seed time from minutesAgo.",
+  "channels": [
+    {
+      "id": "sl-general",
+      "name": "general",
+      "workspace": "오로라랩"
+    },
+    {
+      "id": "sl-orbit",
+      "name": "proj-orbit",
+      "workspace": "오로라랩"
+    },
+    {
+      "id": "sl-design",
+      "name": "design",
+      "workspace": "오로라랩"
+    }
+  ],
+  "messages": [
+    {
+      "id": "slm-001",
+      "channelId": "sl-general",
+      "author": "최민아",
+      "text": "공지: 오늘 오후 4시에 사무실 탕비실 청소가 있어요. 도시락통은 집에 가져가 주세요!",
+      "minutesAgo": 140
+    },
+    {
+      "id": "slm-002",
+      "channelId": "sl-general",
+      "author": "한주원",
+      "text": "10월 클라우드 청구서가 이제 재무 포털에 올라와 있어요.",
+      "minutesAgo": 175
+    },
+    {
+      "id": "slm-003",
+      "channelId": "sl-orbit",
+      "author": "오도윤",
+      "text": "별빛시스템에서 Orbit에 대해 긍정적으로 회신 왔어요. 가격 관련해서 통화하고 싶어 한대요.",
+      "minutesAgo": 30
+    },
+    {
+      "id": "slm-004",
+      "channelId": "sl-orbit",
+      "author": "오도윤",
+      "text": "@지우 님, 별빛시스템 최신 견적서를 오후 5시 전에 여기에 공유해 주실 수 있을까요? 리뷰 자료에 필요해서요.",
+      "minutesAgo": 8
+    },
+    {
+      "id": "slm-005",
+      "channelId": "sl-design",
+      "author": "이서준",
+      "text": "온보딩 시안 3종을 드라이브에 올렸어요. 3시 리뷰 전에 피드백 주세요.",
+      "minutesAgo": 90
+    },
+    {
+      "id": "slm-006",
+      "channelId": "sl-design",
+      "author": "최민아",
+      "text": "2안이 좋긴 한데 헤드라인이 좀 긴 것 같아요.",
+      "minutesAgo": 60
+    }
+  ]
+}

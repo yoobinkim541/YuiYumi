@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import Icon from '@/settings/Icon.vue'
 import { closeWindow, desktop, desktopView, focusWindow, moveWindow, type AppId } from './windows'
 
-const props = defineProps<{ id: AppId, accent?: string, noCapture?: boolean }>()
+// `unified`: the app draws its own toolbar (macOS unified title bar). The traffic lights
+// float over it and any element marked [data-wf-drag] inside the app moves the window.
+const props = defineProps<{ id: AppId, accent?: string, noCapture?: boolean, unified?: boolean }>()
 
 const w = computed(() => desktop.windows[props.id])
 const focused = computed(() => desktop.focused === props.id)
@@ -13,6 +15,13 @@ let drag: { px: number, py: number, x: number, y: number } | null = null
 function onTitlePointerDown(e: PointerEvent) {
   if ((e.target as HTMLElement).closest('.wf-btn')) return
   focusWindow(props.id)
+  drag = { px: e.clientX, py: e.clientY, x: w.value.x, y: w.value.y }
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
+
+function onBodyPointerDown(e: PointerEvent) {
+  const t = e.target as HTMLElement
+  if (!props.unified || !t.closest('[data-wf-drag]') || t.closest('button, input, textarea, select, a, [data-no-drag]')) return
   drag = { px: e.clientX, py: e.clientY, x: w.value.x, y: w.value.y }
   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
@@ -32,7 +41,7 @@ function onTitlePointerUp() {
   <section
     v-show="w.open"
     class="wf"
-    :class="{ focused, assistant: noCapture }"
+    :class="{ focused, assistant: noCapture, unified }"
     :data-no-capture="noCapture ? '' : undefined"
     :style="{ left: `${w.x}px`, top: `${w.y}px`, width: `${w.w}px`, height: `${w.h}px`, zIndex: w.z }"
     @pointerdown="focusWindow(id)"
@@ -55,9 +64,15 @@ function onTitlePointerUp() {
         <Icon :name="id === 'dashboard' ? 'dashboard' : 'settings'" :size="16" />
         <span>{{ w.title }}</span>
       </div>
-      <div v-else class="wf-text">{{ w.title }}</div>
+      <div v-else-if="!unified" class="wf-text">{{ w.title }}</div>
     </header>
-    <div class="wf-body">
+    <div
+      class="wf-body"
+      @pointerdown="onBodyPointerDown"
+      @pointermove="onTitlePointerMove"
+      @pointerup="onTitlePointerUp"
+      @pointercancel="onTitlePointerUp"
+    >
       <slot />
     </div>
   </section>
@@ -68,49 +83,63 @@ function onTitlePointerUp() {
   position: absolute;
   display: flex;
   flex-direction: column;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
   background: #ffffff;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.22), inset 0 0 0 0.5px rgba(255, 255, 255, 0.5);
   transition: box-shadow 0.2s;
 }
-.wf.focused { box-shadow: 0 30px 80px rgba(15, 23, 42, 0.34), 0 0 0 1px rgba(15, 23, 42, 0.16); }
+.wf.focused { box-shadow: 0 28px 70px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.28), inset 0 0 0 0.5px rgba(255, 255, 255, 0.5); }
 .wf-title {
   position: relative;
-  height: 46px;
-  flex: 0 0 46px;
+  height: 52px;
+  flex: 0 0 52px;
   display: flex;
   align-items: center;
-  background: rgba(244, 245, 248, 0.86);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(246, 246, 248, 0.92);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.09);
   cursor: default;
   user-select: none;
   touch-action: none;
 }
-.wf:not(.focused) .wf-title { background: #f3f4f6; }
-.wf-lights { display: flex; gap: 9px; padding-left: 16px; z-index: 1; }
-.wf-btn { display: flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: none; padding: 0; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18); }
+.wf:not(.focused) .wf-title { background: #f2f2f4; }
+/* Unified: no separate title bar, the app's own toolbar sits under the traffic lights. */
+.wf.unified { background: rgba(255, 255, 255, 0.6); }
+.wf.unified .wf-title {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120px;
+  height: 56px;
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  z-index: 5;
+}
+.wf-lights { display: flex; gap: 9px; padding-left: 20px; z-index: 1; }
+.wf-btn { display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: none; padding: 0; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2); }
 .wf-btn svg { width: 9px; height: 9px; stroke: rgba(0, 0, 0, 0.55); stroke-width: 1.4; fill: none; opacity: 0; }
 .wf-lights:hover .wf-btn svg { opacity: 1; }
 .wf-btn.close { background: #ff5f57; cursor: pointer; }
 .wf-btn.min { cursor: pointer; }
 .wf-btn.min { background: #febc2e; }
 .wf-btn.max { background: #28c840; }
-.wf:not(.focused) .wf-btn { background: #d1d5db; }
+.wf:not(.focused) .wf-btn { background: #dcdcde; }
 .wf-text {
   position: absolute;
   inset: 0 120px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
-  color: #374151;
+  color: #3a3a3c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.wf:not(.focused) .wf-text { color: #a1a1a6; }
 .wf.assistant .wf-title { height: 40px; flex-basis: 40px; background: #f5f5f5; border-bottom: 0; backdrop-filter: none; }
 .wf.assistant:not(.focused) .wf-title { background: #f5f5f5; }
 .wf-chip {

@@ -152,7 +152,7 @@ shared/        contracts.ts(zod 계약, CONNECTOR_OPS), languages.ts(언어 단�
 api/           observe, agent, stt, tts, connectors/[service]
 server/        제공자 호출(anthropic, deepgram, elevenlabs, slack, discord), budget.ts, http.ts, prompts/
 scripts/       웹용 모델 빌드, Cubism Core 배치
-data/demo/     메일·일정·Slack·Discord·Drive 가공 데이터(다국어)
+data/demo/<lang>/  언어별(en·ja·ko·zh-Hans·zh-Hant) 메일·일정·Slack·Discord·Drive·시나리오 가공 데이터 (같은 id, 같은 줄거리)
 templates/     외부 스타터와 AIRI 발췌본(참고용, 빌드 제외)
 docs/          spec, architecture, voice, connectors, demo-account 등
 ```

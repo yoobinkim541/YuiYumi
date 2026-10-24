@@ -1,0 +1,52 @@
+{
+  "_note": "Fictional demo data (ko). at is computed at seed time from minutesAgo.",
+  "channels": [
+    {
+      "id": "dc-lounge",
+      "name": "lounge",
+      "workspace": "인디 메이커스 길드"
+    },
+    {
+      "id": "dc-orbit",
+      "name": "orbit-dev",
+      "workspace": "인디 메이커스 길드"
+    }
+  ],
+  "messages": [
+    {
+      "id": "dcm-001",
+      "channelId": "dc-lounge",
+      "author": "픽셀여우",
+      "text": "벌써 커피 세 잔째 마시는 사람 나 말고 또 있음?",
+      "minutesAgo": 50
+    },
+    {
+      "id": "dcm-002",
+      "channelId": "dc-lounge",
+      "author": "모찌_dev",
+      "text": "세 잔? 초보시네ㅋㅋ",
+      "minutesAgo": 48
+    },
+    {
+      "id": "dcm-003",
+      "channelId": "dc-lounge",
+      "author": "카이토",
+      "text": "토요일에 게임 나잇 어때요? 제가 호스트 할게요",
+      "minutesAgo": 20
+    },
+    {
+      "id": "dcm-004",
+      "channelId": "dc-orbit",
+      "author": "모찌_dev",
+      "text": "새 싱크 엔진 beta 브랜치에 푸시했어요. 각자 환경에서 테스트 부탁해요",
+      "minutesAgo": 70
+    },
+    {
+      "id": "dcm-005",
+      "channelId": "dc-orbit",
+      "author": "카이토",
+      "text": "제 쪽에선 beta 잘 돌아가요. 시작 속도가 30%쯤 빨라졌어요",
+      "minutesAgo": 35
+    }
+  ]
+}

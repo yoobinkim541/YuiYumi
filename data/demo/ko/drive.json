@@ -1,0 +1,33 @@
+{
+  "_note": "Fictional demo data (ko). modifiedAt is computed at seed time from minutesAgo.",
+  "files": [
+    {
+      "id": "file-proposal",
+      "name": "Orbit_제안서_별빛시스템_v3.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "minutesAgo": 1500,
+      "content": "별빛시스템 Orbit 도입 제안서 (v3)\n\n1. 목표\nOrbit의 자동 요약 기능으로 영업팀의 주간 보고 작성 시간을 40% 단축합니다.\n\n2. 범위\n- 1단계 (4주): 영업팀, 25석\n- 2단계 (8주): 고객지원팀, 40석\n\n3. 일정\n다음 달 둘째 주에 킥오프하며, 4주 후 1단계 리뷰를 진행합니다.\n\n4. 성공 지표\n보고 작성 시간, 사용률, 만족도 조사 점수."
+    },
+    {
+      "id": "file-quote",
+      "name": "별빛시스템_견적서_2026Q4.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "minutesAgo": 300,
+      "content": "견적 번호 AQ-2026-114 (유효기간 30일)\n\n항목 | 수량 | 단가 (KRW) | 금액 (KRW)\nOrbit Business 라이선스 (연간) | 25 | 480,000 | 12,000,000\n온보딩 워크숍 | 1 | 2,000,000 | 2,000,000\n우선 지원 (연간) | 1 | 1,600,000 | 1,600,000\n\n공급가액: 15,600,000\n부가세 (10%): 1,560,000\n합계: 17,160,000"
+    },
+    {
+      "id": "file-notes",
+      "name": "주간_회의록.md",
+      "mimeType": "text/markdown",
+      "minutesAgo": 2900,
+      "content": "주간 회의록\n\n- Orbit 베타 피드백: 싱크 속도 개선됨\n- 별빛시스템 건: 미팅 일정 대기 중\n- 광채테크: 4분기 공동 마케팅 제안 수신\n- 액션: 지우 님이 오도윤 님에게 견적서 전달"
+    },
+    {
+      "id": "file-onboarding",
+      "name": "온보딩_시안_v2.pdf",
+      "mimeType": "application/pdf",
+      "minutesAgo": 92,
+      "content": "온보딩 화면 시안\n\n1안: 'Orbit에 오신 것을 환영합니다'\n2안: '바쁜 사이에 작성된 나의 주간 보고'\n3안: '보고는 줄이고, 개발은 더 많이'"
+    }
+  ]
+}

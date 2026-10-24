@@ -2,13 +2,15 @@
 import { computed, watch } from 'vue'
 import { useDemo, type CalendarEvent } from '@/stores/demo'
 import { hm } from '../format'
+import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const START_H = 8
 const END_H = 19
-const HOUR_PX = 62
+const HOUR_PX = 60
 
 const demo = useDemo()
+const { t, locale } = useDesktopStrings()
 const day = new Date()
 
 const todays = computed(() =>
@@ -50,24 +52,52 @@ const conflicts = computed(() => placed.value.filter(p => p.conflict))
 const hours = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i)
 const nowTop = computed(() => (day.getHours() + day.getMinutes() / 60 - START_H) * HOUR_PX)
 
-const dayTitle = day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+const dayTitle = computed(() => day.toLocaleDateString(locale.value, { year: 'numeric', month: 'long', day: 'numeric' }))
+const weekday = computed(() => day.toLocaleDateString(locale.value, { weekday: 'long' }))
+const nowLabel = computed(() => day.toLocaleTimeString(locale.value, { hour: 'numeric', minute: '2-digit' }))
+function hourLabel(h: number) {
+  return new Date(2000, 0, 1, h).toLocaleTimeString(locale.value, { hour: 'numeric' })
+}
+// macOS Calendar style: one color per calendar; demo events are spread over a few.
+const CAL_COLORS = ['#1e88ff', '#a259ff', '#34c759', '#ff9500', '#ff2d55']
+function evColor(ev: CalendarEvent) {
+  let h = 0
+  for (const c of ev.id) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return CAL_COLORS[h % CAL_COLORS.length]!
+}
 watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today (${c.length} events overlap)` : 'Calendar — Today'), { immediate: true })
 </script>
 
 <template>
   <div class="cal">
+    <div class="toolbar" data-wf-drag>
+      <div class="tb-left">
+        <span class="tb-icon"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><path d="M9 5v14" /></svg></span>
+        <span class="tb-icon"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" /></svg></span>
+      </div>
+      <div class="seg">
+        <span class="on">{{ t.calendar.day }}</span><span>{{ t.calendar.week }}</span><span>{{ t.calendar.month }}</span><span>{{ t.calendar.year }}</span>
+      </div>
+      <span class="tb-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></svg></span>
+    </div>
     <div class="cal-head">
       <div>
-        <div class="cal-day">Today</div>
         <div class="cal-date">{{ dayTitle }}</div>
+        <div class="cal-weekday">{{ weekday }}</div>
       </div>
-      <div v-if="conflicts.length" class="cal-warn">Overlap at {{ hm(conflicts[0]!.ev.start) }}</div>
+      <div class="nav">
+        <span>‹</span><b>{{ t.calendar.today }}</b><span>›</span>
+      </div>
     </div>
+    <div v-if="conflicts.length" class="cal-warn">{{ t.calendar.overlapAt(hm(conflicts[0]!.ev.start)) }}</div>
+    <div class="allday"><span>{{ t.calendar.allDay }}</span></div>
     <div class="grid" :style="{ height: `${(END_H - START_H) * HOUR_PX}px` }">
       <div v-for="h in hours" :key="h" class="hour" :style="{ top: `${(h - START_H) * HOUR_PX}px` }">
-        <span>{{ String(h).padStart(2, '0') }}:00</span>
+        <span v-if="Math.abs((h - START_H) * HOUR_PX - nowTop) > 16">{{ hourLabel(h) }}</span>
       </div>
-      <div v-if="nowTop > 0 && nowTop < (END_H - START_H) * HOUR_PX" class="now" :style="{ top: `${nowTop}px` }" />
+      <div v-if="nowTop > 0 && nowTop < (END_H - START_H) * HOUR_PX" class="now" :style="{ top: `${nowTop}px` }">
+        <span>{{ nowLabel }}</span>
+      </div>
       <div class="events">
         <div
           v-for="p in placed"
@@ -75,15 +105,16 @@ watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today 
           class="event"
           :class="{ conflict: p.conflict }"
           :style="{
+            '--c': evColor(p.ev),
             top: `${p.top}px`,
-            height: `${p.height - 3}px`,
+            height: `${p.height - 2}px`,
             left: `calc(${(p.col / p.cols) * 100}% + 2px)`,
-            width: `calc(${100 / p.cols}% - 6px)`,
+            width: `calc(${100 / p.cols}% - 4px)`,
           }"
         >
           <div class="ev-title">{{ p.ev.title }}</div>
           <div v-if="p.height >= 44" class="ev-meta">{{ hm(p.ev.start) }}–{{ hm(p.ev.end) }}<template v-if="p.ev.location"> · {{ p.ev.location }}</template></div>
-          <span v-if="p.conflict" class="badge">Conflict</span>
+          <span v-if="p.conflict" class="badge">{{ t.calendar.conflict }}</span>
         </div>
       </div>
     </div>
@@ -91,21 +122,37 @@ watch(conflicts, c => setWindowTitle('calendar', c.length ? `Calendar — Today 
 </template>
 
 <style scoped>
-.cal { height: 100%; display: flex; flex-direction: column; padding: 14px 20px 0; }
-.cal-head { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 12px; border-bottom: 1px solid #eef0f4; }
-.cal-day { font-size: 28px; font-weight: 800; color: #ef4444; }
-.cal-date { font-size: 18px; color: #4b5563; }
-.cal-warn { background: #fee2e2; color: #b91c1c; font-weight: 700; padding: 6px 12px; border-radius: 10px; font-size: 17px; }
-.grid { position: relative; margin-top: 14px; }
-.hour { position: absolute; left: 0; right: 0; border-top: 1px solid #eef0f4; }
-.hour span { position: absolute; top: -11px; left: 0; font-size: 15px; color: #9ca3af; background: #fff; padding-right: 6px; }
-.now { position: absolute; left: 60px; right: 0; border-top: 2px solid #ef4444; z-index: 2; }
-.now::before { content: ''; position: absolute; left: -6px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
-.events { position: absolute; left: 66px; right: 4px; top: 0; bottom: 0; }
-.event { position: absolute; background: #e0ecff; border-left: 5px solid #3b82f6; border-radius: 8px; padding: 4px 10px; overflow: hidden; color: #1e3a8a; }
-.event.conflict .ev-title { padding-right: 76px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.event.conflict { background: #fee2e2; border-left-color: #ef4444; color: #7f1d1d; box-shadow: 0 0 0 2px #fca5a5; }
-.ev-title { font-size: 17px; font-weight: 700; line-height: 1.25; }
-.ev-meta { font-size: 14px; opacity: 0.85; }
-.badge { position: absolute; right: 6px; top: 6px; background: #ef4444; color: #fff; font-size: 13px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.cal { height: 100%; display: flex; flex-direction: column; background: #fff; color: #1d1d1f; }
+.toolbar { height: 56px; flex: 0 0 56px; display: flex; align-items: center; gap: 12px; padding: 0 14px 0 116px; background: rgba(246, 246, 248, 0.92); border-bottom: 1px solid rgba(0, 0, 0, 0.08); user-select: none; }
+.tb-left { display: flex; gap: 2px; }
+.tb-icon { width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: #5c5c62; }
+.tb-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.seg { margin: 0 auto; display: flex; padding: 2px; border-radius: 8px; background: rgba(118, 118, 128, 0.12); font-size: 14px; }
+.seg span { padding: 3px 14px; border-radius: 6px; color: #3a3a3c; }
+.seg span.on { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); font-weight: 600; }
+.cal-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 22px 8px; }
+.cal-date { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+.cal-weekday { font-size: 17px; color: rgba(60, 60, 67, 0.6); }
+.nav { display: flex; align-items: center; gap: 4px; font-size: 15px; }
+.nav span { width: 26px; text-align: center; font-size: 22px; color: #5c5c62; }
+.nav b { font-weight: 500; padding: 2px 10px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.12); }
+.cal-warn { margin: 0 22px 6px; align-self: flex-start; background: rgba(255, 59, 48, 0.12); color: #c4161c; font-weight: 600; padding: 4px 12px; border-radius: 7px; font-size: 15px; }
+.allday { margin: 0 0 0 0; padding: 6px 22px; border-top: 1px solid rgba(0, 0, 0, 0.08); border-bottom: 1px solid rgba(0, 0, 0, 0.12); font-size: 13px; color: rgba(60, 60, 67, 0.6); }
+.grid { position: relative; margin: 12px 18px 0 22px; }
+.hour { position: absolute; left: 70px; right: 0; border-top: 1px solid rgba(0, 0, 0, 0.08); }
+.hour span { position: absolute; top: -9px; left: -70px; width: 62px; text-align: right; font-size: 13px; color: rgba(60, 60, 67, 0.55); }
+.now { position: absolute; left: 70px; right: 0; border-top: 2px solid #ff3b30; z-index: 3; }
+.now::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; }
+.now span { position: absolute; left: -70px; top: -10px; width: 62px; text-align: right; font-size: 13px; font-weight: 700; color: #ff3b30; background: #fff; }
+.events { position: absolute; left: 74px; right: 0; top: 0; bottom: 0; }
+.event {
+  position: absolute; overflow: hidden; padding: 3px 8px 3px 10px; border-radius: 5px;
+  background: color-mix(in srgb, var(--c) 18%, white); color: color-mix(in srgb, var(--c) 70%, black);
+}
+.event::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
+.event.conflict { box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.55); }
+.event.conflict .ev-title { padding-right: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-title { font-size: 16px; font-weight: 600; line-height: 1.25; }
+.ev-meta { font-size: 13px; opacity: 0.85; }
+.badge { position: absolute; right: 6px; top: 5px; background: #ff3b30; color: #fff; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
 </style>

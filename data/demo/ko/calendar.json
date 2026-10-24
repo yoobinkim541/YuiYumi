@@ -1,0 +1,52 @@
+{
+  "_note": "Fictional demo data (ko). start/end are local times of the seed day (HH:MM), dayOffset 0 = today.",
+  "events": [
+    {
+      "id": "ev-001",
+      "title": "팀 스탠드업",
+      "dayOffset": 0,
+      "start": "09:30",
+      "end": "09:45",
+      "location": "허들룸"
+    },
+    {
+      "id": "ev-002",
+      "title": "이서준 님과 점심",
+      "dayOffset": 0,
+      "start": "12:00",
+      "end": "13:00",
+      "location": "카페 루미"
+    },
+    {
+      "id": "ev-003",
+      "title": "온보딩 디자인 리뷰",
+      "dayOffset": 0,
+      "start": "15:00",
+      "end": "16:00",
+      "location": "네뷸라 회의실"
+    },
+    {
+      "id": "ev-004",
+      "title": "광채테크 제휴 통화",
+      "dayOffset": 0,
+      "start": "15:00",
+      "end": "15:30",
+      "location": "온라인"
+    },
+    {
+      "id": "ev-005",
+      "title": "주간 보고서 작성",
+      "dayOffset": 0,
+      "start": "17:00",
+      "end": "18:00"
+    },
+    {
+      "id": "ev-006",
+      "title": "Orbit 스프린트 플래닝",
+      "dayOffset": 1,
+      "start": "11:00",
+      "end": "12:00",
+      "location": "네뷸라 회의실"
+    }
+  ]
+}

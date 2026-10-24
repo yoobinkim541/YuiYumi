@@ -1,0 +1,14 @@
+{
+  "_note": "Fictional demo data (zh-Hans). at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "dc-lounge", "name": "lounge", "workspace": "独立开发者联盟" },
+    { "id": "dc-orbit", "name": "orbit-dev", "workspace": "独立开发者联盟" }
+  ],
+  "messages": [
+    { "id": "dcm-001", "channelId": "dc-lounge", "author": "像素狐", "text": "有人跟我一样已经在喝第三杯咖啡了吗", "minutesAgo": 50 },
+    { "id": "dcm-002", "channelId": "dc-lounge", "author": "麻薯_dev", "text": "才第三杯？新手数据啊哈哈", "minutesAgo": 48 },
+    { "id": "dcm-003", "channelId": "dc-lounge", "author": "凯凯", "text": "周六晚上来个游戏之夜？我可以当东道主", "minutesAgo": 20 },
+    { "id": "dcm-004", "channelId": "dc-orbit", "author": "麻薯_dev", "text": "新的同步引擎已经推到 beta 分支了，大家在自己机器上测测看", "minutesAgo": 70 },
+    { "id": "dcm-005", "channelId": "dc-orbit", "author": "凯凯", "text": "我这边 beta 跑起来没问题，启动速度快了大概30%", "minutesAgo": 35 }
+  ]
+}

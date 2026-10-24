@@ -2,9 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { useDemo } from '@/stores/demo'
 import { timeLabel } from '../format'
+import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const demo = useDemo()
+const { locale } = useDesktopStrings()
 const selectedId = ref<string | null>('file-quote')
 const files = computed(() => [...demo.files].sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt)))
 const selected = computed(() => demo.files.find(f => f.id === selectedId.value) ?? null)
@@ -26,7 +28,7 @@ watch(selected, f => setWindowTitle('drive', f ? `Drive — ${f.name}` : 'Drive 
       <div class="cols"><span>Name</span><span>Modified</span></div>
       <button v-for="f in files" :key="f.id" class="row" :class="{ on: f.id === selectedId }" @click="selectedId = f.id">
         <span class="name"><span class="kind" :style="{ background: kind(f.mimeType).color }">{{ kind(f.mimeType).label }}</span>{{ f.name }}</span>
-        <span class="time">{{ timeLabel(f.modifiedAt) }}</span>
+        <span class="time">{{ timeLabel(f.modifiedAt, undefined, locale) }}</span>
       </button>
     </div>
     <main class="preview">

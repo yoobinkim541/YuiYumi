@@ -1,0 +1,14 @@
+{
+  "slack": {
+    "author": "吴浩",
+    "text": "紧急通知：星空系统的评审提前到下午4点了。谁能在那之前把最新的报价 PDF 发到这里？",
+    "notifyTitle": "吴浩 在 #proj-orbit"
+  },
+  "mail": {
+    "from": "周梦琪 <mengqi.zhou@hoshizora-sys.example>",
+    "to": "林晓 <xiao.lin@aurora-lab.example>",
+    "subject": "回复：Orbit 报价——今天需要更新版报价单",
+    "body": "林晓老师，您好：\n\n感谢您刚才的沟通。能否请您今天下班前把含批量折扣的 Orbit 更新版报价单发给我？我们的采购会议安排在明天上午。\n\n此致\n敬礼！\n\n周梦琪\n星空系统有限公司",
+    "notifyTitle": "周梦琪"
+  }
+}

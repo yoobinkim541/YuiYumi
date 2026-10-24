@@ -5,7 +5,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { markKeystroke } from './activity'
 import { APP_ORDER, assistantWindow, desktop, desktopView, DESKTOP_H, DESKTOP_W, focusWindow, isAssistantApp, type UserAppId } from './windows'
+import AppIcon from './AppIcon.vue'
 import CharacterWindow from './CharacterWindow.vue'
+import { menuBarClock, useDesktopStrings } from './i18n'
 import NotificationCenter from './NotificationCenter.vue'
 import TrayMenu from './TrayMenu.vue'
 import WindowFrame from './WindowFrame.vue'
@@ -46,11 +48,11 @@ onBeforeUnmount(() => {
   if (clockTimer) clearInterval(clockTimer)
 })
 
-const clock = computed(() => now.value.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
-const dateLabel = computed(() => now.value.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
+const { t, locale } = useDesktopStrings()
+const clock = computed(() => menuBarClock(now.value, locale.value))
 const activeName = computed(() => {
   const f = desktop.focused
-  return f && desktop.windows[f].open && !isAssistantApp(f) ? desktop.windows[f].appName : 'Finder'
+  return f && desktop.windows[f].open && !isAssistantApp(f) ? t.value.apps[f as UserAppId] : t.value.finder
 })
 // When an assistant window is focused the menu bar shows its name, but that label is
 // excluded from captures so the observer never reads it.
@@ -58,22 +60,15 @@ const assistantFocused = computed(() => {
   const f = desktop.focused
   return !!f && desktop.windows[f].open && isAssistantApp(f)
 })
-const MENUS = ['File', 'Edit', 'View', 'Go', 'Window', 'Help']
 
 function onAssistantDock() {
   assistantWindow.visible = true
   focusWindow('dashboard')
 }
 
-const APPS: Record<UserAppId, { label: string, bg: string, accent: string }> = {
-  mail: { label: 'Mail', bg: 'linear-gradient(160deg,#5aa9ff,#1e6bff)', accent: '#1e6bff' },
-  calendar: { label: 'Calendar', bg: 'linear-gradient(160deg,#ffffff,#eef0f4)', accent: '#ef4444' },
-  slack: { label: 'Slack', bg: 'linear-gradient(160deg,#7c3a8f,#4a154b)', accent: '#4a154b' },
-  discord: { label: 'Discord', bg: 'linear-gradient(160deg,#7d8bff,#5865f2)', accent: '#5865f2' },
-  drive: { label: 'Drive', bg: 'linear-gradient(160deg,#34d399,#0f9d58)', accent: '#0f9d58' },
+const ACCENT: Record<UserAppId, string> = {
+  mail: '#1d6ff2', calendar: '#ff3b30', slack: '#4a154b', discord: '#5865f2', drive: '#0f9d58',
 }
-
-const today = computed(() => now.value.getDate())
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter' || e.key === 'Delete') markKeystroke()
@@ -87,34 +82,46 @@ function onKeydown(e: KeyboardEvent) {
       :style="{ transform: `translate(${fit.x}px, ${fit.y}px) scale(${fit.s})` }"
     >
       <div class="vd-root" data-capture-root @keydown.capture="onKeydown">
-        <div class="vd-wallpaper" />
+        <div class="vd-wallpaper">
+          <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="vdw-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fb8ff" /><stop offset="1" stop-color="#6d7cf0" /></linearGradient>
+              <linearGradient id="vdw-b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c6a8ff" /><stop offset="1" stop-color="#7fb2ff" /></linearGradient>
+              <linearGradient id="vdw-c" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffb8c6" /><stop offset="0.55" stop-color="#d9a6ff" /><stop offset="1" stop-color="#8fc4ff" /></linearGradient>
+              <linearGradient id="vdw-d" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffd7b0" /><stop offset="1" stop-color="#f6a6c8" /></linearGradient>
+            </defs>
+            <rect width="1920" height="1080" fill="url(#vdw-a)" />
+            <path d="M0 520 C 380 380, 760 640, 1180 500 S 1760 360, 1920 430 L1920 1080 L0 1080 Z" fill="url(#vdw-b)" opacity="0.9" />
+            <path d="M0 700 C 420 560, 820 820, 1260 680 S 1780 600, 1920 660 L1920 1080 L0 1080 Z" fill="url(#vdw-c)" opacity="0.92" />
+            <path d="M0 880 C 360 800, 900 980, 1340 870 S 1800 820, 1920 860 L1920 1080 L0 1080 Z" fill="url(#vdw-d)" opacity="0.95" />
+          </svg>
+        </div>
 
         <!-- Menu bar -->
         <div class="vd-menubar">
           <div class="vd-menu-left">
             <span class="vd-logo" aria-label="System menu">
-              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" /><path d="M10 2a8 8 0 0 0 0 16M2 10h16" /></svg>
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.2" /><circle cx="10" cy="10" r="2.4" class="fill" /></svg>
             </span>
             <strong v-if="assistantFocused" data-no-capture>YuiYumi</strong>
             <strong v-else>{{ activeName }}</strong>
-            <span v-for="m in MENUS" :key="m">{{ m }}</span>
+            <span v-for="m in t.menus" :key="m">{{ m }}</span>
           </div>
           <div class="vd-menu-right">
             <TrayMenu />
-            <svg class="vd-status" viewBox="0 0 26 20" aria-label="Wi-Fi"><path d="M2 7.5a16 16 0 0 1 22 0M5.5 11a11 11 0 0 1 15 0M9 14.5a6 6 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /><circle cx="13" cy="17.5" r="1.6" fill="currentColor" /></svg>
-            <span class="vd-battery" aria-label="Battery 82%"><span class="vd-battery-pct">82%</span><svg viewBox="0 0 34 18"><rect x="1" y="2" width="28" height="14" rx="4" fill="none" stroke="currentColor" stroke-opacity="0.5" stroke-width="1.6" /><rect x="3.5" y="4.5" width="19" height="9" rx="2" fill="currentColor" /><path d="M31 7v4" stroke="currentColor" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round" /></svg></span>
-            <svg class="vd-status" viewBox="0 0 22 20" aria-label="Control Center"><rect x="2" y="3" width="18" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" /><circle cx="6" cy="6" r="1.8" fill="currentColor" /><rect x="2" y="11" width="18" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8" /><circle cx="16" cy="14" r="1.8" fill="currentColor" /></svg>
-            <span>{{ dateLabel }}</span>
-            <strong>{{ clock }}</strong>
+            <span class="vd-battery" aria-label="Battery 82%"><svg viewBox="0 0 34 18"><rect x="1" y="2" width="28" height="14" rx="4.5" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.4" /><rect x="3.4" y="4.4" width="19" height="9.2" rx="2.4" fill="currentColor" /><path d="M31 7.2v3.6" stroke="currentColor" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round" /></svg></span>
+            <svg class="vd-status" viewBox="0 0 26 20" aria-label="Wi-Fi"><path d="M13 18.2 3.2 7.6a14 14 0 0 1 19.6 0z" fill="currentColor" /></svg>
+            <svg class="vd-status" viewBox="0 0 24 20" aria-label="Control Center"><rect x="2.5" y="3" width="19" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" /><circle cx="18.5" cy="6" r="2" fill="currentColor" /><rect x="2.5" y="11" width="19" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" /><circle cx="5.5" cy="14" r="2" fill="currentColor" /></svg>
+            <span class="vd-clock">{{ clock }}</span>
           </div>
         </div>
 
         <!-- Windows -->
-        <WindowFrame id="mail" :accent="APPS.mail.accent"><MailApp /></WindowFrame>
-        <WindowFrame id="calendar" :accent="APPS.calendar.accent"><CalendarApp /></WindowFrame>
-        <WindowFrame id="slack" :accent="APPS.slack.accent"><SlackApp /></WindowFrame>
-        <WindowFrame id="discord" :accent="APPS.discord.accent"><DiscordApp /></WindowFrame>
-        <WindowFrame id="drive" :accent="APPS.drive.accent"><DriveApp /></WindowFrame>
+        <WindowFrame id="mail" :accent="ACCENT.mail" unified><MailApp /></WindowFrame>
+        <WindowFrame id="calendar" :accent="ACCENT.calendar" unified><CalendarApp /></WindowFrame>
+        <WindowFrame id="slack" :accent="ACCENT.slack"><SlackApp /></WindowFrame>
+        <WindowFrame id="discord" :accent="ACCENT.discord"><DiscordApp /></WindowFrame>
+        <WindowFrame id="drive" :accent="ACCENT.drive"><DriveApp /></WindowFrame>
         <!-- Assistant windows: excluded from captures. -->
         <WindowFrame id="settings" no-capture><SettingsApp /></WindowFrame>
         <WindowFrame id="dashboard" no-capture><DashboardApp /></WindowFrame>
@@ -127,27 +134,30 @@ function onKeydown(e: KeyboardEvent) {
 
         <!-- Dock -->
         <nav class="vd-dock">
+          <button class="vd-dock-item" :data-label="t.finder" @click="desktop.focused = null">
+            <AppIcon app="finder" class="vd-icon" />
+            <span class="vd-dot on" />
+          </button>
           <button
             v-for="id in APP_ORDER"
             :key="id"
             class="vd-dock-item"
             :class="{ active: desktop.focused === id }"
-            :title="APPS[id].label"
+            :data-label="t.apps[id]"
             @click="focusWindow(id)"
           >
-            <span class="vd-icon" :style="{ background: APPS[id].bg }">
-              <svg v-if="id === 'mail'" viewBox="0 0 48 48"><rect x="7" y="12" width="34" height="24" rx="4" fill="#fff" /><path d="M8 14l16 12 16-12" stroke="#1e6bff" stroke-width="3" fill="none" /></svg>
-              <span v-else-if="id === 'calendar'" class="vd-cal-icon"><em>{{ dateLabel.split(' ')[0] }}</em><b>{{ today }}</b></span>
-              <svg v-else-if="id === 'slack'" viewBox="0 0 48 48"><g stroke-width="5" stroke-linecap="round"><path d="M18 10v28" stroke="#36c5f0" /><path d="M30 10v28" stroke="#2eb67d" /><path d="M10 18h28" stroke="#ecb22e" /><path d="M10 30h28" stroke="#e01e5a" /></g></svg>
-              <svg v-else-if="id === 'discord'" viewBox="0 0 48 48"><path d="M12 15c4-3 8-4 12-4s8 1 12 4c3 5 4 11 4 18-3 3-7 4-10 4l-2-3c-3 1-6 1-8 0l-2 3c-3 0-7-1-10-4 0-7 1-13 4-18z" fill="#fff" /><circle cx="19" cy="26" r="3" fill="#5865f2" /><circle cx="29" cy="26" r="3" fill="#5865f2" /></svg>
-              <svg v-else viewBox="0 0 48 48"><path d="M17 9h14l12 21-7 11H12L5 30z" fill="#fff" /><path d="M17 9l12 21H5z" fill="#fde68a" /><path d="M29 30h14l-7 11H12z" fill="#bfdbfe" /></svg>
-            </span>
+            <AppIcon :app="id" class="vd-icon" />
             <span class="vd-dot" :class="{ on: desktop.windows[id].open }" />
           </button>
           <span class="vd-dock-sep" />
-          <button class="vd-dock-item" title="YuiYumi" @click="onAssistantDock">
+          <button class="vd-dock-item" data-label="YuiYumi" @click="onAssistantDock">
             <span class="vd-icon vd-icon-yy"><img src="/models/tt2-icon.png" alt="YuiYumi" draggable="false"></span>
             <span class="vd-dot" :class="{ on: assistantWindow.visible || desktop.windows.settings.open || desktop.windows.dashboard.open }" />
+          </button>
+          <span class="vd-dock-sep" />
+          <button class="vd-dock-item" :data-label="t.trash">
+            <AppIcon app="trash" class="vd-icon" />
+            <span class="vd-dot" />
           </button>
         </nav>
       </div>
@@ -175,20 +185,13 @@ function onKeydown(e: KeyboardEvent) {
   width: 1920px;
   height: 1080px;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'PingFang TC', 'Apple SD Gothic Neo', 'Noto Sans CJK JP', 'Noto Sans KR', 'Microsoft JhengHei', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Apple SD Gothic Neo', 'PingFang SC', 'PingFang TC', 'Noto Sans CJK JP', 'Noto Sans KR', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
   font-size: 20px;
-  color: #111827;
+  color: #1d1d1f;
   -webkit-font-smoothing: antialiased;
 }
-.vd-wallpaper {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(1200px 700px at 15% 20%, rgba(255, 183, 197, 0.85), transparent 60%),
-    radial-gradient(1000px 800px at 85% 30%, rgba(147, 197, 253, 0.9), transparent 60%),
-    radial-gradient(900px 700px at 50% 100%, rgba(196, 181, 253, 0.9), transparent 60%),
-    linear-gradient(135deg, #fde2e4, #dbeafe);
-}
+.vd-wallpaper { position: absolute; inset: 0; }
+.vd-wallpaper svg { width: 100%; height: 100%; display: block; filter: blur(0.5px); }
 .vd-menubar {
   position: absolute;
   left: 0; right: 0; top: 0;
@@ -196,64 +199,90 @@ function onKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 22px;
-  background: rgba(255, 255, 255, 0.58);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+  padding: 0 20px 0 24px;
+  background: rgba(246, 246, 250, 0.42);
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
   font-size: 17px;
-  color: #1f2937;
+  letter-spacing: -0.01em;
+  color: #1d1d1f;
   z-index: 100000;
 }
-.vd-menu-left, .vd-menu-right { display: flex; align-items: center; gap: 22px; }
-.vd-menu-right { gap: 18px; }
-.vd-logo { display: flex; width: 22px; height: 22px; }
+.vd-menu-left, .vd-menu-right { display: flex; align-items: center; gap: 26px; }
+.vd-menu-right { gap: 20px; }
+.vd-menu-left strong { font-weight: 700; }
+.vd-menu-left span { font-weight: 500; }
+.vd-logo { display: flex; width: 22px; height: 22px; margin-right: 2px; }
 .vd-logo svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.vd-menu-left span { font-weight: 450; }
-.vd-status { width: 26px; height: 20px; color: #1f2937; }
-.vd-battery { display: flex; align-items: center; gap: 6px; font-size: 15px; }
-.vd-battery svg { width: 34px; height: 18px; color: #1f2937; }
-.vd-dock-sep { width: 1px; margin: 6px 2px 14px; background: rgba(15, 23, 42, 0.2); }
-.vd-icon-yy { overflow: hidden; background: linear-gradient(160deg, #ffe4ef, #e0e7ff); }
-.vd-icon-yy img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.vd-logo svg .fill { fill: currentColor; stroke: none; }
+.vd-status { width: 24px; height: 20px; color: #1d1d1f; }
+.vd-battery { display: flex; align-items: center; }
+.vd-battery svg { width: 32px; height: 18px; color: #1d1d1f; }
+.vd-clock { font-weight: 500; font-variant-numeric: tabular-nums; white-space: pre; }
 .vd-dock {
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: 10px;
   transform: translateX(-50%);
   display: flex;
-  gap: 14px;
-  padding: 10px 16px 8px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 10px 6px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.32);
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  box-shadow: 0 10px 40px rgba(20, 20, 60, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
   z-index: 100000;
 }
 .vd-dock-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   border: none;
   background: none;
-  padding: 0;
+  padding: 0 2px;
   cursor: pointer;
+  font-family: inherit;
 }
 .vd-icon {
-  width: 62px;
-  height: 62px;
-  border-radius: 16px;
+  width: 68px;
+  height: 68px;
+  border-radius: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
-  transition: transform 0.15s;
+  transform-origin: 50% 100%;
+  transition: transform 0.18s cubic-bezier(0.3, 0.7, 0.4, 1.2), margin 0.18s;
 }
-.vd-dock-item:hover .vd-icon { transform: translateY(-6px); }
-.vd-icon svg { width: 44px; height: 44px; }
-.vd-cal-icon { display: flex; flex-direction: column; align-items: center; line-height: 1; }
-.vd-cal-icon em { font-style: normal; font-size: 12px; font-weight: 700; color: #ef4444; text-transform: uppercase; }
-.vd-cal-icon b { font-size: 28px; color: #111827; }
-.vd-dot { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
-.vd-dot.on { background: #374151; }
+/* Dock magnification: hovered icon and its neighbours grow. */
+.vd-dock-item:hover .vd-icon { transform: scale(1.38); margin: 0 14px; }
+.vd-dock-item:hover + .vd-dock-item .vd-icon,
+.vd-dock-item:has(+ .vd-dock-item:hover) .vd-icon { transform: scale(1.16); margin: 0 6px; }
+.vd-dock-item::before {
+  content: attr(data-label);
+  position: absolute;
+  bottom: 118px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(240, 240, 244, 0.85);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.15);
+  font-size: 15px;
+  color: #1d1d1f;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.vd-dock-item:hover::before { opacity: 1; }
+.vd-dock-sep { align-self: stretch; width: 1px; margin: 6px 6px 12px; background: rgba(0, 0, 0, 0.18); }
+.vd-icon-yy { overflow: hidden; background: linear-gradient(160deg, #ffe4ef, #e0e7ff); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); }
+.vd-icon-yy img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.vd-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.vd-dot.on { background: rgba(0, 0, 0, 0.62); }
 </style>

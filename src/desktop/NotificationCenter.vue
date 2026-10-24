@@ -1,15 +1,11 @@
 <script setup lang="ts">
 // Notification banners (top-right, below the menu bar). Part of the captured screen.
+import AppIcon from './AppIcon.vue'
+import { useDesktopStrings } from './i18n'
 import { dismiss, notifications, type Notice } from './notifications'
 import { focusWindow } from './windows'
 
-const ICON_BG: Record<string, string> = {
-  Slack: 'linear-gradient(160deg,#7c3a8f,#4a154b)',
-  Mail: 'linear-gradient(160deg,#5aa9ff,#1e6bff)',
-  Calendar: 'linear-gradient(160deg,#ffffff,#eef0f4)',
-  Discord: 'linear-gradient(160deg,#7d8bff,#5865f2)',
-  Drive: 'linear-gradient(160deg,#34d399,#0f9d58)',
-}
+const { t } = useDesktopStrings()
 
 function open(n: Notice) {
   if (n.target) focusWindow(n.target)
@@ -21,10 +17,9 @@ function open(n: Notice) {
   <div class="nc">
     <TransitionGroup name="nc">
       <div v-for="n in notifications.items" :key="n.id" class="nc-banner" role="status" @click="open(n)">
-        <span class="nc-icon" :style="{ background: ICON_BG[n.app] ?? '#9ca3af' }">{{ n.app.slice(0, 1) }}</span>
+        <AppIcon :app="n.app" :size="44" />
         <div class="nc-text">
-          <div class="nc-top"><strong>{{ n.app.toUpperCase() }}</strong><span>now</span></div>
-          <div class="nc-title">{{ n.title }}</div>
+          <div class="nc-top"><strong class="nc-title">{{ n.title }}</strong><span>{{ t.now }}</span></div>
           <div class="nc-body">{{ n.body }}</div>
         </div>
         <button type="button" class="nc-close" aria-label="Dismiss" @click.stop="dismiss(n.id)">×</button>
@@ -36,9 +31,9 @@ function open(n: Notice) {
 <style scoped>
 .nc {
   position: absolute;
-  top: 54px;
-  right: 18px;
-  width: 460px;
+  top: 52px;
+  right: 16px;
+  width: 470px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -49,33 +44,24 @@ function open(n: Notice) {
 .nc-banner {
   position: relative;
   display: flex;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(246, 246, 248, 0.86);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 12px 12px;
+  border-radius: 20px;
+  background: rgba(246, 246, 250, 0.78);
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.6);
   pointer-events: auto;
   cursor: pointer;
 }
-.nc-icon {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 22px;
-}
 .nc-text { flex: 1; min-width: 0; }
-.nc-top { display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; letter-spacing: 0.02em; }
-.nc-title { font-size: 17px; font-weight: 600; color: #111827; margin-top: 2px; }
+.nc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; color: rgba(60, 60, 67, 0.6); }
+.nc-title { font-size: 17px; font-weight: 700; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nc-body {
   font-size: 16px;
-  color: #374151;
+  color: #1d1d1f;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

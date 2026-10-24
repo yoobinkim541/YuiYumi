@@ -1,0 +1,16 @@
+{
+  "_note": "Fictional demo data (zh-Hans). at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "sl-general", "name": "general", "workspace": "极光实验室" },
+    { "id": "sl-orbit", "name": "proj-orbit", "workspace": "极光实验室" },
+    { "id": "sl-design", "name": "design", "workspace": "极光实验室" }
+  ],
+  "messages": [
+    { "id": "slm-001", "channelId": "sl-general", "author": "苏敏", "text": "温馨提醒：今天下午4点会打扫公司茶水间，大家记得把饭盒带走哦！", "minutesAgo": 140 },
+    { "id": "slm-002", "channelId": "sl-general", "author": "钱嘉明", "text": "10月的云服务账单已经提交到财务系统了。", "minutesAgo": 175 },
+    { "id": "slm-003", "channelId": "sl-orbit", "author": "吴浩", "text": "星空系统那边对 Orbit 反馈很积极，想约个电话聊聊报价。", "minutesAgo": 30 },
+    { "id": "slm-004", "channelId": "sl-orbit", "author": "吴浩", "text": "@林晓 下午5点前能把最新的星空系统报价发到这里吗？评审用的材料要用。", "minutesAgo": 8 },
+    { "id": "slm-005", "channelId": "sl-design", "author": "李思远", "text": "三版新手引导方案已经传到云盘了，3点评审前欢迎大家提意见。", "minutesAgo": 90 },
+    { "id": "slm-006", "channelId": "sl-design", "author": "苏敏", "text": "方案2整体不错，就是标题感觉有点长。", "minutesAgo": 60 }
+  ]
+}

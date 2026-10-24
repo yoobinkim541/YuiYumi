@@ -1,0 +1,16 @@
+{
+  "_note": "Fictional demo data (ja). at is computed at seed time from minutesAgo.",
+  "channels": [
+    { "id": "sl-general", "name": "general", "workspace": "オーロララボ" },
+    { "id": "sl-orbit", "name": "proj-orbit", "workspace": "オーロララボ" },
+    { "id": "sl-design", "name": "design", "workspace": "オーロララボ" }
+  ],
+  "messages": [
+    { "id": "slm-001", "channelId": "sl-general", "author": "田中 美奈", "text": "お知らせです。本日16時にオフィスのキッチンを清掃します。お弁当箱は持ち帰りをお願いします！", "minutesAgo": 140 },
+    { "id": "slm-002", "channelId": "sl-general", "author": "高橋 健", "text": "10月分のクラウド請求書が経理ポータルに上がりました。", "minutesAgo": 175 },
+    { "id": "slm-003", "channelId": "sl-orbit", "author": "吉田 大輔", "text": "星空システムさんからOrbitについて前向きな返信がありました。料金の確認で一度話したいそうです。", "minutesAgo": 30 },
+    { "id": "slm-004", "channelId": "sl-orbit", "author": "吉田 大輔", "text": "@木村 星空システムさんの最新の見積もり、17時までにこのチャンネルに共有してもらえますか？レビュー用の資料に必要で。", "minutesAgo": 8 },
+    { "id": "slm-005", "channelId": "sl-design", "author": "小林 蒼太", "text": "オンボーディングの案を3種類ドライブにアップしました。15時のレビュー前にフィードバックをお待ちしています。", "minutesAgo": 90 },
+    { "id": "slm-006", "channelId": "sl-design", "author": "田中 美奈", "text": "2案、とてもいいと思います。ただ、見出しが少し長い気がします。", "minutesAgo": 60 }
+  ]
+}

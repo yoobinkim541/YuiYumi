@@ -1,9 +1,9 @@
-export function timeLabel(iso: string, now: Date = new Date()): string {
+export function timeLabel(iso: string, now: Date = new Date(), locale = 'en-US'): string {
   const d = new Date(iso)
   const sameDay = d.toDateString() === now.toDateString()
   return sameDay
-    ? d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    ? d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
+    : d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 export function hm(iso: string): string {

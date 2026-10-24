@@ -1,0 +1,14 @@
+{
+  "slack": {
+    "author": "Daniel Wu",
+    "text": "Heads-up: the Hoshizora review moved up to 4pm. Can someone drop the latest quote PDF in here before then?",
+    "notifyTitle": "Daniel Wu in #proj-orbit"
+  },
+  "mail": {
+    "from": "Misaki Sato <misaki.sato@hoshizora-sys.example>",
+    "to": "Alex Kim <alex.kim@aurora-lab.example>",
+    "subject": "Re: Orbit pricing - updated quote needed today",
+    "body": "Hi Alex,\n\nThanks for the call earlier. Could you send the updated Orbit quote with the volume discount by end of day? Our procurement meeting is tomorrow morning.\n\nBest regards,\nMisaki Sato\nHoshizora Systems",
+    "notifyTitle": "Misaki Sato"
+  }
+}

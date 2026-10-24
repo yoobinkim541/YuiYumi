@@ -2,9 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { useDemo } from '@/stores/demo'
 import { colorFor, initials, timeLabel } from '../format'
+import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const demo = useDemo()
+const { locale } = useDesktopStrings()
 const channelId = ref('dc-lounge')
 /** Local composer text only; there is no send action. */
 const composer = ref<Record<string, string>>({})
@@ -43,7 +45,7 @@ watch(channel, c => setWindowTitle('discord', c ? `Discord — #${c.name} | ${c.
         <div v-for="m in messages" :key="m.id" class="msg">
           <span class="avatar" :style="{ background: colorFor(m.author) }">{{ initials(m.author) }}</span>
           <div>
-            <div><strong :style="{ color: colorFor(m.author) }">{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at) }}</span></div>
+            <div><strong :style="{ color: colorFor(m.author) }">{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at, undefined, locale) }}</span></div>
             <div class="text">{{ m.text }}</div>
           </div>
         </div>

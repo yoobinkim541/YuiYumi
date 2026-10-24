@@ -2,9 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { useDemo } from '@/stores/demo'
 import { colorFor, initials, timeLabel } from '../format'
+import { useDesktopStrings } from '../i18n'
 import { setWindowTitle } from '../windows'
 
 const demo = useDemo()
+const { locale } = useDesktopStrings()
 const channelId = ref('sl-orbit')
 
 const channel = computed(() => demo.slackChannels.find(c => c.id === channelId.value) ?? demo.slackChannels[0] ?? null)
@@ -14,6 +16,9 @@ const draft = computed({
   get: () => (channel.value ? demo.slackDrafts[channel.value.id] ?? '' : ''),
   set: v => { if (channel.value) demo.setSlackDraft(channel.value.id, v) },
 })
+
+/** Direct-message list: the two most recent distinct authors in the workspace. */
+const dmNames = computed(() => [...new Set([...demo.slackMessages].sort((a, b) => b.at.localeCompare(a.at)).map(m => m.author))].slice(0, 2))
 
 // Jump to the channel that just received a draft from the agent.
 watch(() => demo.slackDrafts, (next, prev) => {
@@ -39,8 +44,7 @@ watch(channel, c => setWindowTitle('slack', c ? `Slack — #${c.name} (${c.works
         # {{ c.name }}<span v-if="demo.slackDrafts[c.id]" class="pen">draft</span>
       </button>
       <div class="section">Direct messages</div>
-      <div class="dm"><span class="presence" /> Daniel Wu</div>
-      <div class="dm"><span class="presence" /> Mina Choi</div>
+      <div v-for="name in dmNames" :key="name" class="dm"><span class="presence" /> {{ name }}</div>
     </aside>
     <main class="main">
       <div class="head"># {{ channel?.name }}</div>
@@ -48,7 +52,7 @@ watch(channel, c => setWindowTitle('slack', c ? `Slack — #${c.name} (${c.works
         <div v-for="m in messages" :key="m.id" class="msg">
           <span class="avatar" :style="{ background: colorFor(m.author) }">{{ initials(m.author) }}</span>
           <div>
-            <div><strong>{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at) }}</span></div>
+            <div><strong>{{ m.author }}</strong> <span class="time">{{ timeLabel(m.at, undefined, locale) }}</span></div>
             <div class="text">{{ m.text }}</div>
           </div>
         </div>

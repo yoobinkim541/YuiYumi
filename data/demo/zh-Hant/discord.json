@@ -1,0 +1,52 @@
+{
+  "_note": "Fictional demo data. at is computed at seed time from minutesAgo.",
+  "channels": [
+    {
+      "id": "dc-lounge",
+      "name": "lounge",
+      "workspace": "獨立開發者公會"
+    },
+    {
+      "id": "dc-orbit",
+      "name": "orbit-dev",
+      "workspace": "獨立開發者公會"
+    }
+  ],
+  "messages": [
+    {
+      "id": "dcm-001",
+      "channelId": "dc-lounge",
+      "author": "阿狐",
+      "text": "有人跟我一樣已經在喝第三杯咖啡了嗎",
+      "minutesAgo": 50
+    },
+    {
+      "id": "dcm-002",
+      "channelId": "dc-lounge",
+      "author": "麻糬_dev",
+      "text": "第三杯？新手而已啦",
+      "minutesAgo": 48
+    },
+    {
+      "id": "dcm-003",
+      "channelId": "dc-lounge",
+      "author": "凱凱",
+      "text": "週六要不要來個遊戲夜？我可以當主揪",
+      "minutesAgo": 20
+    },
+    {
+      "id": "dcm-004",
+      "channelId": "dc-orbit",
+      "author": "麻糬_dev",
+      "text": "新的同步引擎已經推到 beta 分支了，大家幫忙在自己的電腦上測一下",
+      "minutesAgo": 70
+    },
+    {
+      "id": "dcm-005",
+      "channelId": "dc-orbit",
+      "author": "凱凱",
+      "text": "我這邊 beta 跑起來沒問題，啟動速度大概快了 30%",
+      "minutesAgo": 35
+    }
+  ]
+}

@@ -3,7 +3,9 @@
 // `?scenario=off` disables it; `?scenarioSpeed=N` divides the delays (for testing).
 
 import { useDemo } from '@/stores/demo'
+import { useSettings } from '@/stores/settings'
 import { notify } from './notifications'
+import { scenarioTexts } from './seed'
 
 export const SLACK_DELAY_MS = 25_000
 export const MAIL_DELAY_MS = 50_000
@@ -28,30 +30,30 @@ export function stopScenario(): void {
 
 function arriveSlack(): void {
   const demo = useDemo()
-  const text = 'Heads-up: the Hoshizora review moved up to 4pm. Can someone drop the latest quote PDF in here before then?'
+  const t = scenarioTexts(useSettings().lang).slack
   demo.slackMessages.push({
     id: `slm-live-${Date.now()}`,
     channelId: 'sl-orbit',
-    author: 'Daniel Wu',
-    text,
+    author: t.author,
+    text: t.text,
     at: new Date().toISOString(),
   })
-  notify({ app: 'Slack', title: 'Daniel Wu in #proj-orbit', body: text, target: 'slack' })
+  notify({ app: 'Slack', title: t.notifyTitle, body: t.text, target: 'slack' })
 }
 
 function arriveMail(): void {
   const demo = useDemo()
-  const subject = 'Re: Orbit pricing - updated quote needed today'
-  const body = 'Hi Alex,\n\nThanks for the call earlier. Could you send the updated Orbit quote with the volume discount by end of day? Our procurement meeting is tomorrow morning.\n\nBest regards,\nMisaki Sato\nHoshizora Systems'
+  const lang = useSettings().lang
+  const t = scenarioTexts(lang).mail
   demo.mails.push({
     id: `mail-live-${Date.now()}`,
-    from: 'Misaki Sato <misaki.sato@hoshizora-sys.example>',
-    to: 'Alex Kim <alex.kim@aurora-lab.example>',
-    subject,
-    body,
+    from: t.from,
+    to: t.to,
+    subject: t.subject,
+    body: t.body,
     receivedAt: new Date().toISOString(),
-    lang: 'en',
+    lang,
     read: false,
   })
-  notify({ app: 'Mail', title: 'Misaki Sato', body: subject, target: 'mail' })
+  notify({ app: 'Mail', title: t.notifyTitle, body: t.subject, target: 'mail' })
 }

@@ -1,0 +1,33 @@
+{
+  "_note": "Fictional demo data. modifiedAt is computed at seed time from minutesAgo.",
+  "files": [
+    {
+      "id": "file-proposal",
+      "name": "Orbit_導入提案_星空系統_v3.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "minutesAgo": 1500,
+      "content": "星空系統 Orbit 導入提案（v3）\n\n1. 目標\n透過 Orbit 的自動摘要功能，將業務團隊每週的報告撰寫時間縮短 40%。\n\n2. 範圍\n- 第一階段（4 週）：業務團隊，25 個授權\n- 第二階段（8 週）：客戶支援團隊，40 個授權\n\n3. 時程\n預計下個月第二週啟動，第一階段於 4 週後進行檢討。\n\n4. 成功指標\n報告撰寫時間、採用率，以及滿意度調查分數。"
+    },
+    {
+      "id": "file-quote",
+      "name": "星空系統_報價單_2026Q4.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "minutesAgo": 300,
+      "content": "報價單編號 AQ-2026-114（有效期限 30 天）\n\n項目 | 數量 | 單價（新台幣） | 金額（新台幣）\nOrbit 企業版授權（年約） | 25 | 8,500 | 212,500\n導入教育訓練工作坊 | 1 | 30,000 | 30,000\n優先技術支援（年約） | 1 | 36,000 | 36,000\n\n小計：278,500\n營業稅（5%）：13,925\n總計：292,425"
+    },
+    {
+      "id": "file-notes",
+      "name": "每週會議記錄.md",
+      "mimeType": "text/markdown",
+      "minutesAgo": 2900,
+      "content": "每週會議記錄\n\n- Orbit beta 版回饋：同步速度有改善\n- 星空系統案：等待確認會議時間\n- 光點科技：已收到第四季共同行銷提案\n- 待辦：子安將報價單寄給冠宇"
+    },
+    {
+      "id": "file-onboarding",
+      "name": "新手引導草稿_v2.pdf",
+      "mimeType": "application/pdf",
+      "minutesAgo": 92,
+      "content": "新手引導畫面草稿\n\n第 1 版：「歡迎使用 Orbit」\n第 2 版：「你忙的時候，週報已經幫你寫好了」\n第 3 版：「少一點報告，多一點創造」"
+    }
+  ]
+}
