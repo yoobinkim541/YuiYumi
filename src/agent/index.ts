@@ -7,6 +7,8 @@ import { desktopActuator, resetStage } from '@/desktop/actuator'
 import { useDemo } from '@/stores/demo'
 import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
+import { useCharacterStore } from '@/character/store'
+import { observerSpokeRecently, pickBuiltin, playBuiltin } from '@/voice'
 import { createStepClient, handleDelegate, type AgentDeps } from './agent-loop'
 import { useConfirmQueue } from './confirm-queue'
 
@@ -20,11 +22,22 @@ export function initAgent(): void {
   const demo = useDemo()
   const confirmQueue = useConfirmQueue()
   const persona = usePersona()
+  const character = useCharacterStore()
+  const prepared = { done: 'done', incomplete: 'incomplete', offline: 'agentOffline' } as const
+  /** The running task had a card declined: no cheerful "done!" before its result. */
+  let declined = false
 
   const deps: AgentDeps = {
     step: createStepClient(),
     runTool: (name, input) => runConnector(name, input, { demo, sessionId: settings.sessionId }),
-    confirm: card => confirmQueue.requestConfirm(card),
+    confirm: (card) => {
+      // Asks out loud too: the card alone is easy to miss.
+      if (card.kind === 'write') playBuiltin(card.grade === 'outbound' ? 'confirmSend' : 'confirm')
+      return confirmQueue.requestConfirm(card).then((ok) => {
+        if (!ok && card.kind === 'write') declined = true
+        return ok
+      })
+    },
     emit: (type, payload) => bus.emit(type, payload),
     lang: () => settings.speechLang,
     sessionId: settings.sessionId,
@@ -37,6 +50,14 @@ export function initAgent(): void {
     },
     permission: () => settings.permission,
     actuator: desktopActuator,
+    // An accepted suggestion is acknowledged when it starts (a spoken request already was).
+    onStart: (origin) => {
+      declined = false
+      if (origin === 'screen') playBuiltin('ack')
+    },
+    // A short "done!" clip covers the TTS latency of the result line, which follows it.
+    onResult: (result) => { if (result.ok && result.text && !declined) playBuiltin('done', { emotion: null, bubble: false }) },
+    preparedLine: kind => pickBuiltin(prepared[kind], character.character, settings.speechLang)?.display,
   }
 
   let busy = false
@@ -51,6 +72,8 @@ export function initAgent(): void {
     } else {
       // The user spoke: an open proactive offer is moot.
       for (const c of confirmQueue.queue) if (c.card.kind === 'suggestion') confirmQueue.answer(c.id, false)
+      // Acknowledge at once, hiding the agent's latency, unless the observer already did.
+      if (!observerSpokeRecently()) playBuiltin('ack')
     }
     chain = chain
       .then(() => handleDelegate({ request, origin: payload.origin, summary: payload.summary }, deps))

@@ -109,6 +109,7 @@ interface CharacterRuntime {
 | `voice:speech-start` | `{ source: 'vad' \| 'ptt' }` | Voice | Nunchi(발화 중 침묵), barge-in |
 | `voice:speech-end` | `{ source: 'vad' \| 'ptt' }` | Voice | Nunchi |
 | `voice:transcript` | `Transcript & { source }` | Voice | Nunchi(발화 입력, 모드 해제 판정) |
+| `character:touch` | `{ kind: 'pet', holding, petting } \| { kind: 'poke' }` | Character | Voice(내장 대사) |
 | `tts:start` | `{ text }` | Voice | Character(`speaking`) |
 | `tts:end` | `{ interrupted }` | Voice | Character |
 | `agent:delegate` | `{ request, origin: 'utterance' \| 'screen' }` | Nunchi | Agent(즉시 실행 또는 확인 카드) |
@@ -201,6 +202,7 @@ docs/          spec, architecture, voice, connectors, demo-account 등
 
 - Vercel이 SPA(`dist/`)와 `api/**/*.ts` 함수를 함께 배포한다(`vercel.json`).
 - Cubism Core와 모델 에셋은 저장소에 없으므로 원격 빌드에서 사용할 수 없다. 로컬에서 에셋을 배치한 뒤 `vercel build`로 빌드하고 `vercel deploy --prebuilt`로 산출물을 올린다.
+- 내장 음성 대사(`src/voice/builtin-lines.ts`)의 클립도 저장소에 없다(`public/voice/`는 `.gitignore`에 포함). 배포 전에 `pnpm voices`로 `public/voice/<character>/<lang>/<id>.mp3`와 `manifest.json`을 생성한다. 이미 있는 클립은 건너뛰고 문구가 바뀐 클립만 다시 만들며, `--force`는 전체를 다시 생성한다. 키와 보이스 ID는 `.env.local`의 `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_TT2`, `ELEVENLABS_VOICE_YUI`를 사용한다. 생성된 파일은 `vercel build` 산출물에 포함되어 배포된다. 클립이 없거나 문구가 다르면 앱은 해당 대사를 실시간 TTS로 재생한다.
 
 ## 9. 프로덕션 경로 (Tauri)
 

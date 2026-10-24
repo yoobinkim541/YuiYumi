@@ -3,11 +3,10 @@ import type { ObserveAction, ObserveRequest } from '@shared/contracts'
 import type { Lang } from '@shared/languages'
 import type { ActivitySnapshot, ScreenSource } from '@/core/types'
 import type { AssistantMode } from '@/stores/settings'
-import type { KV } from './gate'
 import type { ObserveResult } from './observer-client'
-import { NunchiEngine, POLL_MS, POLL_STALE_MS } from './scheduler'
+import { LOOK_HOLD_MS, NunchiEngine, POLL_MS, POLL_STALE_MS, type LookTarget } from './scheduler'
 
-function harness(opts: { actions?: ObserveAction[], result?: ObserveResult, mode?: AssistantMode } = {}) {
+function harness(opts: { actions?: ObserveAction[], result?: ObserveResult, mode?: AssistantMode, look?: LookTarget | null } = {}) {
   let t = new Date(2026, 9, 24, 14, 0, 0).getTime()
   const activity: ActivitySnapshot = { activeApp: 'Mail', windowTitle: 'Mail — Inbox', typing: false }
   const source: ScreenSource = {
@@ -16,16 +15,14 @@ function harness(opts: { actions?: ObserveAction[], result?: ObserveResult, mode
   }
   const sent: ObserveRequest[] = []
   const events: { type: string, payload: unknown }[] = []
-  const mem = new Map<string, string>()
-  const storage: KV = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => { mem.set(k, v) } }
   const settings = { mode: opts.mode ?? 'active' as AssistantMode, lang: 'ja' as Lang, sessionId: 's', setMode(m: AssistantMode) { this.mode = m } }
   const engine = new NunchiEngine({
     source: () => source,
     post: async req => { sent.push(req); return opts.result ?? { ok: true, response: { actions: opts.actions ?? [] } } },
     emit: (type, payload) => { events.push({ type, payload }) },
     settings,
-    storage,
     visible: () => true,
+    lookTarget: () => opts.look === undefined ? { x: 600, y: 420, fresh: true } : opts.look,
     now: () => t,
   })
   return { engine, sent, events, activity, settings, advance: (ms: number) => { t += ms } }
@@ -35,36 +32,70 @@ const REACT: ObserveAction = { type: 'react', emotion: 'happy', line: '返信の
 const DELEGATE: ObserveAction = { type: 'delegate_task', request: 'Draft a reply to Sato' }
 
 describe('NunchiEngine proactive path', () => {
-  it('calls the observer every tick but drops actions before 20 s of dwell', async () => {
-    const h = harness({ actions: [REACT] })
+  it('speaks up on the first check: no dwell, no daily limit', async () => {
+    const h = harness({ actions: [REACT, DELEGATE] })
     await h.engine.tick()
     expect(h.sent).toHaveLength(1)
     expect(h.sent[0]!.utterance).toBeUndefined()
-    expect(h.events).toEqual([])
+    expect(h.events.map(e => e.type)).toEqual(['character:look', 'character:react', 'agent:delegate', 'nunchi:interjected'])
+    expect(h.events[0]!.payload).toEqual({ x: 600, y: 420, holdMs: LOOK_HOLD_MS })
+    expect((h.events[2]!.payload as { origin: string }).origin).toBe('screen')
   })
 
-  it('acts after 20 s, emits interjected, then respects the 10 min cooldown', async () => {
-    const h = harness({ actions: [REACT, DELEGATE] })
-    await h.engine.tick()
-    h.advance(21_000)
-    await h.engine.tick()
-    expect(h.sent[1]!.state.dwellSec).toBe(21)
-    expect(h.events.map(e => e.type)).toEqual(['character:react', 'agent:delegate', 'nunchi:interjected'])
-    expect((h.events[1]!.payload as { origin: string }).origin).toBe('screen')
-    h.events.length = 0
-    h.advance(60_000)
-    await h.engine.tick()
-    expect(h.events).toEqual([])
-    expect(h.sent.at(-1)!.state.interjectionsToday).toBe(1)
-  })
-
-  it('stays silent while typing (AC-2)', async () => {
+  it('keeps a 20 s gap after a line, without even asking the observer', async () => {
     const h = harness({ actions: [REACT] })
     await h.engine.tick()
-    h.advance(25_000)
+    h.events.length = 0
+    h.advance(POLL_MS)
+    await h.engine.tick()
+    expect(h.sent).toHaveLength(1)
+    expect(h.events).toEqual([])
+    h.advance(18_000)
+    await h.engine.tick()
+    expect(h.sent).toHaveLength(2)
+    expect(h.sent[1]!.state.secondsSinceLastLine).toBe(21)
+    expect(h.events.map(e => e.type)).toContain('character:react')
+  })
+
+  it('comments while the user is typing', async () => {
+    const h = harness({ actions: [REACT] })
     h.activity.typing = true
     await h.engine.tick()
+    expect(h.sent[0]!.state.typing).toBe(true)
+    expect(h.events.map(e => e.type)).toContain('character:react')
+  })
+
+  it('stays silent while her voice plays or the user speaks, and counts the gap from the end of her line', async () => {
+    const h = harness({ actions: [REACT] })
+    h.engine.setTtsPlaying(true)
+    await h.engine.tick()
+    expect(h.sent).toHaveLength(0)
+    h.advance(30_000)
+    h.engine.setTtsPlaying(false)
+    h.advance(10_000)
+    await h.engine.tick()
+    expect(h.sent).toHaveLength(0)
+    h.advance(10_000)
+    h.engine.setSpeaking(true)
+    await h.engine.tick()
+    expect(h.sent).toHaveLength(0)
+    h.engine.setSpeaking(false)
+    await h.engine.tick()
+    expect(h.events.map(e => e.type)).toContain('character:react')
+  })
+
+  it('drops the result when she started talking during the call', async () => {
+    const h = harness({ actions: [REACT] })
+    const tick = h.engine.tick()
+    h.engine.setTtsPlaying(true)
+    await tick
     expect(h.events).toEqual([])
+  })
+
+  it('remarks without a glance when there is no target', async () => {
+    const h = harness({ actions: [REACT], look: null })
+    await h.engine.tick()
+    expect(h.events.map(e => e.type)).toEqual(['character:react', 'nunchi:interjected'])
   })
 
   it('does not capture or call in quiet mode', async () => {
@@ -112,9 +143,18 @@ describe('NunchiEngine utterance path', () => {
     const quiet = harness({ actions: [] })
     await quiet.engine.onTranscript('음', 'ko')
     expect(quiet.events).toEqual([{ type: 'thinking', payload: { on: false } }])
-    const talk = harness({ actions: [REACT] })
+    const talk = harness({ actions: [REACT], look: { x: 600, y: 420, fresh: false } })
     await talk.engine.onTranscript('안녕', 'ko')
     expect(talk.events.map(e => e.type)).toEqual(['character:react'])
+  })
+
+  it('glances at the screen while answering only when the user is acting there', async () => {
+    const busy = harness({ actions: [REACT] })
+    await busy.engine.onTranscript('이거 어때?', 'ko')
+    expect(busy.events.map(e => e.type)).toEqual(['character:look', 'character:react'])
+    const idle = harness({ actions: [REACT], look: { x: 600, y: 420, fresh: false } })
+    await idle.engine.onTranscript('이거 어때?', 'ko')
+    expect(idle.events.map(e => e.type)).toEqual(['character:react'])
   })
 
   it('sends recent dialogue without duplicating the utterance', async () => {
@@ -138,7 +178,6 @@ describe('NunchiEngine slow observer', () => {
       post: (_req, signal) => { signals.push(signal); return new Promise<ObserveResult>(() => {}) },
       emit: () => {},
       settings: { mode: 'active', lang: 'ko', sessionId: 's', setMode() {} },
-      storage: { getItem: () => null, setItem: () => {} },
       visible: () => true,
       now: () => t,
     })
@@ -172,7 +211,6 @@ describe('NunchiEngine utterance during a capture', () => {
       post: async req => { sent.push(req); return { ok: true, response: { actions: [] } } },
       emit: () => {},
       settings: { mode: 'active', lang: 'ko', sessionId: 's', setMode() {} },
-      storage: { getItem: () => null, setItem: () => {} },
       visible: () => true,
     })
     const tick = engine.tick()

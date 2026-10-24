@@ -1,10 +1,12 @@
 // Reminder clock: fires pending reminders from the demo store when their time comes. A
-// firing shows a macOS-style banner and the character says the reminder out loud.
+// firing shows a macOS-style banner and the character says the reminder out loud: a
+// prepared line from its clip (instant), then the title by live TTS.
 
 import type { Lang } from '@shared/languages'
 import { bus } from '@/core/bus'
 import { useDemo, type Reminder } from '@/stores/demo'
 import { useSettings } from '@/stores/settings'
+import { playBuiltin } from '@/voice/builtin'
 import { notify } from './notifications'
 
 export const REMINDER_TICK_MS = 1000
@@ -27,7 +29,7 @@ export function fireReminder(r: Reminder, lang: Lang): void {
   const l = LINES[lang] ?? LINES.en
   const at = new Date(r.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   notify({ app: l.app, title: r.title, body: at, ttlMs: 12_000 })
-  bus.emit('character:react', { emotion: 'surprised', line: l.line(r.title), source: 'agent' })
+  if (!playBuiltin('reminder', { then: r.title })) bus.emit('character:react', { emotion: 'surprised', line: l.line(r.title), source: 'agent' })
 }
 
 let timer: ReturnType<typeof setInterval> | null = null

@@ -12,7 +12,7 @@ import type { CoreModel } from './live2d/core-model'
 import { composeExpressions, ExpressionLayer, parseExpression } from './live2d/expressions'
 import { createHeadPat, headPatZoneContains, softAdd, type HeadPatHead, type HeadPatPetting, type HeadPatPose } from './live2d/head-pat'
 import { pointInTriangle, TouchGestures, type TouchReaction, type TouchRegion } from './live2d/touch'
-import { applyBreath, applyIdleNoise, AutoBlink, LipSync, setMotionLoop } from './live2d/procedural'
+import { applyBreath, applyIdleNoise, AutoBlink, Glance, glanceDirection, LipSync, setMotionLoop } from './live2d/procedural'
 import { loadModelPack, type ModelPack } from './live2d/pack'
 import { EMPTY_PROFILE, type ModelProfile } from './model-data'
 import type { CharacterModelDef } from './models'
@@ -60,6 +60,9 @@ export class CubismRuntime implements CharacterRuntime {
   private ambient: AmbientMotion[] = []
   private blink = new AutoBlink()
   private lipSync = new LipSync()
+  /** Event-driven glance toward screen activity (character:look); never cursor following. */
+  private glance = new Glance()
+  private lastGlance: ReturnType<Glance['step']> = null
   private node: NodeSettings
   private nodeKey: CharacterNode = 'idle'
   private emotion: Emotion = 'neutral'
@@ -216,6 +219,16 @@ export class CubismRuntime implements CharacterRuntime {
     // No blinking while an expression holds the eyes shut (e.g. a squeezed-eye face).
     if (this.node.blink && this.expressions.eyeHold() === 0) this.blink.apply(core, dtMs)
     this.lipSync.apply(core, dtMs)
+    // A glance toward screen activity, on top of the motion; held while she talks.
+    const g = this.glance.step(dtMs, this.lipSync.active)
+    this.lastGlance = g
+    if (g) {
+      this.addEased(core, 'ParamEyeBallX', g.eyeX)
+      this.addEased(core, 'ParamEyeBallY', g.eyeY)
+      this.addEased(core, 'ParamAngleX', g.angleX)
+      this.addEased(core, 'ParamAngleY', g.angleY)
+      this.addEased(core, 'ParamBodyAngleX', g.bodyX)
+    }
     // Dev-only parameter overrides (window.__yui.param) for trying out faces.
     for (const [id, v] of this.devParams) core.setParameterValueById(id, v)
     // A hand on her head pulls it, and her body after it, on top of everything else;
@@ -243,6 +256,21 @@ export class CubismRuntime implements CharacterRuntime {
     const range = this.paramRanges.get(id)
     if (!range) return
     core.setParameterValueById(id, softAdd(core.getParameterValueById(id), offset, range[0], range[1]))
+  }
+
+  // ---- glance ------------------------------------------------------------------------
+
+  /**
+   * Looks toward a client point for `holdMs` (longer while she talks), then back ahead.
+   * The direction is taken from her head; distances count in desktop pixels (the stage
+   * is laid out in desktop pixels, so the canvas scale is the desktop scale).
+   */
+  lookAt(clientX: number, clientY: number, holdMs: number): void {
+    const c = this.canvasRect()
+    const head = this.headClient()
+    if (!c || !head) return
+    const dir = glanceDirection((clientX - head.x) / c.k, (clientY - head.y) / c.k)
+    this.glance.look(dir.x, dir.y, holdMs)
   }
 
   // ---- touch -------------------------------------------------------------------------
@@ -367,6 +395,7 @@ export class CubismRuntime implements CharacterRuntime {
   private onHeadPatChange(holding: boolean, petting: HeadPatPetting) {
     this.gestures.petting(petting !== 'none', performance.now())
     this.setTouchFace(holding ? this.def.touch.pet[petting] : [])
+    bus.emit('character:touch', { kind: 'pet', holding, petting })
   }
 
   /** Wears `faces` (labels or expression names) over the emotion, for `ms` or until replaced. */
@@ -397,6 +426,7 @@ export class CubismRuntime implements CharacterRuntime {
       this.headPat.nudge({ x: 140, bodyX: -40 })
       bus.emit('character:react', { emotion: 'neutral', source: 'fallback' })
       this.setTouchFace(this.def.touch.pout, POUT_MS)
+      bus.emit('character:touch', { kind: 'poke' })
       return
     }
     if (r.region === 'head') this.headPat.nudge({ y: -160, z: 40 })
@@ -463,8 +493,9 @@ export class CubismRuntime implements CharacterRuntime {
 
   private refreshExpressions() {
     if (!this.profile) return
-    const label = this.def.emotions[this.emotion]?.label ?? null
-    const names = label ? this.profile.emotions[label] ?? [] : []
+    const profile = this.profile
+    // Each face is a profile emotion label or, failing that, an expression name.
+    const names = (this.def.emotions[this.emotion]?.faces ?? []).flatMap(f => profile.emotions[f] ?? [f])
     // The touch face is the last layer, so it wins any mutex group.
     this.expressions.setActive(composeExpressions([...names, ...this.touchFace], this.profile, this.expressions.names()))
   }
@@ -502,6 +533,7 @@ export class CubismRuntime implements CharacterRuntime {
       emotion: this.emotion,
       expressions: this.expressions.snapshot(),
       touch: { head: this.headClient(), holding: this.headPat.state.holding, petting: this.headPat.state.petting, face: this.touchFace, pose: this.lastPat },
+      glance: this.lastGlance,
       motion: this.model?.internalModel.motionManager.state.currentGroup ?? null,
       params: Object.fromEntries(ids.map(id => [id, core?.getParameterValueById(id)])),
     }

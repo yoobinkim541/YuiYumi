@@ -8,7 +8,6 @@ import { CHARACTER_MODELS } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
 import { LIVE_SERVICES } from '@/connectors/registry'
 import { nunchiStatus, recentDialogue } from '@/nunchi'
-import { nunchiConfig } from '@/nunchi/config'
 import { useDemo } from '@/stores/demo'
 import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
@@ -47,9 +46,6 @@ function ago(at: number | undefined | null): string {
 
 const slackDraftCount = computed(() => Object.values(demo.slackDrafts).filter(t => t.trim()).length)
 const draftsSaved = computed(() => demo.drafts.length + slackDraftCount.value)
-const quotaPct = computed(() => nunchiConfig.maxPerDay > 0
-  ? Math.min(100, Math.round(nunchiStatus.interjectionsToday / nunchiConfig.maxPerDay * 100))
-  : 100)
 
 const pttLabel = computed(() => formatShortcut(settings.pttKey, isMacPlatform()))
 
@@ -79,9 +75,9 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
       <div class="tiles">
         <div class="tile">
           <div class="t-icon"><Icon name="spark" :size="64" /></div>
-          <span class="t-label">{{ t.dash.interjections }}</span>
-          <span class="t-value">{{ nunchiStatus.interjectionsToday }}<small> / {{ nunchiConfig.maxPerDay }}</small></span>
-          <div class="meter"><div :style="{ width: `${quotaPct}%` }" /></div>
+          <span class="t-label">{{ t.dash.proactive }}</span>
+          <span class="t-value">{{ nunchiStatus.proactiveCount }}</span>
+          <span class="t-sub">{{ nunchiStatus.lastProactiveAt ? t.dash.proactiveLast(ago(nunchiStatus.lastProactiveAt)) : t.dash.proactiveNone }}</span>
         </div>
         <div class="tile">
           <div class="t-icon"><Icon name="eye" :size="64" /></div>
@@ -170,11 +166,8 @@ const liveFlags = computed(() => { void now.value; return { ...LIVE_SERVICES } }
 .t-icon { transition: all .4s ease-in-out; position: absolute; right: -10px; bottom: -14px; color: rgb(163 163 163 / .22); pointer-events: none; }
 .t-label { font-size: 12.5px; color: var(--n500); position: relative; }
 .t-value { font-size: 28px; font-weight: 500; color: var(--n800); line-height: 1.15; position: relative; }
-.t-value small { font-size: 15px; color: var(--n400); font-weight: 400; }
 .t-value.small { font-size: 16px; line-height: 1.35; padding: 5px 0 3px; }
 .t-sub { font-size: 12px; color: var(--n500); position: relative; }
-.meter { height: 6px; border-radius: 999px; background: var(--n200); overflow: hidden; margin-top: 6px; position: relative; }
-.meter > div { height: 100%; background: linear-gradient(90deg, var(--p300), var(--p500)); border-radius: inherit; transition: width .4s; }
 
 .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
 .section { margin-bottom: 0; }

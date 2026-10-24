@@ -6,7 +6,8 @@ import { LANGS } from './languages'
 
 export const LangSchema = z.enum(LANGS)
 
-export const EMOTIONS = ['neutral', 'happy', 'thinking', 'surprised', 'sorry', 'focused'] as const
+/** `curious`: the user is doing something interesting, surprising or fun on screen. */
+export const EMOTIONS = ['neutral', 'happy', 'thinking', 'surprised', 'sorry', 'focused', 'curious'] as const
 export const EmotionSchema = z.enum(EMOTIONS)
 export type Emotion = z.infer<typeof EmotionSchema>
 
@@ -28,8 +29,8 @@ export const ObserveStateSchema = z.object({
   activeApp: z.string().nullable(),
   windowTitle: z.string().nullable(),
   dwellSec: z.number(),
-  minutesSinceLastInterjection: z.number().nullable(),
-  interjectionsToday: z.number().int(),
+  /** Seconds since the character last said a line (reply or proactive); null if not yet. */
+  secondsSinceLastLine: z.number().nullable(),
   typing: z.boolean(),
   userSpeaking: z.boolean(),
 })
@@ -142,7 +143,11 @@ const Range = z.object({ from: z.string(), to: z.string() })
 const ChannelRead = z.object({ channelId: z.string(), limit: z.number().int().min(1).max(50).optional() })
 const ChannelPost = z.object({ channelId: z.string(), text: z.string().min(1).max(2000) })
 
-/** Every op acts on the in-page virtual PC (demo store). Live Slack/Discord stay read-only. */
+/**
+ * Every op acts on the virtual PC (demo store). When the user connected the provider of a
+ * service, the op runs on the user's real account through /api/connectors/<service> and the
+ * result is mirrored into the demo store; otherwise it runs on the mock data.
+ */
 export const CONNECTOR_OPS = [
   op({ name: 'mail_list', service: 'mail', grade: 'read', description: 'List mail messages (newest first). folder: inbox (default), sent, drafts, trash, spam.', input: z.object({ limit: z.number().int().min(1).max(50).optional(), folder: z.enum(['inbox', 'sent', 'drafts', 'trash', 'spam']).optional() }) }),
   op({ name: 'mail_read', service: 'mail', grade: 'read', description: 'Read one message by id.', input: z.object({ id: z.string() }) }),
@@ -181,6 +186,69 @@ export const LiveConnectorRequestSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
+// Live connectors: each user connects their own accounts (OAuth). Tokens stay in sealed
+// httpOnly cookies; the browser only learns which providers are connected.
+
+export const LIVE_PROVIDERS = ['google', 'slack', 'discord'] as const
+export type LiveProvider = (typeof LIVE_PROVIDERS)[number]
+export type LiveService = 'mail' | 'calendar' | 'slack' | 'discord'
+export const LIVE_SERVICE_LIST: LiveService[] = ['mail', 'calendar', 'slack', 'discord']
+export const PROVIDER_OF: Record<LiveService, LiveProvider> = { mail: 'google', calendar: 'google', slack: 'slack', discord: 'discord' }
+
+/** Extra live ops outside the agent registry: initial load and the opt-in sample data. */
+export const LIVE_SNAPSHOT_OP = 'snapshot'
+export const LIVE_SAMPLES_ADD_OP = 'samples_add'
+export const LIVE_SAMPLES_REMOVE_OP = 'samples_remove'
+
+/** GET /api/auth/status. No tokens: connection state and a display name only. */
+export interface AuthStatus {
+  providers: Record<LiveProvider, {
+    /** The server has the OAuth client configured for this provider. */
+    available: boolean
+    connected: boolean
+    /** Account email (Google), workspace (Slack) or server name (Discord). */
+    account?: string
+    /** Services usable with the granted scopes. */
+    services: LiveService[]
+  }>
+  limits: { outboundPerSession: number, outboundPerAccountDaily: number }
+}
+
+// Store-shaped items the live endpoint returns so the virtual desktop can mirror them.
+export interface LiveMail { id: string, from: string, to: string, subject: string, body: string, receivedAt: string, lang: string, read: boolean, spam?: boolean, trashed?: boolean }
+export interface LiveSentMail { id: string, replyToId?: string, to: string, subject: string, body: string, sentAt: string }
+export interface LiveDraft { id: string, replyToId?: string, to: string, subject: string, body: string, createdAt: string }
+export interface LiveEvent { id: string, title: string, start: string, end: string, location?: string }
+export interface LiveChannel { id: string, name: string, workspace: string }
+export interface LiveChatMessage { id: string, channelId: string, author: string, text: string, at: string }
+
+/** Changes to mirror into the demo store. Items are upserted by id unless noted. */
+export interface LiveStorePatch {
+  /** Snapshot: these services' collections are replaced, not merged. */
+  replace?: LiveService[]
+  mails?: LiveMail[]
+  sent?: LiveSentMail[]
+  drafts?: LiveDraft[]
+  removeDraftIds?: string[]
+  events?: LiveEvent[]
+  /** `events` is the complete list for this range: other events inside it are dropped. */
+  eventRange?: { from: string, to: string }
+  removeEventIds?: string[]
+  slackChannels?: LiveChannel[]
+  slackMessages?: LiveChatMessage[]
+  discordChannels?: LiveChannel[]
+  discordMessages?: LiveChatMessage[]
+  /** Ids of items this op created (sent mail, chat posts): shown with the assistant marker. */
+  created?: string[]
+}
+
+/** POST /api/connectors/<service> response. `result` has the same shape as the mock op. */
+export interface LiveConnectorResponse {
+  result: unknown
+  patch?: LiveStorePatch
+}
+
+// ---------------------------------------------------------------------------
 // Voice. STT: the browser POSTs a 16 kHz mono WAV body to /api/stt?lang=<Lang>.
 
 export const TranscriptSchema = z.object({
@@ -210,6 +278,10 @@ export type SpeechRequest = z.infer<typeof SpeechRequestSchema>
 
 export interface ApiError {
   error: string
-  /** `budget` means the daily or session cap was reached; the client falls back to prepared lines. */
-  code?: 'budget' | 'bad_request' | 'provider' | 'unconfigured'
+  /**
+   * `budget` means the daily or session cap was reached; the client falls back to prepared lines.
+   * `not_connected`: the user has not connected (or revoked) the provider. `rejected`: a live
+   * connector refused the op (unknown id, cap reached); the message is meant for the user.
+   */
+  code?: 'budget' | 'bad_request' | 'provider' | 'unconfigured' | 'not_connected' | 'rejected'
 }

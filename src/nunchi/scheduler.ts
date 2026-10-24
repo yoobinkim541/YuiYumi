@@ -10,7 +10,7 @@ import type { AssistantMode } from '@/stores/settings'
 import { DialogueLog } from './dialogue'
 import { DwellTracker } from './dwell'
 import { FALLBACK_MIN_INTERVAL_MS, pickFallback } from './fallback-lines'
-import { currentLedger, gateProactive, loadLedger, minutesSince, recordInterjection, saveLedger, type GateReason, type KV, type Ledger } from './gate'
+import { gateProactive, type GateReason } from './gate'
 import { modeAfterTranscript } from './mode'
 import type { ObserveResult } from './observer-client'
 
@@ -24,13 +24,27 @@ export const POLL_STALE_MS = 15_000
 
 type Emit = <K extends keyof BusEvents>(type: K, payload: BusEvents[K]) => void
 
+/**
+ * Where on the desktop the user is acting (logical 1920x1080 coordinates). `fresh` is true
+ * when it comes from recent input or a screen change rather than just the focused window.
+ */
+export interface LookTarget {
+  x: number
+  y: number
+  fresh: boolean
+}
+
+/** How long she keeps looking at the activity when she speaks up (longer while talking). */
+export const LOOK_HOLD_MS = 4000
+
 export interface EngineDeps {
   source: () => ScreenSource
   post: (req: ObserveRequest, signal: AbortSignal) => Promise<ObserveResult>
   emit: Emit
   settings: { readonly mode: AssistantMode, readonly lang: Lang, readonly sessionId: string, setMode(m: AssistantMode): void }
-  storage: KV
   visible: () => boolean
+  /** Where the user is acting on screen, for her glance when she remarks on it. */
+  lookTarget?: () => LookTarget | null
   now?: () => number
 }
 
@@ -39,7 +53,9 @@ export const nunchiStatus = reactive({
   dwellSec: 0,
   inFlight: false,
   last: 'idle' as 'idle' | 'silent' | 'acted' | `dropped:${GateReason}` | 'error' | 'budget',
-  interjectionsToday: 0,
+  /** Proactive remarks shown since the page loaded. */
+  proactiveCount: 0,
+  lastProactiveAt: null as number | null,
 })
 
 export type RoutedEvent =
@@ -62,7 +78,6 @@ export class NunchiEngine {
   private readonly now: () => number
   private readonly dwell = new DwellTracker()
   readonly dialogue = new DialogueLog()
-  private ledger: Ledger
   private timer: ReturnType<typeof setInterval> | null = null
   private pollCtl: AbortController | null = null
   private pollStartedAt = 0
@@ -71,13 +86,14 @@ export class NunchiEngine {
   private capturePromise: Promise<Frame | null> | null = null
   private agentBusy = false
   private speaking = false
+  private ttsPlaying = false
+  /** When she last said a line of any origin; proactive lines keep a gap after it. */
+  private lastLineAt: number | null = null
   private lastFallbackAt = -Infinity
   private fallbackSeq = 0
 
   constructor(private readonly d: EngineDeps) {
     this.now = d.now ?? Date.now
-    this.ledger = loadLedger(d.storage, this.now())
-    nunchiStatus.interjectionsToday = this.ledger.count
   }
 
   start(): void {
@@ -93,7 +109,15 @@ export class NunchiEngine {
 
   setAgentBusy(busy: boolean): void { this.agentBusy = busy }
   setSpeaking(speaking: boolean): void { this.speaking = speaking }
-  onAssistantLine(line: string): void { this.dialogue.push('assistant', line) }
+  setTtsPlaying(playing: boolean): void {
+    this.ttsPlaying = playing
+    // The gap runs from the end of her line, not its start.
+    if (!playing) this.lastLineAt = this.now()
+  }
+  onAssistantLine(line: string): void {
+    this.dialogue.push('assistant', line)
+    this.lastLineAt = this.now()
+  }
 
   /** Called when the page is hidden or observing stops. */
   pause(): void {
@@ -105,6 +129,8 @@ export class NunchiEngine {
   async tick(): Promise<void> {
     if (this.d.settings.mode !== 'active' || !this.d.visible()) { this.pause(); return }
     if (this.agentBusy || this.capturing || this.utterCtl) return
+    // No point asking while a gated remark could not be shown anyway.
+    if (!gateProactive(this.gateInput(this.now())).allow) return
     if (this.pollCtl && this.now() - this.pollStartedAt < POLL_STALE_MS) return
 
     this.pollCtl?.abort()
@@ -128,19 +154,28 @@ export class NunchiEngine {
     const actions = res.response.actions
     if (!actions.length) { nunchiStatus.last = 'silent'; return }
 
-    // Re-read live state: the user may have started typing or speaking during the call.
+    // Re-read live state: the user may have started speaking, or she talking, during the call.
     const now = this.now()
-    const activity = this.d.source().activity()
-    const gate = gateProactive({ now, ledger: this.ledger, dwellSec: this.dwell.seconds(now), typing: activity.typing, userSpeaking: this.speaking })
+    const gate = gateProactive(this.gateInput(now))
     if (!gate.allow) { nunchiStatus.last = `dropped:${gate.reason}`; return }
-    if (this.d.settings.mode !== 'active' || this.agentBusy) return
+    if (this.d.settings.mode !== 'active') return
 
+    // She glances at what she is remarking on as she starts to speak.
+    this.glance(this.d.lookTarget?.() ?? null)
     this.dispatch(actions, 'screen')
-    this.ledger = recordInterjection(this.ledger, now)
-    saveLedger(this.d.storage, this.ledger)
-    nunchiStatus.interjectionsToday = this.ledger.count
+    if (actions.some(a => a.type === 'react' && a.line)) this.lastLineAt = now
+    nunchiStatus.proactiveCount++
+    nunchiStatus.lastProactiveAt = now
     nunchiStatus.last = 'acted'
     this.d.emit('nunchi:interjected', { at: now })
+  }
+
+  private gateInput(now: number) {
+    return { now, lastLineAt: this.lastLineAt, userSpeaking: this.speaking, ttsPlaying: this.ttsPlaying, agentBusy: this.agentBusy }
+  }
+
+  private glance(target: LookTarget | null): void {
+    if (target) this.d.emit('character:look', { x: target.x, y: target.y, holdMs: LOOK_HOLD_MS })
   }
 
   async onTranscript(text: string, lang: Lang): Promise<void> {
@@ -175,6 +210,12 @@ export class NunchiEngine {
     // No spoken line and no delegated work: drop the typing dots now instead of on timeout.
     const speaks = actions.some(a => (a.type === 'react' && a.line) || a.type === 'delegate_task')
     if (!speaks) this.d.emit('thinking', { on: false })
+    // A spoken reply while the user is busy in an app looks over at that spot; otherwise
+    // she keeps facing the user.
+    if (actions.some(a => a.type === 'react' && a.line)) {
+      const target = this.d.lookTarget?.() ?? null
+      if (target?.fresh) this.glance(target)
+    }
     this.dispatch(actions, 'utterance')
   }
 
@@ -216,15 +257,13 @@ export class NunchiEngine {
   private buildRequest(frame: Frame | null, dwellSec: number, utterance?: string, lang?: Lang): ObserveRequest {
     const now = this.now()
     const activity = this.d.source().activity()
-    const ledger = currentLedger(this.ledger, now)
     return {
       frame: frame ? { jpegBase64: frame.jpegBase64, width: frame.width, height: frame.height } : null,
       state: {
         activeApp: activity.activeApp,
         windowTitle: activity.windowTitle,
         dwellSec,
-        minutesSinceLastInterjection: minutesSince(ledger, now),
-        interjectionsToday: ledger.count,
+        secondsSinceLastLine: this.lastLineAt === null ? null : Math.max(0, Math.round((now - this.lastLineAt) / 1000)),
         typing: activity.typing,
         userSpeaking: this.speaking,
       },

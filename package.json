@@ -9,6 +9,7 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "model": "node scripts/build-web-model.mjs",
+    "voices": "node scripts/build-voice-lines.mjs",
     "predev": "node scripts/copy-vad-assets.mjs",
     "prebuild": "node scripts/copy-vad-assets.mjs",
     "assets": "node scripts/build-ayagami.mjs && node scripts/build-web-model.mjs && node scripts/copy-vad-assets.mjs"

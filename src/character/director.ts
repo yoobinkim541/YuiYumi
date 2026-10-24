@@ -4,9 +4,21 @@
 import type { Emotion } from '@shared/contracts'
 import { bus } from '@/core/bus'
 import type { CharacterNode, CharacterRuntime, MouthPose } from '@/core/types'
+import { DESKTOP_H, DESKTOP_W } from '@/desktop/windows'
 import type { EmotionMap } from './emotion-map'
 
 const EMOTION_HOLD_MS = 4000
+const LOOK_HOLD_MS = 4000
+
+/** Runtimes that can glance at a client point (the Live2D one; the 2D fallback cannot). */
+type Glancer = { lookAt?: (clientX: number, clientY: number, holdMs: number) => void }
+
+/** Desktop (logical 1920x1080) point -> client point through the scaled capture root. */
+function desktopToClient(x: number, y: number): { x: number, y: number } | null {
+  const r = document.querySelector<HTMLElement>('[data-capture-root]')?.getBoundingClientRect()
+  if (!r || !(r.width > 0)) return null
+  return { x: r.left + x * r.width / DESKTOP_W, y: r.top + y * r.height / DESKTOP_H }
+}
 
 export class Director {
   private runtime: CharacterRuntime | null = null
@@ -22,6 +34,7 @@ export class Director {
       bus.on('character:node', ({ node }) => this.setNode(node)),
       bus.on('character:react', ({ emotion, line, motion }) => this.react(emotion, line, motion)),
       bus.on('character:mouth', pose => this.setMouth(pose)),
+      bus.on('character:look', ({ x, y, holdMs }) => this.look(x, y, holdMs)),
     )
   }
 
@@ -57,6 +70,12 @@ export class Director {
     if (this.revertTimer) clearTimeout(this.revertTimer)
     this.revertTimer = null
     if (emotion !== 'neutral') this.scheduleRevert(EMOTION_HOLD_MS)
+  }
+
+  /** Glances toward a desktop point (screen activity), then back at the user. */
+  look(x: number, y: number, holdMs = LOOK_HOLD_MS): void {
+    const p = desktopToClient(x, y)
+    if (p) (this.runtime as Glancer | null)?.lookAt?.(p.x, p.y, holdMs)
   }
 
   private scheduleRevert(ms: number) {

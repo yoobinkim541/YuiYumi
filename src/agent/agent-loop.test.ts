@@ -134,6 +134,20 @@ describe('agent loop', () => {
     expect(events.at(-1)).toEqual(['character:react', { emotion: 'sorry', line: AGENT_STRINGS.en.fallbackLine, source: 'fallback' }])
   })
 
+  it('calls the start/result hooks and speaks prepared lines when given', async () => {
+    const { fetch } = fakeFetch([{ status: 503, body: { error: 'down', code: 'unconfigured' } }])
+    const { deps, events } = makeDeps(fetch)
+    const calls: string[] = []
+    deps.onStart = origin => calls.push(`start:${origin}`)
+    deps.onResult = r => calls.push(`result:${r.ok}`)
+    deps.preparedLine = kind => `prepared ${kind}`
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await handleDelegate({ request: 'x', origin: 'utterance' }, deps)
+    warn.mockRestore()
+    expect(calls).toEqual(['start:utterance', 'result:false'])
+    expect(events.at(-1)).toEqual(['character:react', { emotion: 'sorry', line: 'prepared offline', source: 'fallback' }])
+  })
+
   it('stops after the step limit', async () => {
     const loop = { body: { stopReason: 'tool_use', content: [{ type: 'tool_use', id: 'x', name: 'mail_list', input: {} }] } }
     const { fetch, fn } = fakeFetch(Array.from({ length: 10 }, () => structuredClone(loop)))

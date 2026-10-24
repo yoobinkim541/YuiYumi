@@ -28,6 +28,7 @@ crates/**/target/
 public/vendor/
 public/models/
 public/vad/
+public/voice/
 /models/
 
 # Character model and motion assets: never published to GitHub

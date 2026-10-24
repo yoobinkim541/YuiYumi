@@ -1,5 +1,5 @@
 // Procedural layers written after motions and expressions each frame: breath, idle
-// head noise, auto blink and lip sync. The blink and lip-sync shapes are adapted from
+// head noise, auto blink, lip sync and the event-driven glance. The blink and lip-sync shapes are adapted from
 // AIRI (MIT): a timer blink that multiplies the post-expression eye openness, and a
 // mouth that eases toward the target and releases back to the motion value.
 
@@ -96,4 +96,95 @@ export function setMotionLoop(motion: unknown, loop: boolean): void {
   const m = motion as { setIsLoop?: (v: boolean) => void, setIsLoopFadeIn?: (v: boolean) => void }
   m.setIsLoop?.(loop)
   m.setIsLoopFadeIn?.(false)
+}
+
+/**
+ * How far a glance turns each part at full deflection: the eyes most (ParamEyeBallX/Y
+ * units), the head moderately and the body only a few degrees. Attack and release are
+ * exponential time constants in ms; the eyes lead, the head and then the body follow.
+ */
+export const GLANCE = {
+  eye: { x: 0.85, y: 0.6 },
+  head: { x: 18, y: 12 },
+  body: { x: 4 },
+  attackMs: { eye: 70, head: 260, body: 520 },
+  releaseMs: { eye: 220, head: 480, body: 760 },
+  /** She never stares longer than this, however long she keeps talking. */
+  maxHoldMs: 12_000,
+} as const
+
+export interface GlanceOffsets {
+  eyeX: number
+  eyeY: number
+  angleX: number
+  angleY: number
+  bodyX: number
+}
+
+/**
+ * An event-driven glance: `look` turns her toward a direction for a while, then she
+ * eases back to facing forward. Directions are -1..1 per axis (x right, y up).
+ */
+export class Glance {
+  private target = { x: 0, y: 0 }
+  private eye = { x: 0, y: 0 }
+  private head = { x: 0, y: 0 }
+  private body = 0
+  private holdMs = 0
+  private heldMs = 0
+
+  look(x: number, y: number, holdMs: number): void {
+    const c = (v: number) => Math.min(1, Math.max(-1, Number.isFinite(v) ? v : 0))
+    this.target = { x: c(x), y: c(y) }
+    this.holdMs = Math.max(0, holdMs)
+    this.heldMs = 0
+  }
+
+  /** Look forward again now. */
+  release(): void {
+    this.holdMs = 0
+  }
+
+  get active(): boolean {
+    return this.holdMs > 0 || Math.abs(this.head.x) + Math.abs(this.head.y) + Math.abs(this.eye.x) + Math.abs(this.eye.y) + Math.abs(this.body) > 4e-3
+  }
+
+  /** Advances by `dtMs`; the hold does not run down while `talking`. Null when at rest. */
+  step(dtMs: number, talking: boolean): GlanceOffsets | null {
+    if (this.holdMs > 0) {
+      this.heldMs += dtMs
+      if (!talking || this.heldMs > GLANCE.maxHoldMs) this.holdMs -= dtMs
+    }
+    const holding = this.holdMs > 0
+    const tx = holding ? this.target.x : 0
+    const ty = holding ? this.target.y : 0
+    const tau = holding ? GLANCE.attackMs : GLANCE.releaseMs
+    const k = (ms: number) => 1 - Math.exp(-dtMs / ms)
+    this.eye.x += (tx - this.eye.x) * k(tau.eye)
+    this.eye.y += (ty - this.eye.y) * k(tau.eye)
+    this.head.x += (tx - this.head.x) * k(tau.head)
+    this.head.y += (ty - this.head.y) * k(tau.head)
+    this.body += (tx - this.body) * k(tau.body)
+    if (!this.active) {
+      this.eye = { x: 0, y: 0 }
+      this.head = { x: 0, y: 0 }
+      this.body = 0
+      return null
+    }
+    return {
+      eyeX: this.eye.x * GLANCE.eye.x,
+      eyeY: this.eye.y * GLANCE.eye.y,
+      angleX: this.head.x * GLANCE.head.x,
+      angleY: this.head.y * GLANCE.head.y,
+      bodyX: this.body * GLANCE.body.x,
+    }
+  }
+}
+
+/**
+ * Direction of a target seen from her head, from the offset in desktop pixels (y down):
+ * -1..1 per axis, x right and y up. Nearby targets turn her a little, far ones nearly fully.
+ */
+export function glanceDirection(dx: number, dy: number): { x: number, y: number } {
+  return { x: Math.tanh(dx / 600), y: -Math.tanh(dy / 450) }
 }

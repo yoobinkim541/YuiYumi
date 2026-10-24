@@ -71,6 +71,12 @@ export interface AgentDeps {
   /** Permission level; decides which grades need a confirm card. Defaults to manual. */
   permission?: () => PermissionLevel
   actuator?: Actuator
+  /** A task starts running (after a suggestion is accepted, or right away for a request). */
+  onStart?: (origin: DelegateOrigin) => void
+  /** The task ended, just before its result is spoken. */
+  onResult?: (result: AgentResult) => void
+  /** A prepared line for the active character (built-in voice clip); falls back to AGENT_STRINGS. */
+  preparedLine?: (kind: 'done' | 'incomplete' | 'offline') => string | undefined
   now?: () => Date
   maxSteps?: number
 }
@@ -219,6 +225,7 @@ export async function handleDelegate(payload: BusEvents['agent:delegate'], deps:
 
   deps.emit('agent:busy', { busy: true })
   deps.emit('character:node', { node: 'working' })
+  deps.onStart?.(payload.origin)
   let result: AgentResult
   try {
     result = await runAgentTask(payload.request, payload.origin, deps)
@@ -230,9 +237,11 @@ export async function handleDelegate(payload: BusEvents['agent:delegate'], deps:
     deps.emit('character:node', { node: 'idle' })
   }
 
+  deps.onResult?.(result)
   const s = AGENT_STRINGS[deps.lang()]
-  if (result.ok) speak(deps, result.text || s.doneLine, 'happy', 'agent')
-  else if (result.cause === 'max_steps') speak(deps, s.incompleteLine, 'sorry', 'agent')
-  else speak(deps, s.fallbackLine, 'sorry', 'fallback')
+  const prepared = (kind: 'done' | 'incomplete' | 'offline', fallback: string) => deps.preparedLine?.(kind) || fallback
+  if (result.ok) speak(deps, result.text || prepared('done', s.doneLine), 'happy', 'agent')
+  else if (result.cause === 'max_steps') speak(deps, prepared('incomplete', s.incompleteLine), 'sorry', 'agent')
+  else speak(deps, prepared('offline', s.fallbackLine), 'sorry', 'fallback')
   return result
 }

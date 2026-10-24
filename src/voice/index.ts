@@ -2,8 +2,11 @@
 // barge-in). Talks to other tracks only through the bus.
 
 import { bus } from '@/core/bus'
+import { setFallbackCharacter } from '@/nunchi/fallback-lines'
 import { useSettings } from '@/stores/settings'
 import { installBargeIn } from './barge-in'
+import { initBuiltin, isOwnLine, playMatchingClip } from './builtin'
+import { installCues } from './cues'
 import { SpeechPlayer } from './player'
 import { installPtt, pttDown, pttUp } from './ptt'
 import { voiceState } from './state'
@@ -13,6 +16,8 @@ import { useCharacterStore } from '@/character/store'
 
 export { currentStatus, voiceState, type VoiceStatus } from './state'
 export { pttDown, pttUp, setVadEnabled }
+export { pickBuiltin, playBuiltin, type PlayBuiltinOptions } from './builtin'
+export { observerSpokeRecently } from './cues'
 
 let initialised = false
 let player: SpeechPlayer | null = null
@@ -34,6 +39,10 @@ export function initVoice(): void {
   installPtt(sttCtx)
   configureVad(sttCtx, () => voiceState.recording)
   installBargeIn(p)
+  initBuiltin(p)
+  installCues(p)
+  const characters = useCharacterStore()
+  setFallbackCharacter(() => characters.character)
 
   // Browsers only allow audio after a user gesture: unlock on the first one.
   const unlock = () => {
@@ -46,8 +55,10 @@ export function initVoice(): void {
 
   bus.on('character:react', ({ line, emotion }) => {
     const text = line?.trim()
-    if (!text || !settings.sound) return
-    void p.say({ text: text.slice(0, 500), lang: settings.speechLang, emotion, character: useCharacterStore().character, preset: settings.voicePreset, sessionId: settings.sessionId })
+    if (!text || !settings.sound || isOwnLine(text)) return
+    // A prepared line (fallback, agent, ...) plays from its clip: instant, and works without TTS.
+    if (playMatchingClip(text, characters.character, settings.speechLang)) return
+    void p.say({ text: text.slice(0, 500), lang: settings.speechLang, emotion, character: characters.character, preset: settings.voicePreset, sessionId: settings.sessionId })
   })
 
   // Turning sound off silences the current line immediately.

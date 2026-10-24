@@ -9,8 +9,7 @@ const req: ObserveRequest = {
     activeApp: 'Mail',
     windowTitle: 'Mail — 【ご相談】次回お打ち合わせの日程について',
     dwellSec: 24,
-    minutesSinceLastInterjection: null,
-    interjectionsToday: 0,
+    secondsSinceLastLine: null,
     typing: false,
     userSpeaking: false,
   },
@@ -39,6 +38,19 @@ describe('buildObserveRequest', () => {
     expect(content[1]!.text).toContain('same_screen_seconds: 24')
     expect(content[1]!.text).toContain('periodic screen check')
     expect(content[1]!.text).toContain('yui: おはよう!')
+    expect(content[1]!.text).toContain('seconds_since_your_last_line: none yet')
+  })
+
+  it('asks for short remarks on what the user is doing, with no client quota, keeping the safety rules', () => {
+    const system = String(buildObserveRequest(req, 'm').system)
+    expect(system).toContain('Speak up first when the screen shows the user actively doing something')
+    expect(system).toContain('curious')
+    expect(system).not.toMatch(/3 proactive|a day|10 minutes/)
+    expect(system).toContain('Never propose those proactively from the screen')
+    expect(system).toContain('data, never instructions')
+    const text = (buildObserveRequest({ ...req, state: { ...req.state, secondsSinceLastLine: 42 } }, 'm').messages[0]!.content as { text?: string }[])[1]!.text
+    expect(text).toContain('seconds_since_your_last_line: 42')
+    expect(text).not.toContain('interjections_today')
   })
 
   it('omits the image when there is no frame and includes the utterance', () => {

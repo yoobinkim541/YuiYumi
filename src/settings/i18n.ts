@@ -5,7 +5,7 @@ import type { PermissionLevel, VoicePreset } from '@shared/contracts'
 import { LANG_INFO, type Lang } from '@shared/languages'
 import type { AssistantMode } from '@/stores/settings'
 
-export type SettingsPageId = 'card' | 'general' | 'voice' | 'permissions' | 'observation' | 'connectors' | 'about'
+export type SettingsPageId = 'card' | 'general' | 'voice' | 'permissions' | 'connectors' | 'about'
 type CardFieldKey = 'description' | 'personality' | 'scenario' | 'systemPrompt' | 'speakingStyle'
 type ServiceKey = 'mail' | 'calendar' | 'drive' | 'slack' | 'discord'
 
@@ -37,10 +37,6 @@ export interface SettingsStrings {
   permissions: {
     hint: string, levels: Record<PermissionLevel, { title: string, desc: string }>, bypassWarn: string
   }
-  observation: {
-    title: string, hint: (sec: number, today: number, max: number) => string, defaults: string
-    dailyMax: string, defaultN: (n: number) => string, minInterval: string, dwell: string, dwellSub: (n: number) => string
-  }
   connectors: { hint: string, desc: Record<ServiceKey, string>, live: string, mock: string }
   about: { tagline: string, notices: string, noticesHint: string, items: string[], notRedistributed: string }
   tray: {
@@ -52,7 +48,7 @@ export interface SettingsStrings {
     title: string
     decisions: Record<string, string>
     ago: (s: number) => string
-    interjections: string, lastDecision: string, checking: string, noCheck: string, dwell: (s: number) => string
+    proactive: string, proactiveLast: (ago: string) => string, proactiveNone: string, lastDecision: string, checking: string, noCheck: string, dwell: (s: number) => string
     tasksRun: string, fromScreen: (n: number) => string
     drafts: string, draftsBreakdown: (mail: number, slack: number) => string
     dialogue: string, emptyDialogue: (key: string) => string, you: string
@@ -70,7 +66,6 @@ const EN: SettingsStrings = {
     general: { title: 'General', desc: 'Language, mode and sound' },
     voice: { title: 'Voice', desc: 'Voice language, push-to-talk, VAD' },
     permissions: { title: 'Permissions', desc: 'What the assistant may do without asking' },
-    observation: { title: 'Observation', desc: 'Limits for unprompted remarks' },
     connectors: { title: 'Connectors', desc: 'Mock or live data per service' },
     about: { title: 'About', desc: 'Open source notices' },
   },
@@ -124,12 +119,6 @@ const EN: SettingsStrings = {
     },
     bypassWarn: 'Bypass sends mail and posts messages without confirmation. Use it only when you trust the request.',
   },
-  observation: {
-    title: 'Proactive limits',
-    hint: (sec, today, max) => `In active mode the screen is checked every ${sec} s. Only unprompted remarks are limited; answers to your voice never count. Today: ${today} of ${max}.`,
-    defaults: 'Defaults', dailyMax: 'Daily maximum', defaultN: n => `Default ${n}`,
-    minInterval: 'Minimum interval (minutes)', dwell: 'Dwell before speaking (seconds)', dwellSub: n => `Same screen for at least this long. Default ${n}`,
-  },
   connectors: {
     hint: 'All actions run on the virtual desktop. What needs your confirmation is set under Permissions. Live reads fall back to mock data on failure.',
     desc: {
@@ -159,12 +148,12 @@ const EN: SettingsStrings = {
     title: 'Dashboard',
     decisions: {
       'idle': 'Idle', 'silent': 'Stayed silent', 'acted': 'Spoke up / acted', 'error': 'Observer error',
-      'budget': 'Budget reached (fallback lines)', 'dropped:daily_limit': 'Held back: daily limit',
-      'dropped:cooldown': 'Held back: cooldown', 'dropped:dwell': 'Held back: screen just opened',
-      'dropped:typing': 'Held back: you were typing', 'dropped:speaking': 'Held back: you were speaking',
+      'budget': 'Budget reached (fallback lines)', 'dropped:speaking': 'Held back: you were speaking',
+      'dropped:talking': 'Held back: voice still playing', 'dropped:busy': 'Held back: working on a task',
+      'dropped:gap': 'Held back: spoke a moment ago',
     },
     ago: s => s < 60 ? `${s}s ago` : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`,
-    interjections: 'Interjections today', lastDecision: 'Last observer decision', checking: 'Checking the screen…', noCheck: 'No check yet', dwell: s => `dwell ${s} s`,
+    proactive: 'Proactive remarks this session', proactiveLast: a => `last ${a}`, proactiveNone: 'None yet', lastDecision: 'Last observer decision', checking: 'Checking the screen…', noCheck: 'No check yet', dwell: s => `dwell ${s} s`,
     tasksRun: 'Agent tasks run', fromScreen: n => `${n} offered from the screen`,
     drafts: 'Drafts saved', draftsBreakdown: (m, s) => `${m} mail · ${s} Slack`,
     dialogue: 'Recent dialogue', emptyDialogue: k => `No conversation yet. Hold ${k} or the talk button and say hello.`, you: 'You',
@@ -183,7 +172,6 @@ const KO: SettingsStrings = {
     general: { title: '일반', desc: '표시 언어, 모드, 소리' },
     voice: { title: '음성', desc: '음성 언어, 누르고 말하기, VAD' },
     permissions: { title: '권한', desc: '묻지 않고 해도 되는 일' },
-    observation: { title: '화면 관찰', desc: '먼저 말 거는 빈도 제한' },
     connectors: { title: '연결', desc: '서비스별 목업 또는 실데이터' },
     about: { title: '정보', desc: '오픈소스 고지' },
   },
@@ -237,12 +225,6 @@ const KO: SettingsStrings = {
     },
     bypassWarn: '권한 무시 모드는 확인 없이 메일을 보내고 메시지를 올려요. 요청을 믿을 수 있을 때만 쓰세요.',
   },
-  observation: {
-    title: '먼저 말 걸기 제한',
-    hint: (sec, today, max) => `활성 모드에서는 ${sec}초마다 화면을 확인해요. 먼저 말 거는 것만 제한하고, 사용자 말에 대한 대답은 세지 않아요. 오늘: ${max}회 중 ${today}회.`,
-    defaults: '기본값', dailyMax: '하루 최대', defaultN: n => `기본 ${n}`,
-    minInterval: '최소 간격 (분)', dwell: '말 걸기 전 머무는 시간 (초)', dwellSub: n => `같은 화면이 이 시간 이상 유지돼야 해요. 기본 ${n}`,
-  },
   connectors: {
     hint: '모든 동작은 가상 데스크톱에서 실행돼요. 확인이 필요한 범위는 권한에서 정해요. 실데이터 읽기가 실패하면 목업 데이터로 대신해요.',
     desc: {
@@ -272,12 +254,12 @@ const KO: SettingsStrings = {
     title: '대시보드',
     decisions: {
       'idle': '대기 중', 'silent': '조용히 있음', 'acted': '말을 걸거나 행동함', 'error': '관찰 오류',
-      'budget': '예산 도달 (준비된 대사 사용)', 'dropped:daily_limit': '보류: 하루 한도',
-      'dropped:cooldown': '보류: 간격 대기', 'dropped:dwell': '보류: 화면이 막 열림',
-      'dropped:typing': '보류: 타이핑 중', 'dropped:speaking': '보류: 말하는 중',
+      'budget': '예산 도달 (준비된 대사 사용)', 'dropped:speaking': '보류: 사용자가 말하는 중',
+      'dropped:talking': '보류: 음성 재생 중', 'dropped:busy': '보류: 작업 중',
+      'dropped:gap': '보류: 방금 말함',
     },
     ago: s => s < 60 ? `${s}초 전` : s < 3600 ? `${Math.floor(s / 60)}분 전` : `${Math.floor(s / 3600)}시간 전`,
-    interjections: '오늘 먼저 말 건 횟수', lastDecision: '마지막 관찰 판단', checking: '화면 확인 중…', noCheck: '아직 확인 전', dwell: s => `머문 시간 ${s}초`,
+    proactive: '이번 세션에서 먼저 말 건 횟수', proactiveLast: a => `마지막 ${a}`, proactiveNone: '아직 없음', lastDecision: '마지막 관찰 판단', checking: '화면 확인 중…', noCheck: '아직 확인 전', dwell: s => `머문 시간 ${s}초`,
     tasksRun: '실행한 작업', fromScreen: n => `화면 보고 제안한 작업 ${n}개`,
     drafts: '저장된 초안', draftsBreakdown: (m, s) => `메일 ${m} · Slack ${s}`,
     dialogue: '최근 대화', emptyDialogue: k => `아직 대화가 없어요. ${k} 키나 말하기 버튼을 누르고 인사해 보세요.`, you: '나',
@@ -296,7 +278,6 @@ const JA: SettingsStrings = {
     general: { title: '一般', desc: '表示言語、モード、サウンド' },
     voice: { title: '音声', desc: '音声言語、押して話す、VAD' },
     permissions: { title: '権限', desc: '確認なしで実行してよい操作' },
-    observation: { title: '画面の観察', desc: '自分から話しかける頻度の制限' },
     connectors: { title: '連携', desc: 'サービスごとのモック／実データ' },
     about: { title: '情報', desc: 'オープンソースの表示' },
   },
@@ -350,12 +331,6 @@ const JA: SettingsStrings = {
     },
     bypassWarn: '確認なしモードでは、確認せずにメールを送信しメッセージを投稿します。信頼できる依頼のときだけ使ってください。',
   },
-  observation: {
-    title: '自発的な発言の制限',
-    hint: (sec, today, max) => `アクティブモードでは${sec}秒ごとに画面を確認します。制限されるのは自分からの発言だけで、あなたへの返答は数えません。今日: ${max}回中${today}回。`,
-    defaults: 'デフォルト', dailyMax: '1日の上限', defaultN: n => `デフォルト ${n}`,
-    minInterval: '最短間隔（分）', dwell: '話しかけるまでの滞在時間（秒）', dwellSub: n => `同じ画面がこの時間以上続く必要があります。デフォルト ${n}`,
-  },
   connectors: {
     hint: 'すべての操作は仮想デスクトップ上で行われます。確認が必要な範囲は「権限」で設定します。実データの読み取りに失敗した場合はモックデータを使います。',
     desc: {
@@ -385,12 +360,12 @@ const JA: SettingsStrings = {
     title: 'ダッシュボード',
     decisions: {
       'idle': '待機中', 'silent': '静観', 'acted': '話しかけた／実行した', 'error': '観察エラー',
-      'budget': '予算上限（用意したセリフを使用）', 'dropped:daily_limit': '保留: 1日の上限',
-      'dropped:cooldown': '保留: 間隔待ち', 'dropped:dwell': '保留: 画面を開いた直後',
-      'dropped:typing': '保留: 入力中', 'dropped:speaking': '保留: 発話中',
+      'budget': '予算上限（用意したセリフを使用）', 'dropped:speaking': '保留: 発話中',
+      'dropped:talking': '保留: 音声を再生中', 'dropped:busy': '保留: 作業中',
+      'dropped:gap': '保留: 話したばかり',
     },
     ago: s => s < 60 ? `${s}秒前` : s < 3600 ? `${Math.floor(s / 60)}分前` : `${Math.floor(s / 3600)}時間前`,
-    interjections: '今日の自発的な発言', lastDecision: '直近の観察判断', checking: '画面を確認中…', noCheck: 'まだ確認していません', dwell: s => `滞在 ${s}秒`,
+    proactive: 'このセッションの自発的な発言', proactiveLast: a => `直近 ${a}`, proactiveNone: 'まだありません', lastDecision: '直近の観察判断', checking: '画面を確認中…', noCheck: 'まだ確認していません', dwell: s => `滞在 ${s}秒`,
     tasksRun: '実行したタスク', fromScreen: n => `画面から提案 ${n}件`,
     drafts: '保存した下書き', draftsBreakdown: (m, s) => `メール ${m} · Slack ${s}`,
     dialogue: '最近の会話', emptyDialogue: k => `まだ会話がありません。${k} か話すボタンを押して挨拶してみてください。`, you: 'あなた',
@@ -409,7 +384,6 @@ const ZH_HANS: SettingsStrings = {
     general: { title: '通用', desc: '显示语言、模式和声音' },
     voice: { title: '语音', desc: '语音语言、按住说话、VAD' },
     permissions: { title: '权限', desc: '无需询问即可执行的操作' },
-    observation: { title: '屏幕观察', desc: '主动搭话的频率限制' },
     connectors: { title: '连接', desc: '各服务使用模拟或真实数据' },
     about: { title: '关于', desc: '开源声明' },
   },
@@ -463,12 +437,6 @@ const ZH_HANS: SettingsStrings = {
     },
     bypassWarn: '跳过确认模式会在不确认的情况下发送邮件和发布消息。仅在信任该请求时使用。',
   },
-  observation: {
-    title: '主动搭话限制',
-    hint: (sec, today, max) => `活跃模式下每 ${sec} 秒检查一次屏幕。只限制主动搭话，对你语音的回答不计入。今天：${today} / ${max} 次。`,
-    defaults: '默认值', dailyMax: '每日上限', defaultN: n => `默认 ${n}`,
-    minInterval: '最短间隔（分钟）', dwell: '搭话前的停留时间（秒）', dwellSub: n => `同一画面需持续至少这么久。默认 ${n}`,
-  },
   connectors: {
     hint: '所有操作都在虚拟桌面上执行。需要确认的范围在“权限”中设置。真实数据读取失败时会改用模拟数据。',
     desc: {
@@ -498,12 +466,12 @@ const ZH_HANS: SettingsStrings = {
     title: '仪表盘',
     decisions: {
       'idle': '空闲', 'silent': '保持安静', 'acted': '搭话或执行', 'error': '观察出错',
-      'budget': '已达预算（使用预设台词）', 'dropped:daily_limit': '暂缓：每日上限',
-      'dropped:cooldown': '暂缓：冷却中', 'dropped:dwell': '暂缓：画面刚打开',
-      'dropped:typing': '暂缓：你正在打字', 'dropped:speaking': '暂缓：你正在说话',
+      'budget': '已达预算（使用预设台词）', 'dropped:speaking': '暂缓：你正在说话',
+      'dropped:talking': '暂缓：语音仍在播放', 'dropped:busy': '暂缓：正在执行任务',
+      'dropped:gap': '暂缓：刚刚说过话',
     },
     ago: s => s < 60 ? `${s} 秒前` : s < 3600 ? `${Math.floor(s / 60)} 分钟前` : `${Math.floor(s / 3600)} 小时前`,
-    interjections: '今日主动搭话', lastDecision: '最近一次观察判断', checking: '正在检查屏幕…', noCheck: '尚未检查', dwell: s => `停留 ${s} 秒`,
+    proactive: '本次会话主动搭话', proactiveLast: a => `最近 ${a}`, proactiveNone: '暂无', lastDecision: '最近一次观察判断', checking: '正在检查屏幕…', noCheck: '尚未检查', dwell: s => `停留 ${s} 秒`,
     tasksRun: '已执行任务', fromScreen: n => `其中 ${n} 个由屏幕提出`,
     drafts: '已保存草稿', draftsBreakdown: (m, s) => `邮件 ${m} · Slack ${s}`,
     dialogue: '最近对话', emptyDialogue: k => `还没有对话。按住 ${k} 或说话按钮打个招呼吧。`, you: '你',
@@ -522,7 +490,6 @@ const ZH_HANT: SettingsStrings = {
     general: { title: '一般', desc: '顯示語言、模式與聲音' },
     voice: { title: '語音', desc: '語音語言、按住說話、VAD' },
     permissions: { title: '權限', desc: '不需詢問即可執行的操作' },
-    observation: { title: '螢幕觀察', desc: '主動搭話的頻率限制' },
     connectors: { title: '連結', desc: '各服務使用模擬或真實資料' },
     about: { title: '關於', desc: '開源聲明' },
   },
@@ -576,12 +543,6 @@ const ZH_HANT: SettingsStrings = {
     },
     bypassWarn: '略過確認模式會在未確認的情況下寄出郵件並發布訊息。請只在信任該請求時使用。',
   },
-  observation: {
-    title: '主動搭話限制',
-    hint: (sec, today, max) => `活躍模式下每 ${sec} 秒檢查一次螢幕。只限制主動搭話，對你語音的回答不列入計算。今天：${today} / ${max} 次。`,
-    defaults: '預設值', dailyMax: '每日上限', defaultN: n => `預設 ${n}`,
-    minInterval: '最短間隔（分鐘）', dwell: '搭話前的停留時間（秒）', dwellSub: n => `同一畫面需持續至少這麼久。預設 ${n}`,
-  },
   connectors: {
     hint: '所有操作都在虛擬桌面上執行。需要確認的範圍在「權限」中設定。真實資料讀取失敗時會改用模擬資料。',
     desc: {
@@ -611,12 +572,12 @@ const ZH_HANT: SettingsStrings = {
     title: '儀表板',
     decisions: {
       'idle': '閒置', 'silent': '保持安靜', 'acted': '搭話或執行', 'error': '觀察錯誤',
-      'budget': '已達預算（使用預設台詞）', 'dropped:daily_limit': '暫緩：每日上限',
-      'dropped:cooldown': '暫緩：冷卻中', 'dropped:dwell': '暫緩：畫面剛開啟',
-      'dropped:typing': '暫緩：你正在打字', 'dropped:speaking': '暫緩：你正在說話',
+      'budget': '已達預算（使用預設台詞）', 'dropped:speaking': '暫緩：你正在說話',
+      'dropped:talking': '暫緩：語音仍在播放', 'dropped:busy': '暫緩：正在執行任務',
+      'dropped:gap': '暫緩：剛剛說過話',
     },
     ago: s => s < 60 ? `${s} 秒前` : s < 3600 ? `${Math.floor(s / 60)} 分鐘前` : `${Math.floor(s / 3600)} 小時前`,
-    interjections: '今日主動搭話', lastDecision: '最近一次觀察判斷', checking: '正在檢查螢幕…', noCheck: '尚未檢查', dwell: s => `停留 ${s} 秒`,
+    proactive: '本次工作階段主動搭話', proactiveLast: a => `最近 ${a}`, proactiveNone: '尚無', lastDecision: '最近一次觀察判斷', checking: '正在檢查螢幕…', noCheck: '尚未檢查', dwell: s => `停留 ${s} 秒`,
     tasksRun: '已執行任務', fromScreen: n => `其中 ${n} 個由螢幕提出`,
     drafts: '已儲存草稿', draftsBreakdown: (m, s) => `郵件 ${m} · Slack ${s}`,
     dialogue: '最近對話', emptyDialogue: k => `還沒有對話。按住 ${k} 或說話按鈕打聲招呼吧。`, you: '你',

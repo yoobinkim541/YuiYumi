@@ -9,9 +9,6 @@ import { LANG_INFO, LANGS } from '@shared/languages'
 import { CHARACTER_MODELS, type CharacterId } from '@/character/models'
 import { useCharacterStore } from '@/character/store'
 import { LIVE_SERVICES } from '@/connectors/registry'
-import { nunchiStatus } from '@/nunchi'
-import { NUNCHI_DEFAULTS, nunchiConfig, resetNunchiConfig } from '@/nunchi/config'
-import { POLL_MS } from '@/nunchi/scheduler'
 import { usePersona, type PersonaCard } from '@/stores/persona'
 import { USER_NAME_MAX, useSettings, type AssistantMode } from '@/stores/settings'
 import { setVadEnabled, voiceState } from '@/voice'
@@ -27,7 +24,6 @@ const PAGES: { id: SettingsPageId, icon: string }[] = [
   { id: 'general', icon: 'settings' },
   { id: 'voice', icon: 'mic' },
   { id: 'permissions', icon: 'shield' },
-  { id: 'observation', icon: 'eye' },
   { id: 'connectors', icon: 'plug' },
   { id: 'about', icon: 'info' },
 ]
@@ -118,24 +114,6 @@ function resetPtt() {
 }
 
 onBeforeUnmount(stopRecording)
-
-// --- Observation
-
-const cooldownMin = computed({
-  get: () => Math.round(nunchiConfig.cooldownMs / 60_000),
-  set: (v: number) => { nunchiConfig.cooldownMs = clamp(v, 0, 240) * 60_000 },
-})
-const maxPerDay = computed({
-  get: () => nunchiConfig.maxPerDay,
-  set: (v: number) => { nunchiConfig.maxPerDay = clamp(v, 0, 50) },
-})
-const minDwell = computed({
-  get: () => nunchiConfig.minDwellSec,
-  set: (v: number) => { nunchiConfig.minDwellSec = clamp(v, 0, 600) },
-})
-function clamp(v: number, lo: number, hi: number) {
-  return Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo
-}
 
 // --- Connectors
 
@@ -399,31 +377,6 @@ const NOTICES: string[] = [
             </button>
           </div>
           <p v-if="settings.permission === 'bypass'" class="warn">{{ t.permissions.bypassWarn }}</p>
-        </section>
-      </template>
-
-      <!-- Observation -->
-      <template v-else-if="page === 'observation'">
-        <section class="section">
-          <div class="sec-head">
-            <div>
-              <h2>{{ t.observation.title }}</h2>
-              <p class="hint">{{ t.observation.hint(POLL_MS / 1000, nunchiStatus.interjectionsToday, nunchiConfig.maxPerDay) }}</p>
-            </div>
-            <button type="button" class="btn" @click="resetNunchiConfig()"><Icon name="reset" :size="15" />{{ t.observation.defaults }}</button>
-          </div>
-          <div class="row">
-            <div class="txt"><b>{{ t.observation.dailyMax }}</b><span>{{ t.observation.defaultN(NUNCHI_DEFAULTS.maxPerDay) }}</span></div>
-            <input v-model.number="maxPerDay" type="number" min="0" max="50">
-          </div>
-          <div class="row">
-            <div class="txt"><b>{{ t.observation.minInterval }}</b><span>{{ t.observation.defaultN(NUNCHI_DEFAULTS.cooldownMs / 60_000) }}</span></div>
-            <input v-model.number="cooldownMin" type="number" min="0" max="240">
-          </div>
-          <div class="row">
-            <div class="txt"><b>{{ t.observation.dwell }}</b><span>{{ t.observation.dwellSub(NUNCHI_DEFAULTS.minDwellSec) }}</span></div>
-            <input v-model.number="minDwell" type="number" min="0" max="600">
-          </div>
         </section>
       </template>
 

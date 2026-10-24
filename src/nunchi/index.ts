@@ -4,7 +4,7 @@ import { getScreenSource } from '@/host'
 import { usePersona } from '@/stores/persona'
 import { useSettings } from '@/stores/settings'
 import { postObserve } from './observer-client'
-import { NunchiEngine } from './scheduler'
+import { NunchiEngine, type LookTarget } from './scheduler'
 
 export { nunchiStatus } from './scheduler'
 
@@ -31,14 +31,17 @@ export function initNunchi(): void {
       get sessionId() { return settings.sessionId },
       setMode: m => { settings.mode = m },
     },
-    storage: localStorage,
     visible: () => document.visibilityState === 'visible',
+    // Sources that can tell where the user is acting (the virtual desktop can) expose lookTarget().
+    lookTarget: () => (getScreenSource() as { lookTarget?: () => LookTarget | null }).lookTarget?.() ?? null,
   })
   const e = engine
 
   bus.on('agent:busy', ({ busy }) => e.setAgentBusy(busy))
   bus.on('voice:speech-start', () => e.setSpeaking(true))
   bus.on('voice:speech-end', () => e.setSpeaking(false))
+  bus.on('tts:start', () => e.setTtsPlaying(true))
+  bus.on('tts:end', () => e.setTtsPlaying(false))
   bus.on('voice:transcript', t => {
     e.setSpeaking(false)
     void e.onTranscript(t.text, t.lang)

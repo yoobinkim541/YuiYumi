@@ -28,6 +28,8 @@ export function initCharacter(): void {
       node: (node: CharacterNode) => bus.emit('character:node', { node }),
       mouth: (open: number | null) => bus.emit('character:mouth', open === null ? null : { open }),
       bubble: (text: string, ttlMs?: number) => bus.emit('bubble', { text, ttlMs }),
+      /** Glance toward a desktop point (1920x1080 logical coordinates). */
+      look: (x: number, y: number, holdMs?: number) => bus.emit('character:look', { x, y, holdMs }),
       hit: (x: number, y: number) => characterHitTest(x, y),
       param: (id: string, value: number | null) => {
         const m = (current as { devParams?: Map<string, number> } | null)?.devParams

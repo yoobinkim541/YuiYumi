@@ -8,6 +8,14 @@ export interface BusEvents {
   'character:react': { emotion: Emotion, line?: string, motion?: string, source: 'observer' | 'agent' | 'fallback' }
   'character:node': { node: CharacterNode }
   'character:mouth': MouthPose | null
+  /**
+   * Glance toward a point on the virtual desktop (logical 1920x1080 coordinates): eyes
+   * most, head moderately, body slightly. Held `holdMs` (default 4 s, longer while she is
+   * talking), then eased back. Event-driven only; she never follows the cursor.
+   */
+  'character:look': { x: number, y: number, holdMs?: number }
+  /** A hand on the avatar: head held and how fast it pets her, or repeated poking. */
+  'character:touch': { kind: 'pet', holding: boolean, petting: 'none' | 'slow' | 'fast' } | { kind: 'poke' }
   /** Show or hide the "..." typing bubble while a reply is being generated. */
   'thinking': { on: boolean }
   /** Speech bubble text; the character layer shows it. */
@@ -27,7 +35,7 @@ export interface BusEvents {
   /** Move the avatar window (user asked it to step aside, come to the center, ...). */
   'assistant:move': { where: MoveTarget }
 
-  /** Proactive interjection actually shown (counts toward the daily limit). */
+  /** Proactive remark actually shown (counted for the dashboard). */
   'nunchi:interjected': { at: number }
 }
 
