@@ -46,6 +46,7 @@
   }
 
   // Demo buttons lead to the web app (<meta name="app-url">). The page veils over, then leaves.
+  // A button with data-character opens the app with that character (?character=yui|yumi).
   const appUrl = ($('meta[name="app-url"]')?.content || '').trim();
   const appLink = $('#appLink');
   const appNote = $('#appNote');
@@ -53,13 +54,16 @@
   if (appUrl) {
     if (appNote) appNote.hidden = true;
     document.querySelectorAll('.js-app').forEach((a) => {
-      a.href = appUrl;
+      const url = new URL(appUrl);
+      if (a.dataset.character) url.searchParams.set('character', a.dataset.character);
+      const target = url.href;
+      a.href = target;
       a.addEventListener('click', (e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
-        if (reduceMotion) { window.location.href = appUrl; return; }
+        if (reduceMotion) { window.location.href = target; return; }
         document.body.classList.add('leaving');
-        setTimeout(() => { window.location.href = appUrl; }, 1100);
+        setTimeout(() => { window.location.href = target; }, 1100);
       });
     });
     // Coming back with the browser's back button restores the page from cache; clear the veil.
